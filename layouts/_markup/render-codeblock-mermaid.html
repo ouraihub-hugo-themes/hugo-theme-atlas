@@ -1,0 +1,54 @@
+{{- /* ```mermaid {caption="…" num="1" id="…"} —— 图表围栏。
+     浏览器端渲染，源码留在 `<pre>` 里作为无 JS 时的回退。
+
+     **源码为什么留着**：mermaid 的语法本身就是给人读的（`A --> B`）。JS 没跑、
+     chunk 没下下来、图写错了这三种情况下，读者看到的是那段描述而不是一片空白。
+     渲染成功后运行时把 `<pre>` 隐藏（CSS 按 data-td-mermaid-rendered 判）。
+
+     给了 `num` 就登记进交叉引用表，和 `fig` 走同一条路 —— 一张流程图和一张
+     图片在"图 3"这个说法里没有区别，读者不该关心它是怎么画出来的。 */ -}}
+{{- $page := .PageInner | default .Page -}}
+{{- $policy := partial "content/attributes.html" (dict
+  "attributes" .Attributes "allowed" (slice "caption" "num" "id")
+  "position" .Position "kind" "mermaid"
+) -}}
+{{- $source := strings.TrimSpace (printf "%s" .Inner) -}}
+
+{{- if not (strings.ContainsNonSpace $source) -}}
+  {{- warnf "mermaid: the fence requires a diagram at %s; skipping the block" .Position -}}
+{{- else -}}
+  {{- /* 能力标记。scripts 在正文渲染之后读它 —— 没有图的页面不下载这个运行时。 */ -}}
+  {{- $page.Store.Set "hasMermaid" true -}}
+
+  {{- $caption := strings.TrimSpace (index $policy.consumed "caption" | default "") -}}
+  {{- $numRaw := index $policy.consumed "num" | default "" -}}
+
+  {{- /* num 可以不给：一张不需要被引用的图也该能画。给了才登记。
+         caption/id 不带 num 的组合与 `eq` 同样处理 —— 那两个是编号目标的属性。 */ -}}
+  {{- $num := "" -}}
+  {{- $id := "" -}}
+  {{- if $numRaw -}}
+    {{- $num = partial "book/validate-num.html" (dict "name" "mermaid" "value" $numRaw "position" .Position) -}}
+    {{- $id = printf "fig-%s" $num -}}
+    {{- with index $policy.consumed "id" -}}
+      {{- $id = partial "book/validate-id.html" (dict "name" "mermaid" "value" . "position" $.Position) -}}
+    {{- end -}}
+    {{- partial "book/register-target.html" (dict
+      "page" $page "kind" "fig" "num" $num "id" $id "caption" $caption
+      "position" .Position "ordinal" .Ordinal
+    ) -}}
+  {{- else if isset $policy.consumed "id" -}}
+    {{- warnf "mermaid: id requires num at %s; ignoring it" .Position -}}
+  {{- end -}}
+
+<figure{{ with $id }} id="{{ . }}"{{ end }} class="td-mermaid{{ with $num }} td-book-figure td-book-figure--mermaid{{ end }}{{ with $policy.class }} {{ . }}{{ end }}" data-td-mermaid{{ with $num }} data-td-book-kind="fig" data-td-book-num="{{ . }}"{{ end }}{{ partial "content/attrs.html" $policy.generic | safeHTMLAttr }}>
+  <div class="td-mermaid-out" data-td-mermaid-out role="img"{{ with $caption }} aria-label="{{ . }}"{{ end }}></div>
+  {{- /* `<pre>` 不是装饰：它是无 JS 时的内容，也是渲染失败时的内容。
+         不用 highlight —— mermaid 不是 Chroma 认得的语言，而且这段文本的作用
+         是"能读"，不是"好看"。 */ -}}
+  <pre class="td-mermaid-source"><code>{{ $source }}</code></pre>
+  {{- with $caption }}
+  <figcaption>{{ with $num }}<span class="td-book-figure-label">{{ partial "book/label.html" (dict "kind" "fig" "num" .) }}</span> {{ end }}<span class="td-book-figure-caption">{{ . }}</span></figcaption>
+  {{- end }}
+</figure>
+{{- end -}}

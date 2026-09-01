@@ -1,0 +1,61 @@
+{{- /* ```goat —— ASCII 线框图，构建时渲染成 SVG。零运行时、零依赖。
+
+     `diagrams.Goat` 是 Hugo 内建的（和 `transform.ToMath` 一样），所以这个围栏
+     不下载任何东西，也没有浏览器端可等的库。画得了的图有限（线、框、箭头），
+     但它画出来的东西在没有 JS、没有网络、打印时都一样在。
+
+     **宽高同时写成属性和 viewBox，两个都要。** 只给 viewBox 的话 SVG 没有固有
+     尺寸，会撑满容器：一张 144 单位宽的小图在 755px 的正文里放大 5.2 倍，13.33px
+     的字变成 70px，图比周围的正文大出一个量级。写上 width/height 之后它按字符
+     网格的原始尺寸显示，viewBox 留着让 CSS 的 max-width 在窄屏上等比缩下去。 */ -}}
+{{- $page := .PageInner | default .Page -}}
+{{- $policy := partial "content/attributes.html" (dict
+  "attributes" .Attributes "allowed" (slice "caption" "num" "id")
+  "position" .Position "kind" "goat"
+) -}}
+{{- $source := printf "%s" .Inner -}}
+
+{{- if not (strings.ContainsNonSpace $source) -}}
+  {{- warnf "goat: the fence requires a diagram at %s; skipping the block" .Position -}}
+{{- else -}}
+  {{- /* 全宽字符（CJK、全角标点）在 goat 里必然重叠，要告诉作者。
+
+         goat 的坐标是字符网格，一列 8px：源码里一个字符占一格。而一个汉字渲染
+         出来是 13.33px，比格子宽 5.33px —— 每个字压住右边那个，一行下来糊成一
+         片。调字号绕不开：小到汉字不重叠时，ASCII 的线框就细得看不清了。
+
+         照画不跳过：图的线框部分仍然是对的，作者一眼能看出是标签的问题；跳掉
+         整块只会得到一个"我的图没了"。这一条是渲染出来能看见的错，警告的作用
+         是告诉他为什么、以及该用 mermaid。 */ -}}
+  {{- if findRE `[\x{1100}-\x{11FF}\x{2E80}-\x{9FFF}\x{A960}-\x{A97F}\x{AC00}-\x{D7FF}\x{F900}-\x{FAFF}\x{FE30}-\x{FE4F}\x{FF00}-\x{FF60}\x{FFE0}-\x{FFE6}]` $source -}}
+    {{- warnf "goat: full-width characters overlap in the character grid at %s; keep labels ASCII or use a mermaid fence" .Position -}}
+  {{- end -}}
+  {{- $caption := strings.TrimSpace (index $policy.consumed "caption" | default "") -}}
+  {{- $numRaw := index $policy.consumed "num" | default "" -}}
+  {{- $num := "" -}}
+  {{- $id := "" -}}
+  {{- if $numRaw -}}
+    {{- $num = partial "book/validate-num.html" (dict "name" "goat" "value" $numRaw "position" .Position) -}}
+    {{- $id = printf "fig-%s" $num -}}
+    {{- with index $policy.consumed "id" -}}
+      {{- $id = partial "book/validate-id.html" (dict "name" "goat" "value" . "position" $.Position) -}}
+    {{- end -}}
+    {{- partial "book/register-target.html" (dict
+      "page" $page "kind" "fig" "num" $num "id" $id "caption" $caption
+      "position" .Position "ordinal" .Ordinal
+    ) -}}
+  {{- else if isset $policy.consumed "id" -}}
+    {{- warnf "goat: id requires num at %s; ignoring it" .Position -}}
+  {{- end -}}
+
+  {{- with diagrams.Goat (strings.TrimRight "\n\r" $source) -}}
+<figure{{ with $id }} id="{{ . }}"{{ end }} class="td-goat{{ with $num }} td-book-figure td-book-figure--goat{{ end }}{{ with $policy.class }} {{ . }}{{ end }}"{{ with $num }} data-td-book-kind="fig" data-td-book-num="{{ . }}"{{ end }}{{ partial "content/attrs.html" $policy.generic | safeHTMLAttr }}>
+  <svg class="td-goat-svg" width="{{ .Width }}" height="{{ .Height }}" viewBox="0 0 {{ .Width }} {{ .Height }}" xmlns="http://www.w3.org/2000/svg" role="img"{{ with $caption }} aria-label="{{ . }}"{{ end }}>
+    {{ .Inner }}
+  </svg>
+  {{- with $caption }}
+  <figcaption>{{ with $num }}<span class="td-book-figure-label">{{ partial "book/label.html" (dict "kind" "fig" "num" .) }}</span> {{ end }}<span class="td-book-figure-caption">{{ . }}</span></figcaption>
+  {{- end }}
+</figure>
+  {{- end -}}
+{{- end -}}

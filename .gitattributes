@@ -14,3 +14,7 @@
 assets/dist/*.css -diff linguist-generated
 assets/dist/*.js -diff linguist-generated
 assets/dist/*.map -diff linguist-generated
+
+# mermaid 的分割产物在 static/ 而不是 assets/dist/：chunk 是浏览器按相对路径
+# 直接取的，不经过 Hugo 资源管线，而 Hugo 只发布被 resources.Get 引用过的 asset。
+static/js/** -diff linguist-generated

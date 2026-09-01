@@ -1,0 +1,112 @@
+/* 图表：mermaid（浏览器端渲染）与 goat（构建时 SVG）。
+ *
+ * 两者共用同一套外框与 figcaption 版式 —— 读者不该从边框上看出一张图是谁画的。
+ * 差别只在 mermaid 有"还没画出来"和"画失败了"两个状态，goat 没有。
+ */
+
+@utility td-mermaid {
+  display: block;
+  margin-block: 1.5rem;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
+@utility td-goat {
+  display: block;
+  margin-block: 1.5rem;
+}
+
+/* 渲染出来的 SVG 居中，并且不许超出容器宽度。
+ *
+ * **这里不能加 !important。** mermaid 给 <svg> 写的是 `width="100%"` 加内联
+ * `style="max-width: <固有宽度>px"`：前者让图填满容器，后者是刹车，把它按在自己
+ * 算出来的固有宽度上。用 !important 压掉那条内联样式，刹车就没了 —— 一张固有宽
+ * 247px 的状态机会被吹到 755px，放大 3 倍，字比正文标题还大。
+ *
+ * 不加 !important 时两种情况都对：mermaid 设了内联 max-width，内联优先级更高，
+ * 小图停在固有宽度；没设的时候（useMaxWidth: false）本规则生效，窄屏不溢出。
+ * goat 走的是后一种：它只有 width/height 属性，靠这条等比缩下去。
+ */
+.td-mermaid-out svg,
+.td-goat-svg {
+  display: block;
+  height: auto;
+  max-width: 100%;
+  margin-inline: auto;
+}
+
+/* goat 的线框靠 currentColor 上色，跟着正文墨色走深浅色。
+ *
+ * **字号必须设在 <svg> 上，不能设在 text 上。** goat 给每个 <text> 写了内联
+ * `style="font-size:1em"`，内联样式压过任何选择器，所以唯一能改字号的地方是
+ * 让那个 `1em` 继承到别的值。
+ *
+ * 13.33px 不是随便取的：goat 的坐标是字符网格，一列 8px。等宽字体的字符步进约
+ * 0.6em，要让步进正好等于 8px 就得 8 / 0.6 ≈ 13.33px。设成 16px（继承正文）时
+ * 步进变成 9.6px，每个字符挤出邻居 1.6px —— 一行下来就糊成一片。
+ */
+.td-goat-svg {
+  color: var(--color-ink);
+  fill: none;
+  stroke: currentcolor;
+  font-family: var(--font-mono);
+  font-size: 13.33px;
+}
+
+.td-goat-svg text {
+  fill: currentcolor;
+  stroke: none;
+}
+
+/* 源码：渲染成功后隐藏，失败或没跑 JS 时留在页面上。
+   默认可见 —— 反过来写的话，JS 没跑时读者看到的是空白。 */
+.td-mermaid-source {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-code);
+  background: var(--color-pre);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--color-ink);
+}
+
+.td-mermaid[data-td-mermaid-rendered] .td-mermaid-source {
+  display: none;
+}
+
+/* 失败时给源码加一条警示边，读者知道这里本该是一张图。 */
+.td-mermaid[data-td-mermaid-failed] .td-mermaid-source {
+  border-inline-start: 3px solid var(--color-status-danger);
+}
+
+figure.td-mermaid > figcaption,
+figure.td-goat > figcaption {
+  margin-block-start: 0.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-ink-muted);
+}
+
+/* 打印：mermaid 的图在打印时可能还没渲染（IntersectionObserver 不一定触发过），
+   两份都留着 —— 一份空白的图占着版面，而源码至少是可读的。 */
+@media print {
+  .td-mermaid[data-td-mermaid-rendered] .td-mermaid-source {
+    display: block;
+  }
+
+  .td-mermaid,
+  .td-goat {
+    overflow-x: visible;
+    break-inside: avoid;
+  }
+}
+
+/* 强制颜色模式：SVG 的配色会被系统调色板接管，goat 的线要显式跟上。 */
+@media (forced-colors: active) {
+  .td-goat-svg {
+    color: CanvasText;
+  }
+}

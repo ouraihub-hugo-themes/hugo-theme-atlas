@@ -103,7 +103,7 @@ token → 代码块静默落回 Chroma 自带的 github 灰。Tailwind 的 `@the
 
 29 shortcodes + 18 render hooks。A 级为主，量大但机械。
 
-**已完成**（实测文件数）：shortcode 26/29，hook 11/18。剩下的基本就是那七个
+**已完成**（实测文件数）：shortcode 26/29，hook 13/18。剩下的基本就是那六个
 带外部运行时的，加两个输出变体。
 
 **`filetree` `gallery` `checksums` `math` `chem` 不是 shortcode**，五个都是
@@ -133,6 +133,7 @@ Hugo 有没有内建。已交付。
 | 下载区 | `download`：三层校验，rolling/pinned 三处差异 |
 | 静态围栏 | `filetree`（构建时算列宽）、`gallery`、`checksums` |
 | 数学 | `math`/`chem`/`eq`/`render-passthrough`：内建 KaTeX，只发 MathML |
+| 图表 | `mermaid`（代码分割 + 进视口才 import）、`goat`（内建，构建时 SVG） |
 
 **本期建立的三件共享设施**（后续 24 个 shortcode 直接复用，不再重复造）：
 
@@ -199,13 +200,32 @@ Hugo 有没有内建。已交付。
    顺带修了资产表在窄屏让整页横滚 32px 的问题 —— `position: absolute` 的后代
    找不到定位祖先就逃出滚动壳的裁剪，给壳加 `position: relative`。
 6. 🔶 **带外部 runtime 的重头**（单独排，每个都要满足"未完整配置前不联网、
-   正常构建不下载任何东西"）：剩 `mermaid` `echarts` `markmap` `plantuml`
-   `swagger` `redoc` `asciinema`。`mermaid` 是其中最重的一个。
+   正常构建不下载任何东西"）：剩 `echarts` `markmap` `plantuml` `swagger`
+   `redoc` `asciinema`。
+
+   **`mermaid` 已交付，`goat` 顺带交付。** 查 Hugo 内建时发现 `diagrams.Goat`
+   是内建的（和 `transform.ToMath` 一样），ASCII 线框图构建时就成 SVG，零运行
+   时 —— 它本来不在这份清单上，等于白捡一个图表围栏。`mermaid` 确实没有内建。
+
+   `mermaid` 走代码分割而不是整份进仓库：`esbuild --splitting` 切成入口 1.4 KB
+   加 105 个 chunk，`IntersectionObserver` 在图进视口前 400px 才 `import()`。
+   有图的页面首屏只多 1.4 KB，图种各自的 chunk 按需下。整份打成单文件是
+   3.3 MB，一次性全下。**产物在 `static/js/mermaid/` 而不是 `assets/`** ——
+   chunk 是浏览器按相对路径直接取的，而 Hugo 只发布被 `resources.Get` 引用过
+   的 asset，放 assets/ 里那 105 个 chunk 一个都进不了 `public/`。代价是入口
+   拿不到 fingerprint 与 integrity；chunk 名自带内容哈希，换版本不会命中旧缓存。
+
+   **两处 SVG 尺寸问题，成因不同但表现一样（图被吹大好几倍）：**
+   goat 只给了 `viewBox` 没给 `width`/`height`，SVG 没有固有尺寸就撑满容器，
+   144 单位宽的图在 755px 正文里放大 5.2 倍，13.33px 的字变成 70px。
+   mermaid 那边是自己写的 `max-width: 100% !important` 压掉了它的内联
+   `max-width: <固有宽度>px` —— 那条内联样式是刹车不是溢出源，压掉之后固有宽
+   248px 的状态机被吹到 755px。**教训：内联样式先判断它在干什么，再决定压不压。**
 
    **`math`/`chem`/`eq` 已从这一批移出并交付**，它们不带运行时：
    `transform.ToMath` 是 Hugo 内建的 KaTeX。原先排进这里是假定数学一定要装
-   浏览器端 KaTeX。**教训：排批次前先查 Hugo 内建了什么。** 这一批剩下的七个
-   要逐个查一遍，别再把内建能力当成外部运行时排进来。
+   浏览器端 KaTeX。**教训：排批次前先查 Hugo 内建了什么。** 这条教训在这一批
+   连着生效两次（`math` 与 `goat`），剩下六个仍要逐个查。
 
    只发 MathML 不发 `htmlAndMathml`，因此不需要 katex.min.css 与 1.5 MB 字体
    （60 个文件）—— 三大引擎都原生渲染 MathML Core，同一条公式 260 字节对
@@ -277,17 +297,20 @@ landing 22 个 section、runtime 4 个已有。
 
 | 阶段 | 批数 | 估时 |
 |---|---|---|
-| 期 3 余下（7 个运行时 + 2 个输出变体） | ~10 | 9–10h |
+| 期 3 余下（6 个运行时 + 2 个输出变体） | ~8 | 7–8h |
 | 期 4 Landing | ~8 | 6h |
 | 期 5 搜索 / 面板 / 分享 | ~6 | 5h |
 | 期 6 输出 / 32 语言 / 审计 | ~7 | 5h |
-| **合计** | **~31** | **25–26h** |
+| **合计** | **~29** | **23–24h** |
 
 期 3 那一行改过两次。第一次 ~14 → ~17：交叉引用体系原按 1 批预算，设计过后
 至少 3 批（登记器 + 四个目标 + `xref` + 五个列表），`field`/`fields` 另占 1 批。
 第二次 ~17 → ~10：那 17 批里已经交付了 7 批，而 `math`/`chem`/`eq` 三个从"带
-外部运行时"降级成静态围栏，一批就够。**两次都不是范围变动，是计数纠正。**
-`mermaid` 单独按 2–3 批留着（chunk 切分 + 语言/配置身份 + 深浅色主题切换）。
+外部运行时"降级成静态围栏，一批就够。第三次 ~10 → ~8：`mermaid` 原按 2–3 批
+留着（chunk 切分 + 语言/配置身份 + 深浅色主题切换），实际一批做完 —— 代码分割
+是 esbuild 的一个开关，语言/配置身份对它不适用（chunk 里没有本地化字符串），
+主题切换是一个 MutationObserver。`goat` 是内建的，不占批。
+**三次都不是范围变动，是计数纠正。**
 
 **这个数字偏乐观的地方**：shortcode 不同质，"标记类一批吃好几个"这个假设只在
 三个上成立。实测：`badge`+`kbd` 一批（各 30–50 行 + 一个 CSS 文件），`param`
@@ -295,15 +318,15 @@ landing 22 个 section、runtime 4 个已有。
 （登记器 + 三张 Store 表 + 四件共享校验设施），`field`/`fields` 各 92 行另带
 五个 partial —— 这六个合起来至少 3 批，不是"一批吃掉好几个"。
 
-7 个带外部 runtime 的（`mermaid` `echarts` `markmap` `plantuml` `swagger`
-`redoc` `asciinema`）每个都要处理离线约束、版本锁、VENDOR.json 条目。上表按
-2 个/批算，偏紧。
+剩下 6 个带外部 runtime 的（`echarts` `markmap` `plantuml` `swagger` `redoc`
+`asciinema`）每个都要处理离线约束、版本锁、VENDOR.json 条目。上表按 2 个/批
+算，偏紧 —— 但 `mermaid` 那批走通之后，代码分割这条路是现成的。
 
 **偏保守的地方**：32 个 locale 是机械活，靠 sync 工具铺英文兜底，占不满一批。
-另外这七个运行时里也许还藏着 Hugo 内建能力 —— `math` 就是这么缩掉的，逐个查过
-才知道，别按"这类功能一般要装个库"预判。
+另外这六个运行时里也许还藏着 Hugo 内建能力 —— `math` 和 `goat` 都是这么缩掉
+的，逐个查过才知道，别按"这类功能一般要装个库"预判。
 
-结论：**25–26h，重量在期 3 的尾巴上，不在数量上。**
+结论：**23–24h，重量在期 3 的尾巴上，不在数量上。**
 
 ## 依赖关系
 
