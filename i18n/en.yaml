@@ -89,3 +89,8 @@ release_links: Release links
 # 没上传"是发布流程里的正常一段，读者需要知道的是等，不是出错了。
 download_channels: Download channels
 download_unpublished: Not published yet
+
+# 终端录屏。这条在播放器挂上之前一直可见，是 JS 没跑时唯一的出路 —— 因此说的
+# 是"下载这份录屏"而不是"你的浏览器不支持"：文件本身对读者有用，asciicast 是
+# 纯文本，在终端里 `asciinema play` 就能看。
+cast_download: Download the terminal recording

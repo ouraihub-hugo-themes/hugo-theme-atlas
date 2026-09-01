@@ -1,0 +1,13 @@
+{"version": 2, "width": 72, "height": 12, "timestamp": 1756700000, "title": "hugo build", "env": {"SHELL": "/bin/bash", "TERM": "xterm-256color"}}
+[0.1, "o", "\u001b[32m$\u001b[0m hugo --gc --minify\r\n"]
+[0.9, "o", "Start building sites …\r\n"]
+[1.4, "o", "hugo v0.165.0+extended\r\n\r\n"]
+[1.9, "o", "                   \u001b[1m| EN |\u001b[0m\r\n"]
+[2.0, "o", "-------------------+----+\r\n"]
+[2.1, "o", "  Pages            | 42 |\r\n"]
+[2.2, "o", "  Paginator pages  |  0 |\r\n"]
+[2.3, "o", "  Non-page files   |  3 |\r\n"]
+[2.4, "o", "  Static files     | 18 |\r\n"]
+[3.1, "o", "\r\nTotal in 214 ms\r\n"]
+[3.6, "o", "\u001b[32m$\u001b[0m "]
+[5.0, "o", ""]

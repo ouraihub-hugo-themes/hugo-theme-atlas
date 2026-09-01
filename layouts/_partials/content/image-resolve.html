@@ -4,13 +4,8 @@
      载入后把下面的内容顶下去 —— 那是最刺眼的一类布局抖动，而修它只需要在
      构建时读一次资源。
 
-     三个查找层，按 Hugo 的资源模型：
-       1. 页面资源（图片与 index.md 同目录）
-       2. 所在 section 的资源（一篇普通页引用 section 目录下的图）
-       3. 全局 assets/
-
-     远程 URL 不抓取：构建过程不该依赖网络，那会让离线构建失败、让 CI 变慢，
-     且对方换了图你不会知道。远程图没有固有尺寸，作者要自己给 width/height。
+     三层查找走 content/resource-lookup.html（录屏那边用同一份）。远程图没有
+     固有尺寸，作者要自己给 width/height。
 
      入参 dict：src、page、position、name、alt、decorative
      返回 dict：src、width、height、alt、decorative、kind、resource */ -}}
@@ -22,28 +17,12 @@
   "value" .src "kind" "image") -}}
 {{- $src := $validated.href -}}
 {{- $source := $validated.raw -}}
-{{- $kind := "static" -}}
-{{- $resource := false -}}
+{{- $found := partial "content/resource-lookup.html" (dict
+  "value" $source "page" $page "scheme" $validated.scheme) -}}
+{{- $kind := $found.kind -}}
+{{- $resource := $found.resource -}}
 {{- $width := 0 -}}
 {{- $height := 0 -}}
-{{- if $validated.scheme -}}
-  {{- $kind = "remote" -}}
-{{- else if $source -}}
-  {{- $lookup := strings.TrimPrefix "/" $source -}}
-  {{- with $page.Resources.Get $lookup -}}
-    {{- $resource = . -}}
-    {{- $kind = "page" -}}
-  {{- else -}}
-    {{- with $page.CurrentSection -}}
-      {{- if ne . $page -}}
-        {{- with .Resources.Get $lookup }}{{ $resource = . }}{{ $kind = "section" }}{{ end -}}
-      {{- end -}}
-    {{- end -}}
-    {{- if not $resource -}}
-      {{- with resources.Get $lookup }}{{ $resource = . }}{{ $kind = "global" }}{{ end -}}
-    {{- end -}}
-  {{- end -}}
-{{- end -}}
 {{- if $resource -}}
   {{- if not (reflect.IsImageResource $resource) -}}
     {{- warnf "%s: src %q resolved to a non-image resource at %s; dropping the image" $name $source $position -}}

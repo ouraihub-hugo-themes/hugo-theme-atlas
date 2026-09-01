@@ -1,0 +1,84 @@
+/* 终端录屏。播放器自带的样式在 vendor/asciinema-player.css，这里只做两件事：
+ * 把它接进主题的排版，以及给"还没挂上"和"挂失败了"两个状态一个样子。
+ */
+
+@utility td-cast {
+  display: block;
+  margin-block: 1.5rem;
+}
+
+/* 挂上之前给挂载点一个占位框，否则播放器到达时把后面的正文往下推，读者正在
+ * 读的那一行跳走。12rem 是十几行终端的高度，与常见录屏的 rows 同量级 ——
+ * 不按 rows 精确算：那要把行高与字号从播放器里复制过来，它升级一次就不准了。 */
+.td-cast:not([data-td-cast-ready]) .td-cast-out {
+  min-height: 12rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-code);
+  background: var(--color-pre);
+}
+
+/* 回落链接：JS 没跑、播放器挂失败、录屏取不到时它是唯一的出路。
+ * 默认可见 —— 反过来写的话，JS 没跑时读者看到的是一个空框。 */
+.td-cast-fallback {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  font-size: 0.875rem;
+  color: var(--color-ink-muted);
+}
+
+.td-cast[data-td-cast-ready] .td-cast-fallback {
+  display: none;
+}
+
+/* 挂失败时留一条警示边，读者知道这里本该是一段录屏。 */
+.td-cast[data-td-cast-failed] .td-cast-fallback {
+  border-inline-start: 3px solid var(--color-status-danger);
+}
+
+figure.td-cast > figcaption {
+  margin-block-start: 0.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-ink-muted);
+}
+
+/* 播放器的字号跟随主题的等宽字体大小，不用它自带的绝对值 ——
+ * 同一页上录屏里的字和代码块的字该是一套。 */
+.td-cast .ap-player {
+  font-size: 0.8125rem;
+}
+
+/* **配色不跟随主题，浅色页面上录屏也是深色的。** 这不是漏了：录屏里的颜色是
+ * ANSI 转义码，程序按"背景是深色"选的前景色 —— 把背景刷成浅色，绿色的提示符和
+ * 亮蓝的路径在白底上就读不出来了，而那是录屏原本的样子，主题改不动它。一个终端
+ * 窗口在浅色文档里是深色的，读者对此没有困惑。
+ *
+ * 播放器自带九套配色（asciinema、dracula、nord、solarized-light…），要换的话
+ * 是往 .ap-player 上加一个 asciinema-player-theme-* 类。等有人真需要再开成参数。 */
+
+/* 打印：录屏在纸上是静态的一帧或什么都没有，回落链接才是有用的东西。 */
+@media print {
+  .td-cast .ap-player {
+    display: none;
+  }
+
+  .td-cast[data-td-cast-ready] .td-cast-fallback {
+    display: block;
+  }
+
+  .td-cast {
+    break-inside: avoid;
+  }
+}
+
+/* 减少动效：关掉播放器自己的界面过渡。
+ *
+ * **自动播放不在这里关，在 JS 里关**（见 src/ts/asciinema.ts 的 readOptions）。
+ * 一段自己动起来的终端录屏就是动效，而 CSS 关不掉它 —— 播放是脚本行为，
+ * `animation: none` 对它没有作用。 */
+@media (prefers-reduced-motion: reduce) {
+  .td-cast .ap-player * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

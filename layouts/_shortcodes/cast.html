@@ -1,0 +1,103 @@
+{{- /* 终端录屏。`src` 指向一份 asciicast（.cast）文件，页面资源或远程 URL 都行。
+
+     参数：src（必需）、caption、poster、start、autoplay、preload、loop、
+           speed、idle、cols、rows
+
+     播放选项与播放器的 API 一对一，不另起一套名字：作者照着 asciinema 的文档
+     就能用。数值与布尔在这里就校验一遍，而不是全推给浏览器 —— 拼错的参数在
+     构建时说出来，作者才知道自己写错了。 */ -}}
+{{- $bools := slice "autoplay" "preload" "loop" -}}
+{{- $numbers := slice "speed" "idle" "cols" "rows" -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "allowed" (slice
+  "src" "caption" "poster" "start" | append $bools | append $numbers)) -}}
+{{- $at := .Position -}}
+{{- $params := dict -}}
+{{- if .IsNamedParams }}{{ $params = .Params }}{{ end -}}
+
+{{- $src := "" -}}
+{{- $kind := "" -}}
+{{- if isset $params "src" -}}
+  {{- $url := partial "content/url.html" (dict "name" .Name "parameter" "src"
+    "position" $at "value" (.Get "src") "kind" "image") -}}
+  {{- if $url.valid -}}
+    {{- $found := partial "content/resource-lookup.html" (dict
+      "value" $url.raw "page" .Page "scheme" $url.scheme) -}}
+    {{- $kind = $found.kind -}}
+    {{- with $found.resource -}}
+      {{- $src = .RelPermalink -}}
+    {{- else -}}
+      {{- /* 查不到就按 static/ 里的文件走：录屏常常是构建脚本生成后直接丢进
+             static/ 的，那时它不是 resource。远程 URL 同理，原样用。 */ -}}
+      {{- $src = $url.href -}}
+    {{- end -}}
+  {{- end -}}
+{{- else -}}
+  {{- warnf "shortcode %q requires src at %s; rendering nothing" .Name $at -}}
+{{- end -}}
+
+{{- $opts := dict -}}
+{{- range $name := $bools -}}
+  {{- if isset $params $name -}}
+    {{- $value := $.Get $name -}}
+    {{- /* Hugo 把无引号的 true/false 解析成布尔，带引号的还是字符串，
+           两种写法都得认。 */ -}}
+    {{- if in (slice true "true") $value -}}
+      {{- $opts = merge $opts (dict $name "true") -}}
+    {{- else if not (in (slice false "false") $value) -}}
+      {{- warnf "shortcode %q: %s must be true or false at %s; ignoring it" $.Name $name $at -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- range $name := $numbers -}}
+  {{- if isset $params $name -}}
+    {{- $value := strings.TrimSpace (printf "%v" ($.Get $name)) -}}
+    {{- /* cols/rows 是整数格，speed/idle 可以是小数。0 和负数都无意义：
+           速度 0 的录屏永远播不完，0 列的终端画不出东西。 */ -}}
+    {{- $pattern := cond (in (slice "cols" "rows") $name) `^[1-9][0-9]*$` `^(0*[1-9][0-9]*(\.[0-9]+)?|0*0?\.[0-9]*[1-9][0-9]*)$` -}}
+    {{- if findRE $pattern $value -}}
+      {{- $opts = merge $opts (dict $name $value) -}}
+    {{- else -}}
+      {{- warnf "shortcode %q: %s must be a positive number at %s; ignoring it" $.Name $name $at -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* poster 与 start 是播放器自己的语法（`npt:1:23`、`data:text/plain,...`），
+       主题不解析它们，只把空白挡掉 —— 带换行的 data 属性会把标签写坏。 */ -}}
+{{- range $name := slice "poster" "start" -}}
+  {{- if isset $params $name -}}
+    {{- with $value := strings.TrimSpace (printf "%v" ($.Get $name)) -}}
+      {{- if findRE `[\x00-\x1f\x7f]` $value -}}
+        {{- warnf "shortcode %q: %s must not contain control characters at %s; ignoring it" $.Name $name $at -}}
+      {{- else -}}
+        {{- $opts = merge $opts (dict $name $value) -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $caption := "" -}}
+{{- if isset $params "caption" }}{{ $caption = strings.TrimSpace (printf "%v" (.Get "caption")) }}{{ end -}}
+
+{{- with $src -}}
+  {{- $.Page.Store.Set "hasCast" true -}}
+{{- /* 属性名要写死，不能从循环里拼出来：Go 的模板转义按上下文工作，属性名是
+       动态的它就判不出这个位置是什么，于是把值换成 ZgotmplZ —— `poster` 上正
+       是这样，输出里会出现 `data-td-cast-zgotmplz`。 */ -}}
+<figure class="td-cast" data-td-cast data-td-cast-src="{{ . }}"
+  {{- with $opts.autoplay }} data-td-cast-autoplay="{{ . }}"{{ end }}
+  {{- with $opts.preload }} data-td-cast-preload="{{ . }}"{{ end }}
+  {{- with $opts.loop }} data-td-cast-loop="{{ . }}"{{ end }}
+  {{- with $opts.speed }} data-td-cast-speed="{{ . }}"{{ end }}
+  {{- with $opts.idle }} data-td-cast-idle="{{ . }}"{{ end }}
+  {{- with $opts.cols }} data-td-cast-cols="{{ . }}"{{ end }}
+  {{- with $opts.rows }} data-td-cast-rows="{{ . }}"{{ end }}
+  {{- with $opts.poster }} data-td-cast-poster="{{ . }}"{{ end }}
+  {{- with $opts.start }} data-td-cast-start="{{ . }}"{{ end }}>
+  <div class="td-cast-out" data-td-cast-out></div>
+  <p class="td-cast-fallback"><a href="{{ . }}"{{ if eq $kind "remote" }} rel="noopener"{{ end }} download>{{ i18n "cast_download" }}</a></p>
+  {{- with $caption }}
+  <figcaption>{{ . }}</figcaption>
+  {{- end }}
+</figure>
+{{- end -}}

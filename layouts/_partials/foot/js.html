@@ -9,16 +9,19 @@
 {{- if .Store.Get "hasCodeRuntime" }}{{ $runtimes = $runtimes | append "code" }}{{ end -}}
 {{- if .Store.Get "hasTabs" }}{{ $runtimes = $runtimes | append "tabs" }}{{ end -}}
 {{- if .Store.Get "hasAssetList" }}{{ $runtimes = $runtimes | append "assets" }}{{ end -}}
-{{- /* mermaid 走 static/ 而不是 assets/dist/，因为它是唯一开代码分割的 bundle：
-       入口旁边还有一百多个 chunk，浏览器按入口里的相对路径直接取它们，不经过
-       Hugo 的资源管线。放 assets/ 的话那些 chunk 一个都不会进 public/ —— 页面
-       上是 404，图一张都画不出来。
+{{- /* 下面两个走 static/ 而不是 assets/dist/，因为它们开了代码分割：入口旁边
+       还有一堆 chunk，浏览器按入口里的相对路径直接取它们，不经过 Hugo 的资源
+       管线。放 assets/ 的话那些 chunk 一个都不会进 public/ —— 页面上是 404，
+       运行时加载到一半就断。
 
        因此也没有 fingerprint 与 integrity：static/ 里的文件不是 resource。
-       chunk 名字自带内容哈希，换版本后旧 chunk 不会被缓存命中；入口本身只有
-       1.9 KB，它没有指纹的代价是一次 304。 */ -}}
+       chunk 名字自带内容哈希，换版本后旧 chunk 不会被缓存命中；入口本身一两
+       KB，它没有指纹的代价是一次 304。 */ -}}
 {{- if .Store.Get "hasMermaid" -}}
   <script src="{{ "js/mermaid/mermaid.js" | relURL }}" type="module"></script>
+{{- end -}}
+{{- if .Store.Get "hasCast" -}}
+  <script src="{{ "js/asciinema/asciinema.js" | relURL }}" type="module"></script>
 {{- end -}}
 {{- range $runtimes -}}
   {{- with resources.Get (printf "dist/%s.js" .) -}}

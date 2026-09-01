@@ -20,6 +20,12 @@
 @import "./figure.css";
 @import "./math.css";
 @import "./diagram.css";
+
+/* 播放器自带的样式，跟在 cast.css 前面 —— 主题的规则要能覆盖它。
+   不按页装载：19 KB 对 86 KB 的包，而为一个组件引入第二套 CSS 装载机制
+   （像 mermaid 的 JS 那样按 Store 标记走 static/）不值。 */
+@import "./vendor/asciinema-player.css";
+@import "./cast.css";
 @import "./gallery.css";
 @import "./filetree.css";
 @import "./card.css";

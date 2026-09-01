@@ -61,7 +61,7 @@ sequenceDiagram
     participant 浏览器
     participant 观察器 as IntersectionObserver
     participant mermaid
-    浏览器->>观察器: 页面加载完（此时只下了 1.9 KB）
+    浏览器->>观察器: 页面加载完（此时只下了 1.4 KB）
     Note over 观察器: 图还在视口外，什么都不做
     浏览器->>观察器: 读者往下滚
     观察器->>mermaid: 距离 400px，开始 import

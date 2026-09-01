@@ -1,0 +1,36 @@
+{{- /* 按 Hugo 的资源模型查一个相对路径，三层：
+
+       1. 页面资源（与 index.md 同目录）
+       2. 所在 section 的资源（一篇普通页引用 section 目录下的文件）
+       3. 全局 assets/
+
+     远程 URL 不抓取，原样返回：构建过程不该依赖网络 —— 那会让离线构建失败、
+     让 CI 变慢，且对方换了文件你不会知道。
+
+     只做查找，不校验类型：调用方知道自己要的是图片还是录屏。
+
+     入参 dict：value（已过 content/url.html 的 raw）、page、scheme
+     返回 dict：resource（false 表示没找到）、kind（remote|page|section|global|static） */ -}}
+{{- $page := .page -}}
+{{- $source := .value | default "" -}}
+{{- $resource := false -}}
+{{- $kind := "static" -}}
+{{- if .scheme -}}
+  {{- $kind = "remote" -}}
+{{- else if $source -}}
+  {{- $lookup := strings.TrimPrefix "/" $source -}}
+  {{- with $page.Resources.Get $lookup -}}
+    {{- $resource = . -}}
+    {{- $kind = "page" -}}
+  {{- else -}}
+    {{- with $page.CurrentSection -}}
+      {{- if ne . $page -}}
+        {{- with .Resources.Get $lookup }}{{ $resource = . }}{{ $kind = "section" }}{{ end -}}
+      {{- end -}}
+    {{- end -}}
+    {{- if not $resource -}}
+      {{- with resources.Get $lookup }}{{ $resource = . }}{{ $kind = "global" }}{{ end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return dict "resource" $resource "kind" $kind -}}
