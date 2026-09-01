@@ -13,6 +13,18 @@ description = "Documentation theme. TypeScript + Tailwind CSS, compiled to plain
 # 取它都走站点配置。见 docs/components/marker。
 product_version = "0.1.0"
 
+# PlantUML 服务器。不配的话 ```plantuml 围栏只渲染源码 —— 主题不给它默认值，
+# 因为默认指向公共服务器等于让每个站点把作者的图发给第三方。
+#
+# 这里配公共服务器是为了让示例站演示"配好之后长什么样"。自托管的话把地址换成
+# 自己那台，其余不变。图是读者的浏览器去取的，构建时不联网。
+#
+# 表头必须在 [params] 的所有顶层键之后 —— TOML 里表头一开，后续键就归它，
+# 放在前面会把 product_version 变成 params.ui.plantuml.product_version。
+[params.ui.plantuml]
+server = "https://www.plantuml.com/plantuml"
+format = "svg"
+
 # navbar 菜单。不配也能跑 —— navbar 会退回顶层 section。这里显式配置是
 # 为了让两条路径都有验证覆盖。
 [[menu.main]]

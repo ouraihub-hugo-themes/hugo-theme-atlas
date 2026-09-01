@@ -103,7 +103,7 @@ token → 代码块静默落回 Chroma 自带的 github 灰。Tailwind 的 `@the
 
 29 shortcodes + 18 render hooks。A 级为主，量大但机械。
 
-**已完成**（实测文件数）：shortcode 26/29，hook 13/18。剩下的基本就是那六个
+**已完成**（实测文件数）：shortcode 26/29，hook 14/18。剩下的基本就是那五个
 带外部运行时的，加两个输出变体。
 
 **`filetree` `gallery` `checksums` `math` `chem` 不是 shortcode**，五个都是
@@ -134,6 +134,7 @@ Hugo 有没有内建。已交付。
 | 静态围栏 | `filetree`（构建时算列宽）、`gallery`、`checksums` |
 | 数学 | `math`/`chem`/`eq`/`render-passthrough`：内建 KaTeX，只发 MathML |
 | 图表 | `mermaid`（代码分割 + 进视口才 import）、`goat`（内建，构建时 SVG） |
+| UML | `plantuml`：`~h` 十六进制 URL，零 JS，默认关着 |
 
 **本期建立的三件共享设施**（后续 24 个 shortcode 直接复用，不再重复造）：
 
@@ -200,8 +201,24 @@ Hugo 有没有内建。已交付。
    顺带修了资产表在窄屏让整页横滚 32px 的问题 —— `position: absolute` 的后代
    找不到定位祖先就逃出滚动壳的裁剪，给壳加 `position: relative`。
 6. 🔶 **带外部 runtime 的重头**（单独排，每个都要满足"未完整配置前不联网、
-   正常构建不下载任何东西"）：剩 `echarts` `markmap` `plantuml` `swagger`
-   `redoc` `asciinema`。
+   正常构建不下载任何东西"）：剩 `echarts` `markmap` `swagger` `redoc`
+   `asciinema`。
+
+   **交付形态分级**（实测体积定的，不是按类别猜的）：`asciinema`（184 KB）、
+   `echarts` 按需（530 KB）、`markmap`（733 KB）vendored 进仓库走代码分割；
+   `swagger-ui`（1.5 MB）与 `redoc`（1.1 MB）只发钩子与文档，作者自己给 URL
+   或自托管 —— 两者是同一份 OpenAPI 的两个渲染器，一个主题带两个 2.6 MB 的
+   副本是重复。全部 vendored 会让仓库从 3.3 MB 涨到 ~9 MB。
+
+   **`plantuml` 已交付，零 JS。** 它的渲染器是 Java，没有浏览器实现，图只能
+   由服务器画 —— 于是不是运行时问题而是 URL 问题：服务器接受 `~h` 前缀的
+   十六进制编码（不压缩），`printf "%x"` 在模板里就能算。图是一个普通
+   `<img>`，打印、无 JS、爬虫都一样在。默认关着：不给 `server` 默认值，因为
+   默认指向公共服务器等于让每个装了主题的站点把作者的图发给第三方。
+
+   没选默认的 deflate + 自定义字母表 base64，是因为它在 Hugo 模板里没有实现
+   路径（没有 deflate 函数，也没有能改字母表的 base64）。代价是 URL 随图变长，
+   几十行的图约两千字符，仍在所有浏览器与服务器的限制之内。
 
    **`mermaid` 已交付，`goat` 顺带交付。** 查 Hugo 内建时发现 `diagrams.Goat`
    是内建的（和 `transform.ToMath` 一样），ASCII 线框图构建时就成 SVG，零运行
@@ -318,13 +335,13 @@ landing 22 个 section、runtime 4 个已有。
 （登记器 + 三张 Store 表 + 四件共享校验设施），`field`/`fields` 各 92 行另带
 五个 partial —— 这六个合起来至少 3 批，不是"一批吃掉好几个"。
 
-剩下 6 个带外部 runtime 的（`echarts` `markmap` `plantuml` `swagger` `redoc`
-`asciinema`）每个都要处理离线约束、版本锁、VENDOR.json 条目。上表按 2 个/批
-算，偏紧 —— 但 `mermaid` 那批走通之后，代码分割这条路是现成的。
+剩下 5 个带外部 runtime 的（`echarts` `markmap` `swagger` `redoc`
+`asciinema`）要处理离线约束、版本锁、VENDOR.json 条目 —— 但只有前三个需要，
+`swagger`/`redoc` 不入库就没有版本可锁。`mermaid` 那批走通之后代码分割是现成的。
 
 **偏保守的地方**：32 个 locale 是机械活，靠 sync 工具铺英文兜底，占不满一批。
-另外这六个运行时里也许还藏着 Hugo 内建能力 —— `math` 和 `goat` 都是这么缩掉
-的，逐个查过才知道，别按"这类功能一般要装个库"预判。
+另外「先查有没有更省的路」这条已经生效三次：`math` 与 `goat` 是 Hugo 内建，
+`plantuml` 不需要任何运行时。别按"这类功能一般要装个库"预判。
 
 结论：**23–24h，重量在期 3 的尾巴上，不在数量上。**
 

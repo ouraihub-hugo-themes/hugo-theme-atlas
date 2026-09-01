@@ -16,6 +16,13 @@
   margin-block: 1.5rem;
 }
 
+@utility td-plantuml {
+  display: block;
+  margin-block: 1.5rem;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+}
+
 /* 渲染出来的 SVG 居中，并且不许超出容器宽度。
  *
  * **这里不能加 !important。** mermaid 给 <svg> 写的是 `width="100%"` 加内联
@@ -28,7 +35,8 @@
  * goat 走的是后一种：它只有 width/height 属性，靠这条等比缩下去。
  */
 .td-mermaid-out svg,
-.td-goat-svg {
+.td-goat-svg,
+.td-plantuml-img {
   display: block;
   height: auto;
   max-width: 100%;
@@ -60,7 +68,8 @@
 
 /* 源码：渲染成功后隐藏，失败或没跑 JS 时留在页面上。
    默认可见 —— 反过来写的话，JS 没跑时读者看到的是空白。 */
-.td-mermaid-source {
+.td-mermaid-source,
+.td-plantuml-source {
   margin: 0;
   padding: 0.8rem 1rem;
   border: 1px solid var(--color-border);
@@ -82,8 +91,19 @@
   border-inline-start: 3px solid var(--color-status-danger);
 }
 
+/* plantuml 的源码显隐由构建时决定，不由 JS：配了服务器就有 <img>，源码退到
+ * 幕后；没配就只有源码。
+ *
+ * 没有"渲染失败"这个状态 —— 图是一个普通 <img>，加载不出来时浏览器显示 alt，
+ * 这与站点里其他图的行为一致，不需要主题再加一层。而 onerror 是唯一能探到
+ * 失败的钩子，内联事件处理器是注入面（attributes.html 一律丢弃它们）。 */
+.td-plantuml:not([data-td-plantuml-unconfigured]) .td-plantuml-source {
+  display: none;
+}
+
 figure.td-mermaid > figcaption,
-figure.td-goat > figcaption {
+figure.td-goat > figcaption,
+figure.td-plantuml > figcaption {
   margin-block-start: 0.5rem;
   text-align: center;
   font-size: 0.875rem;
@@ -98,7 +118,8 @@ figure.td-goat > figcaption {
   }
 
   .td-mermaid,
-  .td-goat {
+  .td-goat,
+  .td-plantuml {
     overflow-x: visible;
     break-inside: avoid;
   }

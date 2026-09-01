@@ -58,6 +58,13 @@ try {
       "block = true",
       "[markup.highlight]",
       "noClasses = false",
+      // 站点级配置的非法值从用例正文里够不到 —— params.ui.* 不是页面属性。
+      // 这里故意配坏 plantuml：地址是相对路径（PlantUML 服务器只能是绝对
+      // 地址），format 不在白名单。两条各自 warn，而围栏退回"未配置"那条路，
+      // 因此 tests/invalid/plantuml.md 里的围栏同时验证了回落行为。
+      "[params.ui.plantuml]",
+      'server = "/not-a-server"',
+      'format = "gif"',
       "",
     ].join("\n"),
   );

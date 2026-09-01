@@ -1,0 +1,43 @@
+{{- /* 解析 PlantUML 服务器地址。没配就是关着的。
+
+     这是主题里唯一一个"渲染要靠网络"的围栏：PlantUML 的渲染器是 Java，没有
+     能塞进浏览器的实现，图只能由一台服务器画。因此它默认不开 —— 契约要求
+     主题的联网特性在完整配置前不联网，而"默认指向 plantuml.com"会让每个装了
+     主题的站点把作者的图悄悄发给第三方。
+
+     配置：
+       [params.ui.plantuml]
+       server = "https://www.plantuml.com/plantuml"   # 或自托管地址
+       format = "svg"                                  # svg | png（默认 svg）
+
+     入参 dict：position（出错位置）
+     返回 dict：server（无尾斜杠，空串表示未配置）、format */ -}}
+{{- $cfg := site.Params.ui.plantuml | default dict -}}
+{{- $position := .position | default "unknown position" -}}
+{{- $server := "" -}}
+{{- $format := "svg" -}}
+
+{{- with $cfg.server -}}
+  {{- $policy := partial "content/url.html" (dict
+    "value" . "kind" "image" "parameter" "params.ui.plantuml.server"
+    "position" $position "name" "plantuml"
+  ) -}}
+  {{- /* 必须是绝对地址：站内相对路径没有 PlantUML 服务器可言，作者写了它
+         说明配错了，而不是想让图去找当前站点。 */ -}}
+  {{- if and $policy.valid $policy.external -}}
+    {{- $server = strings.TrimSuffix "/" $policy.raw -}}
+  {{- else if $policy.valid -}}
+    {{- warnf "plantuml: params.ui.plantuml.server must be an absolute http(s) URL at %s; diagrams stay unrendered" $position -}}
+  {{- end -}}
+{{- end -}}
+
+{{- with $cfg.format -}}
+  {{- $want := lower (printf "%v" .) -}}
+  {{- if in (slice "svg" "png") $want -}}
+    {{- $format = $want -}}
+  {{- else -}}
+    {{- warnf "plantuml: unsupported params.ui.plantuml.format %q at %s (allowed: svg, png); using svg" $want $position -}}
+  {{- end -}}
+{{- end -}}
+
+{{- return dict "server" $server "format" $format -}}

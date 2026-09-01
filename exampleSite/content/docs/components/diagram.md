@@ -1,16 +1,18 @@
 ---
 title: 图表
 weight: 108
-description: mermaid 浏览器端渲染，goat 构建时渲染成 SVG。
+description: mermaid 浏览器端渲染，goat 构建时出 SVG，plantuml 构建时出 URL。
 ---
 
-两种图表围栏，取舍不同：
+三种图表围栏，取舍不同：
 
 - **`goat`** 构建时就渲染成 SVG，零运行时、零依赖（Hugo 内建 `diagrams.Goat`）。
   画得了线、框、箭头。没有 JS、没有网络、打印时都一样在。
 - **`mermaid`** 浏览器端渲染，图种齐全（流程、时序、类、状态、ER、甘特、饼、
   思维导图…）。代价是要加载库 —— 但**只在图滚进视口时才加载**，页面本身只多
-  1.9 KB。
+  1.4 KB。
+- **`plantuml`** 构建时算出 URL，浏览器取一张图片，零 JS。UML 的图种最全，
+  但要一台服务器 —— **默认关着**，配了 `params.ui.plantuml.server` 才渲染。
 
 ## goat
 
@@ -97,6 +99,32 @@ stateDiagram-v2
 图里的标签是 ASCII，`caption` 是中文 —— caption 走的是普通 HTML 文本，不受
 字符网格限制。
 
+## plantuml
+
+UML 图。构建时算出 URL，浏览器只发一个 `<img>` —— 零 JS，打印和无 JS 时都在。
+
+```plantuml {caption="时序图" num="3"}
+Alice -> Bob: 请求
+Bob --> Alice: 响应
+Bob -> Bob: 自己记一笔
+```
+
+`@startuml`/`@enduml` 可以省，写不写都行。
+
+**默认关着。** 没配 `params.ui.plantuml.server` 时这个围栏只渲染源码 —— 主题
+不给它默认值，因为默认指向公共服务器等于让每个装了主题的站点把作者的图发给
+第三方，而图里可能是内部系统的架构。配置：
+
+```toml
+[params.ui.plantuml]
+server = "https://www.plantuml.com/plantuml"   # 或自托管地址
+format = "svg"                                  # svg | png
+```
+
+它和其他运行时不同的地方：PlantUML 的渲染器是 Java，没有能塞进浏览器的实现，
+图只能由一台服务器画。所以这是主题里唯一"渲染要靠网络"的围栏 —— 但联网的是
+读者的浏览器取图片，构建时什么都不下载。
+
 ## 没画出来会怎样
 
 mermaid 的源码**留在页面上**，渲染成功后才隐藏它。JS 没跑、chunk 没下下来、
@@ -109,6 +137,10 @@ mermaid 的源码**留在页面上**，渲染成功后才隐藏它。JS 没跑�
 graph TD
     A --> 这里少了右括号[
 ```
+
+`plantuml` 同理留着源码，但没有"渲染失败"这个状态：图是普通 `<img>`，取不到时
+浏览器显示 `alt`，与站点里其他图一致。探测失败只能靠 `onerror`，而内联事件
+处理器是注入面，主题一律不输出。
 
 ## 图表列表
 
