@@ -1,0 +1,22 @@
+{{- /* 交叉引用目标的编号。用不了的值 warn 并回空串 —— 调用方渲染一个不带编号
+     的组件，而不是让构建停下。
+
+     字符集 `[0-9A-Za-z.-]`：编号要能进 id（`fig-2.3`），也要能是 `A.1`、
+     `3-bis` 这类人写的形式。空格与引号排除掉，它们进 id 就是坏的 HTML。
+
+     入参 dict：name（消息里的组件名）、value、position */ -}}
+{{- $name := .name | default "book component" -}}
+{{- $position := .position | default "unknown position" -}}
+{{- $num := "" -}}
+{{- if ne (printf "%T" .value) "string" -}}
+  {{- warnf "shortcode %q: num must be a string at %s; dropping it" $name $position -}}
+{{- else -}}
+  {{- $num = strings.TrimSpace .value -}}
+  {{- if not $num -}}
+    {{- warnf "shortcode %q: num must not be empty at %s; dropping it" $name $position -}}
+  {{- else if not (findRE `^[0-9A-Za-z.-]+$` $num) -}}
+    {{- warnf "shortcode %q: num must match [0-9A-Za-z.-]+; got %q at %s; dropping it" $name $num $position -}}
+    {{- $num = "" -}}
+  {{- end -}}
+{{- end -}}
+{{- return $num -}}

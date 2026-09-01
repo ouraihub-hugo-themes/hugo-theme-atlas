@@ -1,0 +1,31 @@
+{{- /* 输出特征图。模式与图源由 shell/featured.html 解析，这里只负责标记。
+
+     入参 dict：mode、image
+
+     banner 在文档流里，有 alt 与固有尺寸；wash 与 hero 是背景装饰，一律
+     aria-hidden + alt=""：它们承载的信息已经由标题和正文给出，让屏幕阅读器
+     再读一遍图片说明只是噪音。装饰图也不该进无障碍树。 */ -}}
+{{- $mode := .mode -}}
+{{- $image := .image -}}
+{{- if and $mode $image -}}
+  {{- if eq $mode "banner" -}}
+<figure class="td-featured-banner">
+  <img src="{{ $image.src }}" alt="{{ $image.alt }}"
+    {{- with $image.width }} width="{{ . }}"{{ end }}
+    {{- with $image.height }} height="{{ . }}"{{ end }}
+    {{- /* 特征图在首屏，不 lazy —— 懒加载首屏图片会推迟 LCP。 */}}
+    decoding="async">
+  {{- with $image.alt }}
+  <figcaption class="td-featured-banner-byline">{{ . }}</figcaption>
+  {{- end }}
+</figure>
+  {{- else -}}
+    {{- /* wash 与 hero 结构相同，只差类名与几何。 */ -}}
+<div class="td-featured-{{ $mode }}" aria-hidden="true">
+  <img src="{{ $image.src }}" alt=""
+    {{- with $image.width }} width="{{ . }}"{{ end }}
+    {{- with $image.height }} height="{{ . }}"{{ end }}
+    decoding="async">
+</div>
+  {{- end -}}
+{{- end -}}

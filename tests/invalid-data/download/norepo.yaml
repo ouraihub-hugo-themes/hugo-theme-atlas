@@ -1,0 +1,9 @@
+# pinned 渠道有链接但没有 repo：拼出来的地址会是 https://github.com//...，
+# 一个能点的死链。整个渠道跳过。
+version: "1.0.0"
+channels:
+  - id: pinned
+    kind: pinned
+    title: 没有 repo
+    checksums: |
+      9f1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f8  a.tar.gz

@@ -1,0 +1,45 @@
+{{- /* 站点 navbar。菜单来自 Hugo 原生 [[menu.main]]。
+       未配置菜单时退回顶层 section —— 一个有内容没配菜单的站点应当拿到
+       一个可用的 navbar，而不是一条空横条。 */ -}}
+{{- $items := .Site.Menus.main -}}
+{{- $sections := slice -}}
+{{- if not $items -}}
+  {{- range .Site.Home.Sections -}}
+    {{- $sections = $sections | append . -}}
+  {{- end -}}
+{{- end -}}
+<header class="td-navbar">
+  <div class="td-navbar-inner mx-auto max-w-[100rem] px-4 lg:px-8">
+    <a class="td-navbar-brand" href="{{ .Site.Home.RelPermalink }}">
+      {{- with resources.Get "img/logo.svg" -}}
+        <img class="td-navbar-logo" src="{{ .RelPermalink }}" alt="" width="22" height="22">
+      {{- end }}
+      {{ .Site.Title }}
+    </a>
+
+    <nav class="td-navbar-menu" aria-label="{{ i18n "main_nav" }}">
+      <ul class="td-navbar-menu-list">
+        {{- range $items }}
+          {{- /* 顶层菜单项在其整个子树里都算当前位置，所以用 aria-current="true"
+                 而不是 "page" —— 后者断言"这就是当前页面"，只有叶子链接配得上。 */ -}}
+          {{- $active := or ($.IsMenuCurrent "main" .) ($.HasMenuCurrent "main" .) }}
+          <li>
+            <a class="td-navbar-link" href="{{ .URL }}"
+               {{ if $active }}aria-current="true"{{ end }}>{{ .Name }}</a>
+          </li>
+        {{- end }}
+        {{- range $sections }}
+          {{- $active := or (eq $ .) ($.IsDescendant .) }}
+          <li>
+            <a class="td-navbar-link" href="{{ .RelPermalink }}"
+               {{ if $active }}aria-current="true"{{ end }}>{{ .LinkTitle }}</a>
+          </li>
+        {{- end }}
+      </ul>
+    </nav>
+
+    <div class="td-navbar-util">
+      {{ partial "shell/theme-toggle.html" . }}
+    </div>
+  </div>
+</header>

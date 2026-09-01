@@ -1,0 +1,13 @@
+node_modules/
+public/
+resources/
+.hugo_build.lock
+exampleSite/public/
+exampleSite/resources/
+
+# assets/dist/ 是编译产物，但要提交 —— 用户直接消费，不装 Node。
+# 不参与 diff，见 .gitattributes。
+
+# sourcemap 例外：只服务本地 pnpm dev，消费者拿不到 src/ 也用不上，
+# 而且体积是产物本身的三倍。
+*.map

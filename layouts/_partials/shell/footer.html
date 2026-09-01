@@ -1,0 +1,56 @@
+{{- /* 站点页脚。链接列来自 [[menu.footer]]，用每项的 params.column 分组 ——
+       Hugo 的菜单没有原生的二级分组概念，靠嵌套 .Children 表达列会让
+       "列标题"变成一个假链接。
+
+       没配 menu.footer 时只出品牌与版权，不画空列。 */ -}}
+{{- $groups := slice -}}
+{{- $byName := dict -}}
+{{- range .Site.Menus.footer -}}
+  {{- $col := or .Params.column "" -}}
+  {{- if not (index $byName $col) -}}
+    {{- $groups = $groups | append $col -}}
+    {{- $byName = merge $byName (dict $col true) -}}
+  {{- end -}}
+{{- end -}}
+<footer class="td-footer">
+  <div class="td-footer-inner" style="--td-footer-cols: {{ len $groups | default 1 }}">
+    <div>
+      <a class="td-footer-brand" href="{{ .Site.Home.RelPermalink }}">
+        {{- with resources.Get "img/logo.svg" -}}
+          <img src="{{ .RelPermalink }}" alt="" width="22" height="22">
+        {{- end }}
+        {{ .Site.Title }}
+      </a>
+      {{- with .Site.Params.description }}
+        <p class="td-footer-tagline">{{ . }}</p>
+      {{- end }}
+      {{- with .Site.Params.slogan }}
+        <p class="td-footer-slogan">{{ . }}</p>
+      {{- end }}
+    </div>
+
+    {{- if $groups }}
+      <div class="td-footer-grid">
+        {{- range $col := $groups }}
+          <div class="td-footer-column">
+            {{- with $col }}
+              <h2 class="td-footer-heading">{{ . }}</h2>
+            {{- end }}
+            <ul class="td-footer-list">
+              {{- range $.Site.Menus.footer }}
+                {{- if eq (or .Params.column "") $col }}
+                  <li><a href="{{ .URL }}">{{ .Name }}</a></li>
+                {{- end }}
+              {{- end }}
+            </ul>
+          </div>
+        {{- end }}
+      </div>
+    {{- end }}
+  </div>
+
+  <div class="td-footer-bottom">
+    {{- /* 版权年份用构建时间而非硬编码。站点可用 params.copyright 整句覆盖。 */ -}}
+    {{ with .Site.Params.copyright }}{{ . }}{{ else }}&copy; {{ now.Year }} {{ .Site.Title }}{{ end }}
+  </div>
+</footer>

@@ -1,0 +1,39 @@
+{{- /* 侧栏的一个节点。递归自身渲染子树。
+       接收 dict: page（当前节点）、current（正在阅读的页面）。
+
+       用 <details> 承担折叠：原生 disclosure 自带键盘可达与 AT 语义，
+       写 JS 折叠等于重新实现浏览器已有的东西。 */ -}}
+{{- $page := .page -}}
+{{- $current := .current -}}
+{{- $children := $page.Pages -}}
+{{- $active := eq $page.RelPermalink $current.RelPermalink -}}
+{{- $inTrail := $current.IsDescendant $page -}}
+
+<li>
+  {{- if $children -}}
+    {{/* 祖先链上的 section 默认展开，其余收起 —— 读者的位置决定初始状态。
+         data-td-nav-key 是这个节点的稳定身份，运行时靠它记住读者手动展开
+         过哪些 section。RelPermalink 在站内唯一，且跨构建稳定。 */}}
+    <details data-td-nav-key="{{ $page.RelPermalink }}"{{ if or $active $inTrail }} open{{ end }}>
+      <summary class="td-shell-nav-row td-shell-nav-summary">
+        {{ $page.LinkTitle }}
+      </summary>
+      <ul class="td-shell-nav-list">
+        {{- if $page.File -}}
+          {{/* section 自身有内容页时，把它作为第一个子项 —— 否则点标题只能
+               折叠，读不到 _index.md。 */}}
+          <li>
+            <a href="{{ $page.RelPermalink }}" class="td-shell-nav-row"
+               {{ if $active }}aria-current="page"{{ end }}>{{ i18n "section_overview" | default "Overview" }}</a>
+          </li>
+        {{- end -}}
+        {{- range $children -}}
+          {{- partial "shell/sidebar-node.html" (dict "page" . "current" $current) -}}
+        {{- end -}}
+      </ul>
+    </details>
+  {{- else -}}
+    <a href="{{ $page.RelPermalink }}" class="td-shell-nav-row"
+       {{ if $active }}aria-current="page"{{ end }}>{{ $page.LinkTitle }}</a>
+  {{- end -}}
+</li>

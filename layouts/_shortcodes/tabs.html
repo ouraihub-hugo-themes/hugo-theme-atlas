@@ -1,0 +1,119 @@
+{{- /* 标签页组。
+
+     子 tab 把自己注册进 Scratch，这里统一渲染 —— tablist 必须排在 panel
+     前面（ARIA 要求，也是 Tab 键的自然顺序）。
+
+     参数：
+       group    同名的组在页面内、页面间同步选择，写进 URL hash 与
+                localStorage。不给 group 就是一组独立的标签页。
+       default  初始选中的 value，需要 group（没有 group 时 value 是自动
+                生成的 tab1/tab2，写死一个没有意义）
+       label    tablist 的可访问名字
+
+     渲染顺序的要求：`.Inner` 必须先求值，Scratch 才有内容。 */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" .
+  "allowed" (slice "group" "default" "label")) -}}
+
+{{- /* 无参数的 `{{< tabs >}}` 的 .Params 是 nil，对它调 isset 会直接报
+       "unable to use key of type string as index"（硬错，不是 warn）。
+       兜成空 dict，下面的 isset 才安全。 */ -}}
+{{- $params := dict -}}
+{{- if .IsNamedParams }}{{ $params = .Params }}{{ end -}}
+
+{{- $group := "" -}}
+{{- if isset $params "group" -}}
+  {{- $group = strings.TrimSpace (printf "%v" (.Get "group")) -}}
+  {{- /* group 进 hash 与 localStorage 键，且要能和 value 用 `-` 拼起来后
+         仍可解析，所以不收 `-` 开头与大写。 */ -}}
+  {{- if not (findRE `^[a-z][a-z0-9_-]*$` $group) -}}
+    {{- warnf "shortcode %q: group must match ^[a-z][a-z0-9_-]*$; got %q at %s; dropping it" .Name $group .Position -}}
+    {{- $group = "" -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* 求值 Inner 只为触发子 shortcode 的注册；它自己不该有可见输出。 */ -}}
+{{- $stray := strings.TrimSpace .Inner -}}
+{{- if $stray -}}
+  {{- warnf "shortcode %q takes tab children only at %s; ignoring the stray content" .Name .Position -}}
+{{- end -}}
+
+{{- $entries := .Scratch.Get "tdTabs" | default dict -}}
+{{- if eq (len $entries) 0 -}}
+  {{- warnf "shortcode %q needs at least one tab at %s; rendering nothing" .Name .Position -}}
+{{- else -}}
+
+{{- /* 补齐 value 并查重。无 group 时 value 由位置生成 —— 那种组不同步，
+       value 只用来连 tab 与 panel 的 id。 */ -}}
+{{- $tabs := slice -}}
+{{- $seen := dict -}}
+{{- $index := 0 -}}
+{{- range $entries -}}
+  {{- $value := .value -}}
+  {{- if $group -}}
+    {{- if not $value -}}
+      {{- warnf "shortcode \"tab\": value is required because tabs declares group %q at %s; this tab will not sync" $group .at -}}
+    {{- end -}}
+  {{- else if $value -}}
+    {{- warnf "shortcode \"tab\": value needs tabs to declare a group at %s; ignoring it" .at -}}
+    {{- $value = "" -}}
+  {{- end -}}
+  {{- if not $value }}{{ $value = printf "tab%d" (add $index 1) }}{{ end -}}
+  {{- if isset $seen $value -}}
+    {{- warnf "shortcode \"tab\": duplicate value %q at %s; the later tab wins" $value .at -}}
+  {{- end -}}
+  {{- $seen = merge $seen (dict $value true) -}}
+  {{- $tabs = $tabs | append (merge . (dict "value" $value)) -}}
+  {{- $index = add $index 1 -}}
+{{- end -}}
+
+{{- $default := "" -}}
+{{- if isset $params "default" -}}
+  {{- $default = strings.TrimSpace (printf "%v" (.Get "default")) -}}
+  {{- if not $group -}}
+    {{- warnf "shortcode %q: default needs group at %s; ignoring it" .Name .Position -}}
+    {{- $default = "" -}}
+  {{- else if not (isset $seen $default) -}}
+    {{- warnf "shortcode %q: default %q matches no tab value at %s; ignoring it" .Name $default .Position -}}
+    {{- $default = "" -}}
+  {{- end -}}
+{{- end -}}
+{{- if not $default }}{{ $default = (index $tabs 0).value }}{{ end -}}
+
+{{- /* id 前缀。同一组在一页上出现多次时，第一次保留 `组名-值`（深链目标），
+       之后的加序号后缀 —— 不然一页里会有重复 id，aria-controls 指向哪一个
+       由浏览器随便挑。 */ -}}
+{{- $prefix := printf "tabs-%d" .Ordinal -}}
+{{- if $group -}}
+  {{- $key := printf "tdTabsGroup:%s" $group -}}
+  {{- $nth := add (.Page.Store.Get $key | default 0) 1 -}}
+  {{- .Page.Store.Set $key $nth -}}
+  {{- $prefix = cond (eq $nth 1) $group (printf "%s-%d" $group $nth) -}}
+{{- end -}}
+
+{{- .Page.Store.Set "hasTabs" true -}}
+<div class="td-tabs" data-td-tabs
+  {{- with $group }} data-td-tabs-group="{{ . }}"{{ end }} data-td-tabs-default="{{ $default }}">
+  <div class="td-tabs-list" role="tablist" aria-label="{{ with .Get "label" }}{{ . }}{{ else }}{{ i18n "tabs_label" }}{{ end }}">
+    {{- range $tabs }}
+    <button class="td-tabs-tab" type="button" role="tab"
+      id="{{ $prefix }}-{{ .value }}-tab" aria-controls="{{ $prefix }}-{{ .value }}"
+      aria-selected="{{ eq .value $default }}"
+      {{- /* 一组标签页在 Tab 键序里只占一站，组内用方向键走 —— 这是 ARIA
+             的 tablist 约定，标签多时不会让键盘用户一路 Tab 过去。 */}}
+      tabindex="{{ cond (eq .value $default) "0" "-1" }}"
+      data-td-tabs-value="{{ .value }}">{{ .label }}</button>
+    {{- end }}
+  </div>
+  {{- range $tabs }}
+  <div class="td-tabs-panel" id="{{ $prefix }}-{{ .value }}" role="tabpanel"
+    aria-labelledby="{{ $prefix }}-{{ .value }}-tab" tabindex="0"
+    data-td-tabs-value="{{ .value }}"{{ if ne .value $default }} hidden{{ end }}>
+    {{- /* 标签名在 panel 里再出一次：没有 JS 时所有 panel 都可见，读者要
+           知道每一段是哪个标签的内容。运行时接管后 CSS 隐藏它。 */}}
+    <div class="td-tabs-panel-title" aria-hidden="true">{{ .label }}</div>
+    <div class="td-tabs-panel-body">{{ partial "content/render-block.html" (dict
+      "page" $.Page "scope" (printf "tabs%d-%s" $.Ordinal .value) "content" .body) }}</div>
+  </div>
+  {{- end }}
+</div>
+{{- end -}}

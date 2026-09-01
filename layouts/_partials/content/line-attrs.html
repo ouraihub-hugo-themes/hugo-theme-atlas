@@ -1,0 +1,60 @@
+{{- /* 一行末尾的 `{k=v k="v v"}` 属性。filetree 与 gallery 共用。
+
+     抽出来是因为两个围栏的这段语法必须一致：作者学过一次就该在两处都对。
+     各写一遍的话，"引号里允许空格"这类细节会在其中一处漏掉，而漏掉的那处
+     只在作者刚好用到带空格的值时才暴露。
+
+     Markdown 块属性（`content/attributes.html`）不能复用：那个收的是 Hugo
+     已经解析好的 `.Attributes`，这里的输入是围栏正文里的一行原始文本。
+
+     未知键、重复键、空值都 warn 后丢弃那一个键，不丢整行 —— 一个属性写错
+     不该赔掉这一行的条目本身。
+
+     入参 dict：line（原始行文本）、allowed（slice）、lineNo、kind、position
+     返回 dict：rest（去掉属性段的剩余文本）、attrs（dict） */ -}}
+{{- $line := .line -}}
+{{- $allowed := .allowed -}}
+{{- $lineNo := .lineNo -}}
+{{- $kind := .kind -}}
+{{- $position := .position -}}
+{{- $attrs := dict -}}
+{{- $rest := $line -}}
+
+{{- /* `[^{}]*` 而非 `.*`：嵌套的花括号不当属性段，那更可能是作者正文里的
+       字面花括号（`{{ }}` 模板片段、shell 的 `${var}`）。 */ -}}
+{{- /* 开了花括号却没闭上：把它当名字的一部分是静默的，而作者的意图很明显。
+       先查这一条，再走正常解析 —— 顺序反了的话带属性的正常行也会命中。 */ -}}
+{{- if and (findRE `\{` $line) (not (findRE `\{[^{}]*\}\s*$` $line)) -}}
+  {{- warnf "%s: line %d: unclosed attribute brace at %s; treating it as part of the text" $kind $lineNo $position -}}
+{{- end -}}
+
+{{- with findRESubmatch `^(.*?)\s*\{([^{}]*)\}\s*$` $line -}}
+  {{- $match := index . 0 -}}
+  {{- $rest = index $match 1 -}}
+  {{- $text := index $match 2 -}}
+  {{- $pairRE := `([A-Za-z][A-Za-z0-9_-]*)=(?:"([^"]*)"|'([^']*)'|([^\s"']+))` -}}
+
+  {{- /* 先看减掉所有合法 pair 之后还剩什么：剩下非空说明有一段没被认出来，
+         而那一段静默消失比报出来糟 —— 作者会以为自己写的属性生效了。 */ -}}
+  {{- with strings.TrimSpace (replaceRE $pairRE "" $text) -}}
+    {{- warnf "%s: line %d: malformed attributes {%s} (expected key=value pairs) at %s; ignoring them" $kind $lineNo $text $position -}}
+  {{- end -}}
+
+  {{- range $pair := findRESubmatch $pairRE $text -}}
+    {{- $key := index $pair 1 -}}
+    {{- /* 三个捕获组对应双引号、单引号、裸值，只有一个非空。 */ -}}
+    {{- $value := strings.TrimSpace (or (index $pair 2) (index $pair 3) (index $pair 4)) -}}
+    {{- if not (in $allowed $key) -}}
+      {{- warnf "%s: line %d: unknown attribute %q (allowed: %s) at %s; ignoring it" $kind $lineNo $key (delimit $allowed ", ") $position -}}
+    {{- else if isset $attrs $key -}}
+      {{- warnf "%s: line %d: attribute %q is set twice at %s; keeping the first" $kind $lineNo $key $position -}}
+    {{- else if not $value -}}
+      {{- warnf "%s: line %d: attribute %q must not be empty at %s; ignoring it" $kind $lineNo $key $position -}}
+    {{- else -}}
+      {{- $attrs = merge $attrs (dict $key $value) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $result := dict "rest" (strings.TrimSpace $rest) "attrs" $attrs -}}
+{{- return $result -}}

@@ -1,0 +1,122 @@
+/* 行内标记：按键序列与徽章。
+   两者都是“嵌在句子里的一小块”，共用一套克制的几何：em 相对单位、基线对齐、
+   不撑行高。合成一个文件是因为它们的规则各只有十几行，分开两个文件读起来
+   比放一起更费事。 */
+
+@layer components {
+  /* ---- 按键序列 ---- */
+
+  /* inline-flex + wrap：长序列（Ctrl Shift Alt K）在窄列里要能折行，而不是
+     把列撑破。baseline 对齐让键帽坐在文本基线上，不是居中浮在行里。 */
+  .td-kbd {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.22em;
+  }
+
+  .td-kbd kbd {
+    /* min-width 让单字符键（K、1）也是方的 —— 不给的话 "Ctrl + K" 里的 K
+       会窄成一条。 */
+    min-width: 1.75em;
+    padding: 0.08em 0.42em;
+    border: 1px solid var(--color-border);
+    border-radius: 0.28em;
+    background-color: var(--color-surface);
+
+    /* 底部一道实影，键帽的立体感只靠这一条 —— 完整的 inset 高光在暗色下
+       会脏。 */
+    box-shadow: 0 1px 0 var(--color-border);
+    color: var(--color-ink-strong);
+    font-family: var(--font-mono);
+    font-size: 0.82em;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: center;
+
+    /* 键名不折行："Page Down" 断成两行就不是一个键了。 */
+    white-space: nowrap;
+  }
+
+  .td-kbd-plus {
+    color: var(--color-ink-muted);
+    font-family: var(--font-meta);
+    font-size: 0.82em;
+
+    /* 复制整个序列时不该带上分隔符。 */
+    user-select: none;
+  }
+
+  /* ---- 徽章 ---- */
+
+  .td-badge {
+    --td-badge-tone: var(--color-status-neutral);
+    --td-badge-ink: var(--td-status-neutral-emphasis);
+
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    padding: 0.16em 0.55em;
+    border: 1px solid color-mix(in srgb, var(--td-badge-tone) 30%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--td-badge-tone) 12%, var(--color-canvas));
+    color: var(--td-badge-ink);
+    font-family: var(--font-meta);
+    font-size: 0.78em;
+    font-weight: 600;
+    line-height: 1.25;
+
+    /* 徽章文字通常短，但版本号那类长 token 要能断而不是撑破容器。 */
+    overflow-wrap: anywhere;
+
+    /* 药丸比它旁边的文字矮，不抬一点会显得往下坠。 */
+    vertical-align: 0.08em;
+  }
+
+  /* 带链接的徽章不要下划线 —— 药丸自己就是可点的形状。 */
+  a.td-badge {
+    text-decoration: none;
+
+    &:is(:hover, :focus-visible) {
+      background: color-mix(in srgb, var(--td-badge-tone) 22%, var(--color-canvas));
+    }
+  }
+
+  .td-badge-icon {
+    font-size: 0.85em;
+  }
+
+  /* 类型着色：每个 tone 只改两个变量，几何全部继承。同 callout。 */
+  .td-badge--info {
+    --td-badge-tone: var(--color-status-info);
+    --td-badge-ink: var(--td-status-info-emphasis);
+  }
+
+  .td-badge--success {
+    --td-badge-tone: var(--color-status-success);
+    --td-badge-ink: var(--td-status-success-emphasis);
+  }
+
+  .td-badge--warning {
+    --td-badge-tone: var(--color-status-warning);
+    --td-badge-ink: var(--td-status-warning-emphasis);
+  }
+
+  .td-badge--danger {
+    --td-badge-tone: var(--color-status-danger);
+    --td-badge-ink: var(--td-status-danger-emphasis);
+  }
+}
+
+/* 强制配色下 color-mix 出来的底色被系统接管，两者的边界只剩描边。键帽的
+   投影在强制配色里是一条脏线，去掉。 */
+@media (forced-colors: active) {
+  .td-kbd kbd,
+  .td-badge {
+    border: 1px solid CanvasText;
+  }
+
+  .td-kbd kbd {
+    box-shadow: none;
+  }
+}

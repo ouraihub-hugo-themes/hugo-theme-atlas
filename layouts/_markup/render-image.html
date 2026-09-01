@@ -1,0 +1,76 @@
+{{- /* 图片。
+
+     行内图（一行文字中间的 `![](x)`）只出 <img>：它是那句话的一部分，套
+     <figure> 会把它从段落里拽出来。
+
+     块级图（独占一段）可带块属性。有 caption 才升级成 <figure> —— 没有说明
+     文字的 figure 只是个语义空壳。
+
+     固有尺寸从资源读，作者给的 width/height 覆盖它。两者都没有时不输出这两个
+     属性，而不是猜 —— 猜错比不写更糟，浏览器会按错的比例预留空间。
+
+     入参属性：caption、link、width、height、id、class、data-*、aria-* */ -}}
+{{- $page := .PageInner | default .Page -}}
+{{- $isBlock := .IsBlock -}}
+{{- $policy := dict "class" "" "generic" dict "consumed" dict -}}
+{{- if $isBlock -}}
+  {{- $policy = partial "content/attributes.html" (dict
+    "attributes" .Attributes
+    "allowed" (slice "id" "caption" "link" "width" "height")
+    "position" .Position "kind" "image") -}}
+{{- end -}}
+{{- $image := partial "content/image-resolve.html" (dict
+  "name" "image" "position" .Position "page" $page
+  "src" .Destination "alt" .PlainText) -}}
+{{- $src := $image.src -}}
+{{- $width := $image.width -}}
+{{- $height := $image.height -}}
+{{- $caption := strings.TrimSpace (index $policy.consumed "caption" | default "") -}}
+{{- $id := strings.TrimSpace (index $policy.consumed "id" | default "") -}}
+{{- /* 显式尺寸。非正整数 warn 并退回固有尺寸 —— int 转换会在非数值上直接
+       中断构建，而一个写错的宽度不该是构建失败。 */ -}}
+{{- range $key := slice "width" "height" -}}
+  {{- with index $policy.consumed $key -}}
+    {{- if findRE `^[1-9][0-9]*$` . -}}
+      {{- if eq $key "width" }}{{ $width = int . }}{{ else }}{{ $height = int . }}{{ end -}}
+    {{- else -}}
+      {{- warnf "image: %s must be a positive integer; got %q at %s; using the image's own size" $key . $.Position -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- /* 链接需要 caption。裸的链接图 Markdown 自己就写得出：[![alt](src)](href) */ -}}
+{{- $href := "" -}}
+{{- $external := false -}}
+{{- with index $policy.consumed "link" -}}
+  {{- if not $caption -}}
+    {{- warnf "image: link requires caption; a linked image without a caption is written [![alt](src)](%s) at %s; dropping the link" . $.Position -}}
+  {{- else -}}
+    {{- $link := partial "content/url.html" (dict
+      "name" "image" "parameter" "link" "position" $.Position "value" . "kind" "link") -}}
+    {{- $href = $link.href -}}
+    {{- $external = $link.external -}}
+  {{- end -}}
+{{- end -}}
+{{- $figure := and $isBlock (ne $caption "") -}}
+{{- if $src -}}
+  {{- /* class、id、generic 属性归最外层元素：有 caption 时是 <figure>，
+         否则是 <img> 自己。 */ -}}
+  {{- $plainBlock := and $isBlock (not $figure) -}}
+  {{- $img := printf `<img%s src="%s" alt="%s"%s%s%s%s loading="lazy" decoding="async">`
+    (cond $plainBlock (printf ` class="td-image%s"` (cond (ne $policy.class "") (printf " %s" $policy.class) "")) "")
+    ($src | safeURL) (htmlEscape $image.alt)
+    (cond (gt $width 0) (printf ` width="%d"` $width) "")
+    (cond (gt $height 0) (printf ` height="%d"` $height) "")
+    (cond (and $plainBlock (ne $id "")) (printf ` id="%s"` $id) "")
+    (cond $plainBlock (partial "content/attrs.html" $policy.generic) "")
+  -}}
+  {{- if not $figure -}}
+    {{- $img | safeHTML -}}
+  {{- else -}}
+<figure{{ with $id }} id="{{ . }}"{{ end }} class="td-figure{{ with $policy.class }} {{ . }}{{ end }}"
+  {{- partial "content/attrs.html" $policy.generic | safeHTMLAttr }}>
+  {{ if $href }}<a class="td-figure-link" href="{{ $href }}"{{ if $external }} rel="noopener external"{{ end }}>{{ $img | safeHTML }}</a>{{ else }}{{ $img | safeHTML }}{{ end }}
+  <figcaption class="td-figure-caption">{{ $caption }}</figcaption>
+</figure>
+  {{- end -}}
+{{- end -}}

@@ -1,0 +1,34 @@
+@import "tailwindcss";
+
+/* Hugo 的模板不在 Tailwind 默认扫描范围内，显式声明。 */
+@source "../../layouts/**/*.html";
+@source "../ts/**/*.ts";
+@source "../../exampleSite/content/**/*.md";
+
+@import "./vendor/fonts.css" layer(base);
+@import "./theme.css";
+@import "./base.css";
+@import "./shell.css";
+@import "./navbar.css";
+@import "./page-nav.css";
+@import "./footer.css";
+@import "./prose.css";
+@import "./code.css";
+@import "./icon.css";
+@import "./callout.css";
+@import "./table.css";
+@import "./figure.css";
+@import "./math.css";
+@import "./gallery.css";
+@import "./filetree.css";
+@import "./card.css";
+@import "./steps.css";
+@import "./tabs.css";
+@import "./featured.css";
+@import "./marker.css";
+@import "./book.css";
+@import "./field.css";
+@import "./contributors.css";
+@import "./assets.css";
+@import "./release.css";
+@import "./download.css";

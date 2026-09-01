@@ -1,0 +1,73 @@
+{
+  "$comment": [
+    "sprite 收录的图标清单。这是唯一真相 —— 加图标改这里，跑 pnpm icons:build。",
+    "放在 data/ 是为了让模板经 site.Data.icons 校验图标名，与构建脚本共用同一份。",
+    "名字是 sprite 里的 symbol id，作者在 shortcode 里写的就是这个名字。",
+    "值是 Font Awesome free 的 style/name，构建脚本据此读 node_modules 里的 svg。",
+    "id 用短名而非 fa- 前缀：它是主题的图标词汇，不是对某个图标库的引用。",
+    "按用途分组只为可读，产出与顺序无关。"
+  ],
+
+  "callout-note": "solid/circle-info",
+  "callout-tip": "solid/lightbulb",
+  "callout-important": "solid/circle-exclamation",
+  "callout-warning": "solid/triangle-exclamation",
+  "callout-caution": "solid/circle-xmark",
+  "callout-success": "solid/circle-check",
+  "callout-danger": "solid/fire",
+  "callout-question": "solid/circle-question",
+  "callout-example": "solid/flask",
+  "callout-quote": "solid/quote-left",
+
+  "chevron-down": "solid/chevron-down",
+  "angle-down": "solid/angle-down",
+  "arrow-right": "solid/arrow-right",
+  "external": "solid/arrow-up-right-from-square",
+  "check": "solid/check",
+  "close": "solid/xmark",
+  "copy": "regular/copy",
+  "link": "solid/link",
+  "search": "solid/magnifying-glass",
+  "menu": "solid/bars",
+  "sun": "solid/sun",
+  "moon": "solid/moon",
+
+  "book": "solid/book",
+  "box": "solid/box",
+  "code": "solid/code",
+  "download": "solid/download",
+  "file": "regular/file",
+  "file-lines": "regular/file-lines",
+  "file-zipper": "regular/file-zipper",
+  "folder": "regular/folder",
+  "folder-open": "regular/folder-open",
+  "gear": "solid/gear",
+  "list": "solid/list",
+  "rocket": "solid/rocket",
+  "tag": "solid/tag",
+  "terminal": "solid/terminal",
+
+  "code-branch": "solid/code-branch",
+
+  "$comment_filetree": [
+    "以下六个供 filetree 按文件名/扩展名派图标。不铺一百多个扩展名：那样的",
+    "平表只落到约 25 个不同图标上，多出来的都是同一个图标的别名。这里按图标",
+    "收，映射表在 content/filetree-icon.html 里按图标分组写。"
+  ],
+  "image": "regular/image",
+  "database": "solid/database",
+  "key": "solid/key",
+  "lock": "solid/lock",
+  "scale-balanced": "solid/scale-balanced",
+  "hammer": "solid/hammer",
+
+  "apple": "brands/apple",
+  "github": "brands/github",
+  "windows": "brands/windows",
+  "markdown": "brands/markdown",
+  "docker": "brands/docker",
+  "python": "brands/python",
+  "js": "brands/js",
+  "html5": "brands/html5",
+  "css3-alt": "brands/css3-alt"
+}

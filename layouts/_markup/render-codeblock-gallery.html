@@ -1,0 +1,44 @@
+{{- /* ```gallery —— 一行一张图，排成栅格。
+
+     `<ul role="list">` 而不是一串 `<div>`：这是"一组同类条目"，而条目数是
+     读者该知道的信息（屏幕阅读器会念"列表，6 项"）。`list-style: none` 会让
+     Safari 摘掉列表语义，所以显式留 role。
+
+     不做点击放大：那要一个 lightbox 运行时，而 `link=` 已经能把图指到全尺寸
+     原图。等真有人要求再说 —— 现在写一个 data 属性等于留一段没人读的标记。 */ -}}
+{{- $page := .PageInner | default .Page -}}
+{{- $policy := partial "content/attributes.html" (dict
+  "attributes" .Attributes "allowed" slice
+  "position" .Position "kind" "gallery"
+) -}}
+
+{{- $inner := printf "%s" .Inner -}}
+{{- if not (strings.ContainsNonSpace $inner) -}}
+  {{- warnf "gallery: the fence requires at least one image at %s; rendering nothing" .Position -}}
+{{- else -}}
+  {{- $parsed := partial "content/gallery-parse.html" (dict
+    "source" $inner "position" .Position "page" $page
+  ) -}}
+  {{- with $parsed.items -}}
+    {{- $classes := slice "td-gallery" -}}
+    {{- /* 有说明的图集每格高一截，栅格的最小列宽也要跟着变 —— 一个修饰类
+           承载它，不在每个 li 上重复。 */ -}}
+    {{- if $parsed.hasDescription }}{{ $classes = $classes | append "td-gallery--described" }}{{ end -}}
+    {{- with $policy.class }}{{ $classes = $classes | append . }}{{ end -}}
+<ul class="{{ delimit $classes " " }}" role="list"{{ partial "content/attrs.html" $policy.generic | safeHTMLAttr }}>
+  {{- range $item := . }}
+  <li class="td-gallery-item{{ with $item.class }} {{ . }}{{ end }}">
+    {{- $img := printf `<img class="td-gallery-image" src="%s" alt="%s"%s%s loading="lazy" decoding="async">`
+      $item.src (htmlEscape $item.alt)
+      (cond (gt $item.width 0) (printf ` width="%d"` $item.width) "")
+      (cond (gt $item.height 0) (printf ` height="%d"` $item.height) "") -}}
+    {{- with $item.href -}}
+      {{- $img = printf `<a class="td-gallery-link" href="%s"%s>%s</a>` (htmlEscape .) (cond $item.external ` rel="external"` "") $img -}}
+    {{- end -}}
+    {{- $img | safeHTML -}}
+    {{- with $item.description }}<p class="td-gallery-description">{{ . }}</p>{{ end }}
+  </li>
+  {{- end }}
+</ul>
+  {{- end -}}
+{{- end -}}

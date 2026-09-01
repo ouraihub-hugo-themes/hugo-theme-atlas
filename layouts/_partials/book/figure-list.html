@@ -1,0 +1,59 @@
+{{- /* `book-figures` / `book-tables` / `book-equations` / `book-examples` 共用的
+     列表主体。读的是页面渲染过程中填起来的登记表。
+
+     顺序来自 tdBookTargetOrder 的键（源码行列），不是 tdBookTargets ——
+     后者按 id 排序，"图 10" 会排到"图 2"前面。
+
+     跨页列表要先取一次目标页的 .Content：Hugo 不保证页面渲染顺序，目标页还
+     没渲染时它的登记表是空的。取 .Content 会强制渲染它。
+
+     入参 dict：shortcode（传 `.`）、kind */ -}}
+{{- $sc := .shortcode -}}
+{{- $kind := .kind -}}
+{{- $page := $sc.Page -}}
+{{- $at := $sc.Position -}}
+{{- $params := dict -}}
+{{- if $sc.IsNamedParams }}{{ $params = $sc.Params }}{{ end -}}
+
+{{- $target := $page -}}
+{{- if isset $params "page" -}}
+  {{- $ref := $sc.Get "page" -}}
+  {{- with $page.GetPage $ref -}}
+    {{- $target = . -}}
+    {{- $_ := .Content -}}
+  {{- else -}}
+    {{- warnf "shortcode %q: page %q was not found at %s; listing this page instead" $sc.Name $ref $at -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $entries := slice -}}
+{{- range $target.Store.Get "tdBookTargetOrder" -}}
+  {{- if eq .kind $kind }}{{ $entries = $entries | append . }}{{ end -}}
+{{- end -}}
+
+{{- $title := "" -}}
+{{- if isset $params "title" }}{{ $title = strings.TrimSpace (printf "%v" ($sc.Get "title")) }}{{ end -}}
+{{- $class := "" -}}
+{{- if isset $params "class" -}}
+  {{- $class = strings.TrimSpace (printf "%v" ($sc.Get "class")) -}}
+  {{- if and $class (not (findRE `^[A-Za-z0-9_ -]+$` $class)) -}}
+    {{- warnf "shortcode %q: class contains unsafe characters at %s; dropping the class" $sc.Name $at -}}
+    {{- $class = "" -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if not $entries -}}
+  {{- warnf "shortcode %q found no %s targets on %s at %s; rendering nothing" $sc.Name $kind $target.Path $at -}}
+{{- else -}}
+  {{- /* nav 要有可访问名字：一页上可能同时有图表目录与表格目录，屏幕阅读器
+         的地标列表里两个都叫 "navigation" 就没法选。 */ -}}
+  {{- $label := $title | default (i18n (printf "book_%s_list" $kind)) -}}
+<nav class="td-book-list{{ with $class }} {{ . }}{{ end }}" aria-label="{{ $label }}">
+  {{- with $title }}<p class="td-book-list-title">{{ . }}</p>{{ end }}
+  <ol>
+    {{- range $entries }}
+    <li><a href="{{ if ne $target $page }}{{ $target.RelPermalink }}{{ end }}#{{ .id }}">{{ partial "book/label.html" (dict "kind" .kind "num" .num) }}</a>{{ with .caption }} — {{ . }}{{ end }}</li>
+    {{- end }}
+  </ol>
+</nav>
+{{- end -}}

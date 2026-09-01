@@ -1,0 +1,49 @@
+{{- /* 取一个渠道的校验和文本：写在数据里，或指向 assets 下的一个文件。
+
+     两个键互斥。都给时保留 checksums 并警告 —— 静默让一个覆盖另一个，作者会
+     以为自己改的那份生效了。
+
+     只有 pinned 渠道有校验和：rolling 渠道不指向具体版本，一组校验和挂在它
+     下面就是错的。
+
+     入参 dict：channel、at、kind
+     返回：规范化换行后的字符串，无则空串 */ -}}
+{{- $at := .at -}}
+{{- $checksums := "" -}}
+
+{{- with index .channel "checksums" -}}
+  {{- if ne (printf "%T" .) "string" -}}
+    {{- warnf "%s: checksums must be a string; dropping the checksums" $at -}}
+  {{- else -}}
+    {{- $checksums = strings.TrimSpace . -}}
+    {{- if not $checksums -}}
+      {{- warnf "%s: checksums must not be empty; dropping the checksums" $at -}}
+    {{- else if strings.Contains $checksums "${" -}}
+      {{- /* 校验和是文件内容的指纹，插值进去的东西不可能是指纹。 */ -}}
+      {{- warnf "%s: checksums must not interpolate version facts; dropping the checksums" $at -}}
+      {{- $checksums = "" -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- with index .channel "checksums_src" -}}
+  {{- if ne (printf "%T" .) "string" -}}
+    {{- warnf "%s: checksums_src must be a string; dropping the checksums" $at -}}
+  {{- else if not (strings.TrimSpace .) -}}
+    {{- warnf "%s: checksums_src must not be empty; dropping the checksums" $at -}}
+  {{- else if $checksums -}}
+    {{- warnf "%s: checksums and checksums_src are mutually exclusive; keeping checksums" $at -}}
+  {{- else -}}
+    {{- with resources.Get (strings.TrimSpace .) -}}
+      {{- $checksums = printf "%s" .Content -}}
+    {{- else -}}
+      {{- warnf "%s: checksums_src resource %q was not found; dropping the checksums" $at . -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if and $checksums (ne .kind "pinned") -}}
+  {{- warnf "%s: checksums are valid only for a pinned channel; dropping the checksums" $at -}}
+  {{- $checksums = "" -}}
+{{- end -}}
+{{- return replace (replace $checksums "\r\n" "\n") "\r" "\n" -}}

@@ -1,0 +1,98 @@
+/* 发布卡片。由 layouts/_shortcodes/release-card.html 渲染。
+
+   版本号与日期一栏，四个链接一栏，中间一道线：卡片的两半是"这是哪个版本"与
+   "去哪里拿"，读者通常只关心后者，分开画让第二栏可以直接扫。 */
+
+@layer components {
+  .td-release-card {
+    margin-block: 2rem;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    background: var(--color-surface);
+  }
+
+  /* 版本号与日期两端对齐，基线对齐。换行时日期跟着走 —— 窄屏上它落到第二行
+     比挤在版本号右边被截断好。 */
+  .td-release-card-header {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 1rem 1.125rem;
+    border-block-end: 1px solid var(--color-border);
+  }
+
+  .td-release-card-tag {
+    overflow-wrap: anywhere;
+    color: var(--color-ink-strong);
+    font-family: var(--font-heading);
+    font-size: 1.125rem;
+    font-weight: 700;
+  }
+
+  .td-release-card-date {
+    color: var(--color-ink-muted);
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+  }
+
+  .td-release-card-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 1rem 1.125rem;
+  }
+
+  /* 四个链接是并列的按钮，不是一句话里的链接：所以有边框、没有下划线。 */
+  .td-release-card-link {
+    display: inline-flex;
+    gap: 0.45rem;
+    align-items: center;
+    min-width: 0;
+    padding: 0.45rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    color: var(--color-ink);
+    overflow-wrap: anywhere;
+    text-decoration: none;
+
+    &:is(:hover, :focus-visible) {
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+      text-decoration: none;
+    }
+  }
+}
+
+@media print {
+  /* 纸上不需要卡片的框，链接的边框也一并去掉 —— 纸上没有"可点击"这回事。
+     URL 本身由 base.css 的打印规则负责显形。 */
+  .td-release-card {
+    border: 0;
+    background: transparent;
+  }
+
+  .td-release-card-header {
+    padding-inline: 0;
+  }
+
+  .td-release-card-links {
+    display: block;
+    padding-inline: 0;
+  }
+
+  .td-release-card-link {
+    display: block;
+    padding: 0.1rem 0;
+    border: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .td-release-card,
+  .td-release-card-link {
+    border-color: CanvasText;
+  }
+}

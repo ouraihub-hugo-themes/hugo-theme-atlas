@@ -1,0 +1,132 @@
+{{- /* 校验并规范化下载渠道数组。
+
+     从 resolve.html 拆出来的：记录级校验与渠道级校验各有十几个分支，合在一个
+     文件里没人能读完。拆分线是"错了赔多少"——记录级错误整块丢弃，渠道级错误
+     只丢那一个渠道。
+
+     入参 dict：page、raw、position、version、tag、repo
+     返回：渠道 slice，每项 id / kind / title / note / icon / url / steps / checksums */ -}}
+{{- $page := .page -}}
+{{- $version := .version -}}
+{{- $tag := .tag -}}
+{{- $repo := .repo -}}
+
+{{- $channels := slice -}}
+{{- $ids := slice -}}
+{{- range $index, $channel := .raw -}}
+  {{- $at := printf "%s: download channel %d" $.position (add $index 1) -}}
+  {{- if not (reflect.IsMap $channel) -}}
+    {{- warnf "%s: must be a map; skipping the channel" $at -}}
+    {{- continue -}}
+  {{- end -}}
+
+  {{- /* title 与 note 可以带语言后缀，所以名单要按前缀匹配。 */ -}}
+  {{- $allowed := slice "id" "kind" "icon" "url" "steps" "checksums" "checksums_src" -}}
+  {{- $fieldsOk := true -}}
+  {{- range $name, $_ := $channel -}}
+    {{- if not (or (in $allowed $name) (findRE `^(title|note)(_[a-z0-9_]+)?$` $name)) -}}
+      {{- warnf "%s: has unsupported field %q; skipping the channel" $at $name -}}
+      {{- $fieldsOk = false -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if not $fieldsOk }}{{ continue }}{{ end -}}
+
+  {{- /* id 进锚点与元素 id，限成标识符。 */ -}}
+  {{- $id := "" -}}
+  {{- with index $channel "id" -}}
+    {{- if eq (printf "%T" .) "string" }}{{ $id = strings.TrimSpace . }}{{ end -}}
+  {{- end -}}
+  {{- if not (findRE `^[a-z][a-z0-9-]*$` $id) -}}
+    {{- warnf "%s: id must match ^[a-z][a-z0-9-]*$; got %q; skipping the channel" $at $id -}}
+    {{- continue -}}
+  {{- end -}}
+  {{- if in $ids $id -}}
+    {{- /* 同一个 id 渲染两次会让页面上的元素 id 撞车，锚点跳向哪一个由浏览器
+           随便挑。 */ -}}
+    {{- warnf "%s: has duplicate id %q; skipping the channel" $at $id -}}
+    {{- continue -}}
+  {{- end -}}
+
+  {{- /* rolling 跟着最新走，pinned 指向一个具体版本。只有 pinned 能插值，也
+         只有 pinned 会因为 published=false 而置灰。 */ -}}
+  {{- $kind := "" -}}
+  {{- with index $channel "kind" -}}
+    {{- if eq (printf "%T" .) "string" }}{{ $kind = strings.TrimSpace . }}{{ end -}}
+  {{- end -}}
+  {{- if not (in (slice "rolling" "pinned") $kind) -}}
+    {{- warnf "%s: kind must be rolling or pinned; got %q; skipping the channel" $at $kind -}}
+    {{- continue -}}
+  {{- end -}}
+
+  {{- /* 标题里不许插值：它是一个渠道的名字（"从源码构建"），不是一条命令。
+         想在标题里写版本号说明作者把标题当成了说明文字。 */ -}}
+  {{- $title := partial "content/localized.html" (dict "record" $channel "key" "title" "page" $page) -}}
+  {{- if or (eq $title false) (ne (printf "%T" $title) "string") (not (strings.TrimSpace $title)) -}}
+    {{- warnf "%s: title must resolve to a non-empty string; skipping the channel" $at -}}
+    {{- continue -}}
+  {{- end -}}
+  {{- $title = strings.TrimSpace $title -}}
+  {{- if strings.Contains $title "${" -}}
+    {{- warnf "%s: title must not interpolate version facts; skipping the channel" $at -}}
+    {{- continue -}}
+  {{- end -}}
+
+  {{- $note := partial "content/localized.html" (dict "record" $channel "key" "note" "page" $page) -}}
+  {{- if eq $note false -}}
+    {{- $note = "" -}}
+  {{- else if ne (printf "%T" $note) "string" -}}
+    {{- warnf "%s: note must resolve to a string; dropping the note" $at -}}
+    {{- $note = "" -}}
+  {{- else -}}
+    {{- $note = strings.TrimSpace $note -}}
+    {{- if not $note -}}
+      {{- warnf "%s: note must not be empty; dropping the note" $at -}}
+    {{- else if strings.Contains $note "${" -}}
+      {{- warnf "%s: note must not interpolate version facts; dropping the note" $at -}}
+      {{- $note = "" -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- /* 图标名走 sprite 的词汇表，不是 Font Awesome 的 class 对 —— 名单在
+         data/icons.json，校验由 content/icon.html 自己做。 */ -}}
+  {{- $icon := "" -}}
+  {{- with index $channel "icon" -}}
+    {{- if eq (printf "%T" .) "string" -}}
+      {{- $icon = strings.TrimSpace . -}}
+    {{- else -}}
+      {{- warnf "%s: icon must be a string; dropping the icon" $at -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- $url := "" -}}
+  {{- with index $channel "url" -}}
+    {{- $expanded := partial "download/interpolate.html" (dict
+      "value" . "field" "url" "kind" $kind "version" $version "tag" $tag "position" $at) -}}
+    {{- with $expanded -}}
+      {{- $policy := partial "content/url.html" (dict
+        "value" . "kind" "link" "parameter" "url" "position" $at "name" "download") -}}
+      {{- if $policy.valid }}{{ $url = $policy.href }}{{ end -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- $steps := partial "download/steps.html" (dict
+    "page" $page "channel" $channel "at" $at
+    "kind" $kind "version" $version "tag" $tag) -}}
+
+  {{- $checksums := partial "download/checksums.html" (dict
+    "channel" $channel "at" $at "kind" $kind) -}}
+
+  {{- /* pinned 的链接与校验和都指向 release 资产，那需要 repo 才能拼出地址。
+         没有 repo 时整个渠道跳过 —— 渲染一个指向 https://github.com//... 的
+         链接是个能点的死链。 */ -}}
+  {{- if and (eq $kind "pinned") (or $url $checksums) (not $repo) -}}
+    {{- warnf "%s: pinned links/assets require download repo; skipping the channel" $at -}}
+    {{- continue -}}
+  {{- end -}}
+
+  {{- $ids = $ids | append $id -}}
+  {{- $channels = $channels | append (dict
+    "id" $id "kind" $kind "title" $title "note" $note "icon" $icon
+    "url" $url "steps" $steps "checksums" $checksums) -}}
+{{- end -}}
+{{- return $channels -}}

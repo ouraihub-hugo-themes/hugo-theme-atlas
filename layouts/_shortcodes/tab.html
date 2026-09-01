@@ -1,0 +1,54 @@
+{{- /* tabs 里的一个标签页。
+
+     它自己不输出任何东西 —— 把内容注册进父级的 Scratch，由 tabs 统一渲染。
+     必须这样：tablist 要排在所有 panel 前面，而子 shortcode 只在父级求值
+     `.Inner` 时才执行，那时 tablist 的 HTML 已经写出去了。
+
+     参数：label（必需）、value（父级声明 group 时必需，否则不允许）
+     正文是标签页内容，按 Markdown 渲染。 */ -}}
+{{- $at := .Position -}}
+{{- with .Parent }}{{ $at = printf "%s, tab #%d" .Position (add $.Ordinal 1) }}{{ end -}}
+
+{{- partial "validate-shortcode.html" (dict "shortcode" . "at" $at
+  "allowed" (slice "label" "value")) -}}
+
+{{- $ok := true -}}
+{{- with .Parent -}}
+  {{- if ne .Name "tabs" -}}
+    {{- warnf "shortcode %q must sit inside tabs, not %q, at %s; skipping this tab" $.Name .Name $at -}}
+    {{- $ok = false -}}
+  {{- end -}}
+{{- else -}}
+  {{- warnf "shortcode %q must sit inside tabs at %s; skipping this tab" .Name $at -}}
+  {{- $ok = false -}}
+{{- end -}}
+
+{{- /* 无参数时 .Params 是 nil，对它调 isset 会让 Hugo 报 IsSet 类型错误。 */ -}}
+{{- if and $ok (not .Params) -}}
+  {{- warnf "shortcode %q needs a label at %s; skipping this tab" .Name $at -}}
+  {{- $ok = false -}}
+{{- end -}}
+
+{{- $label := strings.TrimSpace (printf "%v" (.Get "label" | default "")) -}}
+{{- if and $ok (not $label) -}}
+  {{- warnf "shortcode %q needs a non-empty label at %s; skipping this tab" .Name $at -}}
+  {{- $ok = false -}}
+{{- end -}}
+
+{{- /* value 进 id、URL hash 与 localStorage 键，所以只收这一种形状。
+       校验放在这里而不是父级：父级只知道有没有值，不知道它写在哪一行。 */ -}}
+{{- $value := "" -}}
+{{- if and $ok (isset .Params "value") -}}
+  {{- $value = strings.TrimSpace (printf "%v" (.Get "value")) -}}
+  {{- if not (findRE `^[a-z0-9][a-z0-9_-]*$` $value) -}}
+    {{- warnf "shortcode %q: value must match ^[a-z0-9][a-z0-9_-]*$; got %q at %s; dropping it" .Name $value $at -}}
+    {{- $value = "" -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if $ok -}}
+  {{- /* 键用零填充的序号：Hugo 的 map 按键排序遍历，"10" 会排在 "2" 前面。 */ -}}
+  {{- .Parent.Scratch.SetInMap "tdTabs" (printf "%04d" .Ordinal) (dict
+    "label" $label "value" $value "at" $at
+    "body" (strings.TrimSpace .InnerDeindent)) -}}
+{{- end -}}

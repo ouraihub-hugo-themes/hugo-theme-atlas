@@ -1,0 +1,31 @@
+# 贡献者数据的坏记录。断言在 tests/invalid/include.md 的 expect 里 ——
+# 数据文件没有 front matter，放不下断言。
+#
+# 每一条都该只赔掉自己：坏条目跳过，坏可选字段回退，其余的人照常列出来。
+items:
+  # 不是 map
+  - "字符串不是条目"
+  # 缺 github
+  - name: 没有 handle
+  # github 不是字符串
+  - github: 123
+  # github 不是合法的 handle：连字符开头
+  - github: -leading-hyphen
+  # 重复（大小写不敏感）
+  - github: hugo
+  - github: HUGO
+  # 可选字段类型不对：四个各错一次，条目本身照常渲染
+  - github: wrongtypes
+    name: 42
+    role: true
+    url: 7
+    avatar: 9
+  # url 不合格：协议相对，回退到 GitHub 主页
+  - github: badurl
+    url: //evil.example.com/
+  # avatar 不合格：javascript: 不在白名单，丢掉头像画占位块
+  - github: badavatar
+    avatar: "javascript:alert(1)"
+  # avatar 是空字符串：当没写
+  - github: emptyavatar
+    avatar: ""

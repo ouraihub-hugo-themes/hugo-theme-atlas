@@ -1,0 +1,40 @@
+{{- /* ```chem —— 化学方程式。走的是同一条 KaTeX 路径（内建的那份带 mhchem
+     扩展），`math` 与它的区别只在作者写 `\ce{}` 还是写公式。
+
+     单独一种围栏语言而不是让作者在 `math` 里写 `\ce{}`：语言标记是给读的人
+     看的，`chem` 一眼就知道下面是方程式；而且编辑器按语言高亮。 */ -}}
+{{- $page := .PageInner | default .Page -}}
+{{- $policy := partial "content/attributes.html" (dict
+  "attributes" .Attributes "allowed" (slice "title")
+  "position" .Position "kind" "chem"
+) -}}
+{{- $title := strings.TrimSpace (index $policy.consumed "title" | default "") -}}
+{{- if and (isset $policy.consumed "title") (not $title) -}}
+  {{- warnf "chem: title must not be empty at %s; dropping it" .Position -}}
+{{- end -}}
+
+{{- $expr := strings.TrimSpace (printf "%s" .Inner) -}}
+{{- if not $expr -}}
+  {{- warnf "chem: the fence requires an equation at %s; rendering nothing" .Position -}}
+{{- else -}}
+  {{- /* 没写 `\ce{}` 就自己包上：作者在 chem 围栏里写的必然是方程式，让他
+         每次重复一遍标记只是多一处可以忘。已经写了的不动 —— 一条方程式里
+         可能有多个 `\ce{}` 段落。 */ -}}
+  {{- $wrapped := $expr -}}
+  {{- if not (strings.Contains $expr `\ce{`) -}}
+    {{- $wrapped = printf `\ce{%s}` $expr -}}
+  {{- end -}}
+  {{- $html := partial "content/math.html" (dict
+    "expression" $wrapped "display" true "position" .Position
+  ) -}}
+  {{- $classes := slice "td-math" "td-math--chem" -}}
+  {{- with $policy.class }}{{ $classes = $classes | append . }}{{ end -}}
+<div class="{{ delimit $classes " " }}"{{ partial "content/attrs.html" $policy.generic | safeHTMLAttr }}>
+  {{- with $title }}<p class="td-math-title">{{ . }}</p>{{ end }}
+  {{- if $html -}}
+    {{- $html | safeHTML -}}
+  {{- else -}}
+    <pre class="td-math-source"><code>{{ $expr }}</code></pre>
+  {{- end }}
+</div>
+{{- end -}}

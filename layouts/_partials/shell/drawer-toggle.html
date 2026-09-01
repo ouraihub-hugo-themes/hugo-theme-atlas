@@ -1,0 +1,7 @@
+{{- /* 抽屉开关。aria-expanded 的初值由 JS 写 —— 无 JS 时不该宣称一个
+       不会动的展开态。aria-controls 指向面板 id。 */ -}}
+<button type="button" class="td-shell-drawer-toggle"
+        data-td-shell-drawer-toggle aria-controls="td-sidebar">
+  <span class="td-shell-drawer-toggle-icon" aria-hidden="true"></span>
+  {{ i18n "open_sidebar" }}
+</button>

@@ -1,0 +1,5 @@
+# 没有 version，站点也没有 params.version。断言在 tests/invalid/download.md。
+channels:
+  - id: a
+    kind: rolling
+    title: 无版本

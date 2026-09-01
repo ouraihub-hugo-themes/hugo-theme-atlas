@@ -1,0 +1,16 @@
+* text=auto eol=lf
+
+# 二进制显式声明。上面的 text=auto 靠启发式判断二进制，字体一旦被 EOL
+# 规范化就是永久损坏 —— 这种事不赌启发式。
+*.woff2 binary
+*.woff binary
+*.ttf binary
+*.png binary
+*.jpg binary
+*.webp binary
+*.ico binary
+
+# 编译产物：提交但不显示 diff，否则每次改样式都是几千行噪音。
+assets/dist/*.css -diff linguist-generated
+assets/dist/*.js -diff linguist-generated
+assets/dist/*.map -diff linguist-generated

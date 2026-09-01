@@ -1,0 +1,85 @@
+{{- /* 解析一段 sha*sum 输出成资产记录。
+
+     算法按十六进制长度判断，不让作者声明：`sha256sum` 的输出里没有算法名，
+     而长度是无歧义的。作者可以用 algo 声明期望值，那时长度不符就是一条明确
+     的警告 —— 拿 md5 当 sha256 发布是真实存在的事故。
+
+     一段里混用算法一律拒掉：表格每行显示自己的算法标签，混排看起来是对的，
+     但"这一批文件的校验和"这个说法就不成立了。
+
+     坏行跳过而不是整段丢弃：一行手工粘错不该赔掉其余二十行。
+
+     入参 dict：content、position、base（下载地址前缀）、algo（可选期望算法）
+     返回：记录 slice */ -}}
+{{- $position := .position -}}
+{{- $base := strings.TrimSuffix "/" .base -}}
+{{- $expect := .algo | default "" -}}
+{{- $byLength := dict
+  "32" (dict "id" "md5" "label" "MD5")
+  "40" (dict "id" "sha1" "label" "SHA-1")
+  "64" (dict "id" "sha256" "label" "SHA-256")
+  "128" (dict "id" "sha512" "label" "SHA-512")
+-}}
+
+{{- $content := printf "%s" .content -}}
+{{- $content = replace $content "\r\n" "\n" -}}
+{{- $content = replace $content "\r" "\n" -}}
+
+{{- $entries := slice -}}
+{{- $seen := "" -}}
+{{- range $index, $line := split $content "\n" -}}
+  {{- $num := add $index 1 -}}
+  {{- $trimmed := strings.TrimSpace $line -}}
+  {{- /* 空行与注释行不是错误：sha256sum 的输出常带一行说明头。 */ -}}
+  {{- if or (not $trimmed) (hasPrefix $trimmed "#") }}{{ continue }}{{ end -}}
+
+  {{- /* 两种形式：`<hex>  <name>`（文本模式，两个空格）与 `<hex> *<name>`
+         （二进制模式）。coreutils 两种都产出，两种都要认。 */ -}}
+  {{- $match := "" -}}
+  {{- with findRESubmatch `^([0-9A-Fa-f]+) ([ *])(.+)$` $line }}{{ $match = index . 0 }}{{ end -}}
+  {{- if not $match -}}
+    {{- warnf "%s: release-assets line %d must be <hex><two spaces><name> or <hex><space>*<name>; got %q; skipping the line" $position $num $line -}}
+    {{- continue -}}
+  {{- end -}}
+  {{- $hash := index $match 1 -}}
+  {{- $name := index $match 3 -}}
+
+  {{- /* 文件名会拼进下载 URL，限成一个路径段：带斜杠的名字能指到 release
+         资产之外的地方。这是信任边界。 */ -}}
+  {{- if not (strings.TrimSpace $name) -}}
+    {{- warnf "%s: release-assets line %d has an empty filename; skipping the line" $position $num -}}
+    {{- continue -}}
+  {{- end -}}
+  {{- if findRE `[/\\]` $name -}}
+    {{- warnf "%s: release-assets line %d filename must be one path segment; got %q; skipping the line" $position $num $name -}}
+    {{- continue -}}
+  {{- end -}}
+
+  {{- $algorithm := index $byLength (printf "%d" (len $hash)) -}}
+  {{- if not $algorithm -}}
+    {{- warnf "%s: release-assets line %d has unsupported hex length %d; skipping the line" $position $num (len $hash) -}}
+    {{- continue -}}
+  {{- end -}}
+  {{- if and $expect (ne $expect $algorithm.id) -}}
+    {{- warnf "%s: release-assets line %d is %s by length, which conflicts with algo=%q; skipping the line" $position $num $algorithm.label $expect -}}
+    {{- continue -}}
+  {{- end -}}
+  {{- if and $seen (ne $seen $algorithm.id) -}}
+    {{- warnf "%s: release-assets mixes checksum algorithms (%s and %s); skipping the line, split them into separate blocks" $position $seen $algorithm.id -}}
+    {{- continue -}}
+  {{- end -}}
+  {{- $seen = $algorithm.id -}}
+
+  {{- $kind := partial "release/asset-kind.html" $name -}}
+  {{- $entries = $entries | append (merge $kind (dict
+    "hash" $hash
+    "binary" (eq (index $match 2) "*")
+    "name" $name
+    "url" (printf "%s/%s" $base (urls.PathEscape $name))
+    "algorithm" $algorithm.label
+  )) -}}
+{{- end -}}
+{{- if not $entries -}}
+  {{- warnf "%s: release-assets requires at least one checksum line; rendering nothing" $position -}}
+{{- end -}}
+{{- return $entries -}}

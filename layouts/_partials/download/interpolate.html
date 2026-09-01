@@ -1,0 +1,46 @@
+{{- /* 展开下载记录里唯一允许的两个版本事实：${version} 与 ${tag}。
+
+     只有 pinned 渠道能用。rolling 渠道的意思就是"跟着最新走"，往它的命令里写
+     死一个版本号是自相矛盾的 —— 那是作者把两种渠道搞混了，要警告。
+
+     出错返回空串而不是原值：调用方对空值的处理是丢掉这一步或这个链接，代价是
+     一个元素；返回原值会把没展开的 `${version}` 原样印到页面上，读者照着复制
+     一条跑不通的命令。
+
+     入参 dict：value、field（消息里的字段名）、kind、version、tag、position
+     返回：展开后的字符串，出错时空串 */ -}}
+{{- $field := .field -}}
+{{- $position := .position -}}
+{{- $ok := true -}}
+{{- $result := "" -}}
+
+{{- if ne (printf "%T" .value) "string" -}}
+  {{- warnf "%s: download %s must be a string; dropping it" $position $field -}}
+  {{- $ok = false -}}
+{{- else -}}
+  {{- $result = replace (replace .value "\r\n" "\n") "\r" "\n" -}}
+  {{- $tokens := findRE `\$\{[^}]*\}` $result -}}
+  {{- if and $tokens (eq .kind "rolling") -}}
+    {{- warnf "%s: rolling download channel %s must not interpolate version facts; dropping it" $position $field -}}
+    {{- $ok = false -}}
+  {{- end -}}
+  {{- if $ok -}}
+    {{- range $tokens -}}
+      {{- if eq . "${version}" -}}
+        {{- $result = replace $result . $.version -}}
+      {{- else if eq . "${tag}" -}}
+        {{- $result = replace $result . $.tag -}}
+      {{- else -}}
+        {{- warnf "%s: download %s has unknown interpolation variable %q; dropping it" $position $field . -}}
+        {{- $ok = false -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+  {{- /* 展开完还剩 `${` 说明括号没闭合，`${version` 那类。上面的正则匹配不到
+         它，所以要单独兜一次 —— 不兜就原样印出去。 */ -}}
+  {{- if and $ok (strings.Contains $result "${") -}}
+    {{- warnf "%s: download %s has malformed interpolation syntax; dropping it" $position $field -}}
+    {{- $ok = false -}}
+  {{- end -}}
+{{- end -}}
+{{- return cond $ok $result "" -}}

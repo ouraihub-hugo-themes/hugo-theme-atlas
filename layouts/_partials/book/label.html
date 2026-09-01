@@ -1,0 +1,11 @@
+{{- /* 目标的可读标签："Figure 2.3"、"表 4"。
+
+     四种 kind 各有自己的 i18n 键 —— 语言之间的词序不同（英文 "Figure 3"，
+     中文"图 3"），拼字符串拼不出来。
+
+     kind 不在名单里的情况不做校验：它只由本仓库的四个 shortcode 传入，是
+     内部值而非作者输入。给不可达状态加分支就是给自己找一段永远跑不到的代码。
+
+     入参 dict：kind（fig | tbl | eq | eg）、num */ -}}
+{{- $key := index (dict "fig" "book_figure" "tbl" "book_table" "eq" "book_equation" "eg" "book_example") .kind -}}
+{{- return printf "%s %s" (i18n $key) .num -}}

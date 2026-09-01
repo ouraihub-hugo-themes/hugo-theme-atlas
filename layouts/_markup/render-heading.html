@@ -1,0 +1,16 @@
+{{- /* 每个标题带 id 与一个自链接锚点，样式在 hover 时显形。
+     块属性走共享策略：id 被消费，class 校验后透传，data- 与 aria- 前缀
+     透传，其余 warn 并丢弃。 */ -}}
+{{- $policy := partial "content/attributes.html" (dict
+  "attributes" .Attributes "allowed" (slice "id")
+  "position" .Page.Path "kind" "heading") -}}
+{{- $id := index $policy.consumed "id" | default .Anchor -}}
+<h{{ .Level }} id="{{ $id }}"
+  {{- with $policy.class }} class="{{ . }}"{{ end -}}
+  {{- partial "content/attrs.html" $policy.generic | safeHTMLAttr }}>
+  {{- .Text -}}
+  {{- /* 锚点文本由 CSS 提供 —— 它是装饰，不该进 .Text 的可访问名。
+         aria-label 给它一个真名字，否则屏幕阅读器读到一个空链接。 */ -}}
+  <a class="td-heading-anchor" href="#{{ $id | safeURL }}"
+     aria-label="{{ i18n "heading_anchor" }}"></a>
+</h{{ .Level }}>

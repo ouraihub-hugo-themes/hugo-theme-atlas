@@ -1,0 +1,174 @@
+/* 贡献者头像墙。由 layouts/_shortcodes/contributors.html 渲染。
+
+   一整块带框的面板，不是散在正文里的一排图：它是"这份文档由这些人写的"这个
+   事实的容器，读者要么整块看要么整块跳过。
+
+   格子用 auto-fill 而不是固定列数 —— 贡献者数量从 3 到 300 都可能，固定列数
+   在两头都难看。 */
+
+@layer components {
+  .td-contributors {
+    width: 100%;
+    margin-block: 1.5rem 2.5rem;
+    padding: clamp(0.85rem, 2vw, 1.25rem);
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    background: var(--color-surface);
+  }
+
+  /* 计数与说明同一基线：数字大，"位贡献者"小，读作一句话而不是两行。 */
+  .td-contributors-summary {
+    display: flex;
+    gap: 0.35rem;
+    align-items: baseline;
+    margin: 0 0 1rem;
+    color: var(--color-ink-muted);
+    font-family: var(--font-meta);
+    font-size: 0.82rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+  }
+
+  /* tabular-nums：这一位数字在不同页面上宽度一致，换页时数字不跳。 */
+  .td-contributors-count {
+    color: var(--color-ink-strong);
+    font-size: 1.35rem;
+    font-variant-numeric: tabular-nums;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+  }
+
+  .td-contributors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(4.35rem, 1fr));
+    gap: 0.75rem 0.55rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    > li {
+      min-width: 0;
+      margin: 0;
+    }
+  }
+
+  .td-contributors-link {
+    display: grid;
+    gap: 0.4rem;
+    place-items: center;
+    min-width: 0;
+    padding: 0.45rem 0.25rem;
+    border-radius: 0.5rem;
+    color: var(--color-ink-muted);
+    text-decoration: none;
+    transition:
+      background-color 150ms ease,
+      color 150ms ease,
+      transform 150ms ease;
+
+    /* focus-visible 与 hover 同款：键盘用户要看到同样的"这一格被选中了"。 */
+    &:is(:hover, :focus-visible) {
+      background: var(--color-canvas);
+      color: var(--color-link);
+      text-decoration: none;
+      transform: translateY(-2px);
+    }
+  }
+
+  /* 边框用页面底色而不是描边色：头像之间挤得近，一圈底色的缝比一圈线更干净。
+     外面那层 box-shadow 才是真正的描边。 */
+  .td-contributors-avatar {
+    display: block;
+    width: 3.4rem;
+    height: 3.4rem;
+    border: 2px solid var(--color-canvas);
+    border-radius: 50%;
+    background: var(--color-surface-raised);
+    box-shadow: 0 0 0 1px var(--color-border);
+    object-fit: cover;
+  }
+
+  /* 没有头像时用首字母。占位块与图片同尺寸，缺图不会让那一格塌掉。 */
+  .td-contributors-avatar--placeholder {
+    display: grid;
+    place-items: center;
+    color: var(--color-ink-muted);
+    font-family: var(--font-meta);
+    font-size: 1rem;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  /* handle 单行截断：真实的 GitHub handle 最长 39 字符，格子只有 4.35rem。
+     完整名字在 aria-label 和 title 里，截断不丢信息。 */
+  .td-contributors-handle {
+    display: block;
+    width: 100%;
+    overflow: hidden;
+    font-family: var(--font-meta);
+    font-size: 0.67rem;
+    line-height: 1.2;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* 窄屏收一档：格子小一号、间距收紧、去掉左右内边距，一行还能放下五六个。 */
+  @media (width < 36rem) {
+    .td-contributors-grid {
+      grid-template-columns: repeat(auto-fill, minmax(3.45rem, 1fr));
+      gap: 0.55rem 0.35rem;
+    }
+
+    .td-contributors-link {
+      padding-inline: 0;
+    }
+
+    .td-contributors-avatar {
+      width: 2.95rem;
+      height: 2.95rem;
+    }
+
+    .td-contributors-handle {
+      font-size: 0.6rem;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .td-contributors-link {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  /* 强制配色接管背景，面板与头像的边界只剩描边可用。 */
+  .td-contributors,
+  .td-contributors-avatar {
+    border-color: CanvasText;
+  }
+}
+
+@media print {
+  /* 纸上不需要面板框，也不需要 hover 的余量：压成十列缩略图。 */
+  .td-contributors {
+    padding: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  .td-contributors-grid {
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .td-contributors-avatar {
+    width: 2rem;
+    height: 2rem;
+    box-shadow: none;
+  }
+
+  .td-contributors-handle {
+    font-size: 6.5pt;
+  }
+}

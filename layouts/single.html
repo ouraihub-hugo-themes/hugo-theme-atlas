@@ -1,0 +1,21 @@
+{{ define "main" }}
+{{- /* 标题与描述在 td-prose 内部：h1 的标尺和 .lead 的处理归排版层，
+       模板不重复声明字号字重。
+
+       特征图由 baseof 解析一次存进 Store —— hero 已在栅格外输出，这里只处理
+       落在文档流里的 banner 与包在标题区背后的 wash。 */ -}}
+{{- $featured := .Store.Get "tdFeatured" -}}
+{{- $mode := "" -}}
+{{- with $featured }}{{ $mode = .mode }}{{ end -}}
+<article class="td-prose">
+  {{ if eq $mode "banner" }}{{ partial "shell/featured-image.html" $featured }}{{ end }}
+
+  <div class="td-shell-article-header{{ if eq $mode "wash" }} td-shell-article-header--wash{{ end }}">
+    {{ if eq $mode "wash" }}{{ partial "shell/featured-image.html" $featured }}{{ end }}
+    <h1>{{ .Title }}</h1>
+    {{ with .Description }}<div class="lead">{{ . | markdownify }}</div>{{ end }}
+  </div>
+
+  {{ .Content }}
+</article>
+{{ end }}

@@ -1,0 +1,2 @@
+# items 不是列表。断言在 tests/invalid/include.md。
+items: 一个字符串

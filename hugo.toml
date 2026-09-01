@@ -1,0 +1,15 @@
+baseURL = "https://example.org/"
+locale = "en-US"
+title = "Atlas"
+
+# 期 0 不做分类法。启用时连同 taxonomy/term 模板一起加。
+disableKinds = ["taxonomy", "term"]
+
+[params]
+description = "Documentation theme. TypeScript + Tailwind CSS."
+
+[markup.goldmark.renderer]
+unsafe = true
+
+[markup.highlight]
+noClasses = false

@@ -1,0 +1,68 @@
+{{- /* 字段定义表：一串 field 子元素，渲染成 <dl>。
+
+     参数：label、id、class
+
+     用 dl 而非 ul：这是术语与释义的配对，屏幕阅读器会报"定义列表，5 项"并把
+     名字与说明关联起来。每个条目包一层 div —— dt/dd 之间不能插别的元素，而
+     锚点要挂在"名字加说明"这个整体上。
+
+     meta 项之间插一个仅供朗读的逗号：视觉上靠间距和颜色区分，朗读时
+     "timeout string required" 听起来像三个词而不是三项信息。 */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "allowed" (slice "label" "id" "class")) -}}
+{{- $at := .Position -}}
+{{- $params := dict -}}
+{{- if .IsNamedParams }}{{ $params = .Params }}{{ end -}}
+
+{{- $label := "" -}}
+{{- if isset $params "label" -}}
+  {{- $label = strings.TrimSpace (printf "%v" (.Get "label")) -}}
+  {{- if not $label }}{{ warnf "shortcode %q: label must not be empty at %s; dropping it" .Name $at }}{{ end -}}
+{{- end -}}
+
+{{- $id := "" -}}
+{{- if isset $params "id" -}}
+  {{- $id = partial "book/validate-id.html" (dict "name" .Name "value" (.Get "id") "position" $at) -}}
+{{- end -}}
+
+{{- $class := "" -}}
+{{- if isset $params "class" -}}
+  {{- $class = strings.TrimSpace (printf "%v" (.Get "class")) -}}
+  {{- if and $class (not (findRE `^[A-Za-z0-9_ -]+$` $class)) -}}
+    {{- warnf "shortcode %q: class contains unsafe characters at %s; dropping the class" .Name $at -}}
+    {{- $class = "" -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* Inner 要先求值，子 shortcode 才会跑并登记自己。 */ -}}
+{{- $stray := strings.TrimSpace (printf "%s" .Inner) -}}
+{{- if $stray -}}
+  {{- warnf "shortcode %q accepts field children only at %s; ignoring the stray content" .Name $at -}}
+{{- end -}}
+
+{{- $entries := .Scratch.Get "tdFields" | default dict -}}
+{{- if not $entries -}}
+  {{- warnf "shortcode %q requires at least one field child at %s; rendering nothing" .Name $at -}}
+{{- else -}}
+  {{- $labelID := printf "td-fields-%s-%d-label" (md5 .Page.RelPermalink) .Ordinal -}}
+<div class="td-fields{{ with $class }} {{ . }}{{ end }}"{{ with $id }} id="{{ . }}"{{ end }}>
+  {{- with $label }}
+  <p class="td-fields-label" id="{{ $labelID }}">{{ . }}</p>
+  {{- end }}
+  <dl class="td-fields-list"{{ with $label }} aria-labelledby="{{ $labelID }}"{{ end }}>
+    {{- range $key, $entry := $entries }}
+    {{- $anchor := partial "content/field-anchor.html" (dict "page" $.Page "name" $entry.name) }}
+    <div class="td-field" id="{{ $anchor }}">
+      <dt class="td-field-term">
+        <code class="td-field-name">{{ $entry.name }}</code>
+        {{- with $entry.type }}<span class="sr-only">, </span><code class="td-field-type">{{ . }}</code>{{ end }}
+        {{- if $entry.required }}<span class="sr-only">, </span><span class="td-field-required">{{ i18n "field_required" }}</span>{{ end }}
+        {{- if $entry.hasDefault }}<span class="sr-only">, </span><span class="td-field-default"><span class="td-field-meta-label">{{ i18n "field_default" }}</span> <code>{{ $entry.default }}</code></span>{{ end }}
+        {{- /* 自链接跟标题锚点同一个类，hover 行为、打印隐藏、RTL 都是现成的。 */}}
+        <a class="td-heading-anchor td-field-anchor" href="#{{ $anchor }}" aria-label="{{ i18n "field_self_link" }}"></a>
+      </dt>
+      <dd class="td-field-description">{{ partial "content/render-block.html" (dict "page" $.Page "scope" (printf "field%d-%s" $.Ordinal $key) "content" $entry.description) }}</dd>
+    </div>
+    {{- end }}
+  </dl>
+</div>
+{{- end -}}

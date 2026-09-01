@@ -1,0 +1,58 @@
+{{- /* 从文件名猜出分组、图标、系统与架构。
+
+     这些都是呈现，不是事实：猜错了读者看到一个不对的图标或少一个徽章，而
+     下载链接与校验和不受影响。所以这里可以用后缀和词边界匹配，猜不出就留空
+     —— 不猜比猜错好，一个标着 Linux 的 Windows 包会让人下错。
+
+     词边界用 `[._+-]` 而不是 `\b`：`darwin` 在 `myapp-darwin-arm64.tar.gz` 里
+     两侧都是连字符，而 `\b` 会让 `windows` 匹配上 `xwindows`。
+
+     入参：文件名字符串（直接传，不包 dict —— 只有一个参数）
+     返回 dict：group、icon、kind、os、arch */ -}}
+{{- $name := lower (printf "%s" .) -}}
+
+{{- $group := "*" -}}
+{{- $icon := "file" -}}
+{{- $kind := "file" -}}
+{{- if hasSuffix $name ".tar.gz" -}}
+  {{- $group = ".tar.gz" -}}{{ $icon = "file-zipper" }}{{ $kind = "tar.gz" -}}
+{{- else if hasSuffix $name ".rpm" -}}
+  {{- $group = ".rpm" -}}{{ $icon = "box" }}{{ $kind = "rpm" -}}
+{{- else if hasSuffix $name ".deb" -}}
+  {{- $group = ".deb" -}}{{ $icon = "box" }}{{ $kind = "deb" -}}
+{{- else if hasSuffix $name ".apk" -}}
+  {{- $group = ".apk" -}}{{ $icon = "box" }}{{ $kind = "apk" -}}
+{{- else if hasSuffix $name ".zip" -}}
+  {{- $group = ".zip" -}}{{ $icon = "file-zipper" }}{{ $kind = "zip" -}}
+{{- else if or (hasSuffix $name ".exe") (hasSuffix $name ".msi") -}}
+  {{- $group = ".exe / .msi" -}}{{ $icon = "windows" }}
+  {{- $kind = cond (hasSuffix $name ".exe") "exe" "msi" -}}
+{{- else if or (hasSuffix $name ".dmg") (hasSuffix $name ".pkg") -}}
+  {{- $group = ".dmg / .pkg" -}}{{ $icon = "apple" }}
+  {{- $kind = cond (hasSuffix $name ".dmg") "dmg" "pkg" -}}
+{{- end -}}
+
+{{- /* 系统先看包格式（.rpm 一定是 Linux），再看文件名里的词。 */ -}}
+{{- $os := "" -}}
+{{- if or (in (slice "rpm" "deb" "apk") $kind) (findRE `(^|[._+-])linux([._+-]|$)` $name) -}}
+  {{- $os = "Linux" -}}
+{{- else if or (in (slice "exe" "msi") $kind) (findRE `(^|[._+-])(windows|win32|win64)([._+-]|$)` $name) -}}
+  {{- $os = "Windows" -}}
+{{- else if or (in (slice "dmg" "pkg") $kind) (findRE `(^|[._+-])(darwin|macos)([._+-]|$)` $name) -}}
+  {{- $os = "macOS" -}}
+{{- end -}}
+
+{{- /* 架构名两套写法都认：Go 的 GOARCH 与 uname -m 的输出不一样，同一个包在
+       不同项目里两种命名都见得到。 */ -}}
+{{- $arch := "" -}}
+{{- if findRE `(^|[._+-])(amd64|x86_64)([._+-]|$)` $name -}}
+  {{- $arch = "amd64" -}}
+{{- else if findRE `(^|[._+-])(arm64|aarch64)([._+-]|$)` $name -}}
+  {{- $arch = "arm64" -}}
+{{- else if findRE `(^|[._+-])loongarch64([._+-]|$)` $name -}}
+  {{- $arch = "loongarch64" -}}
+{{- else if findRE `(^|[._+-])riscv64([._+-]|$)` $name -}}
+  {{- $arch = "riscv64" -}}
+{{- end -}}
+
+{{- return dict "group" $group "icon" $icon "kind" $kind "os" $os "arch" $arch -}}

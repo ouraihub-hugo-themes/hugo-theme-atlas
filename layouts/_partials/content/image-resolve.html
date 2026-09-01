@@ -1,0 +1,77 @@
+{{- /* 解析图片来源，取出固有尺寸。
+
+     取尺寸不是可选的优化：没有 width/height 的 <img> 在图片载入前占 0 高，
+     载入后把下面的内容顶下去 —— 那是最刺眼的一类布局抖动，而修它只需要在
+     构建时读一次资源。
+
+     三个查找层，按 Hugo 的资源模型：
+       1. 页面资源（图片与 index.md 同目录）
+       2. 所在 section 的资源（一篇普通页引用 section 目录下的图）
+       3. 全局 assets/
+
+     远程 URL 不抓取：构建过程不该依赖网络，那会让离线构建失败、让 CI 变慢，
+     且对方换了图你不会知道。远程图没有固有尺寸，作者要自己给 width/height。
+
+     入参 dict：src、page、position、name、alt、decorative
+     返回 dict：src、width、height、alt、decorative、kind、resource */ -}}
+{{- $name := .name | default "image" -}}
+{{- $position := .position | default "unknown position" -}}
+{{- $page := .page -}}
+{{- $validated := partial "content/url.html" (dict
+  "name" $name "parameter" "src" "position" $position
+  "value" .src "kind" "image") -}}
+{{- $src := $validated.href -}}
+{{- $source := $validated.raw -}}
+{{- $kind := "static" -}}
+{{- $resource := false -}}
+{{- $width := 0 -}}
+{{- $height := 0 -}}
+{{- if $validated.scheme -}}
+  {{- $kind = "remote" -}}
+{{- else if $source -}}
+  {{- $lookup := strings.TrimPrefix "/" $source -}}
+  {{- with $page.Resources.Get $lookup -}}
+    {{- $resource = . -}}
+    {{- $kind = "page" -}}
+  {{- else -}}
+    {{- with $page.CurrentSection -}}
+      {{- if ne . $page -}}
+        {{- with .Resources.Get $lookup }}{{ $resource = . }}{{ $kind = "section" }}{{ end -}}
+      {{- end -}}
+    {{- end -}}
+    {{- if not $resource -}}
+      {{- with resources.Get $lookup }}{{ $resource = . }}{{ $kind = "global" }}{{ end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- if $resource -}}
+  {{- if not (reflect.IsImageResource $resource) -}}
+    {{- warnf "%s: src %q resolved to a non-image resource at %s; dropping the image" $name $source $position -}}
+    {{- $resource = false -}}
+    {{- $src = "" -}}
+  {{- else -}}
+    {{- $src = $resource.RelPermalink -}}
+    {{- /* SVG 是矢量，没有像素尺寸 —— 读 .Width 会拿到 0。 */ -}}
+    {{- if ne $resource.MediaType.SubType "svg" -}}
+      {{- $width = $resource.Width -}}
+      {{- $height = $resource.Height -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- /* alt 空字符串是"这张图是装饰"的正式写法（WAI-ARIA），不是"忘了写"。
+       两者在 Markdown 里无法区分，所以空 alt 一律当装饰处理：输出
+       alt=""，屏幕阅读器会跳过它。缺失的 alt 属性才是错误。 */ -}}
+{{- $alt := strings.TrimSpace (.alt | default "") -}}
+{{- /* 资源自带的 alt 元数据兜底：同一张图在多处引用时不必重复写。 */ -}}
+{{- if and (not $alt) $resource -}}
+  {{- with $resource.Params.alt }}{{ $alt = strings.TrimSpace (printf "%v" .) }}{{ end -}}
+{{- end -}}
+{{- return dict
+  "src" $src
+  "width" $width
+  "height" $height
+  "alt" $alt
+  "decorative" (eq $alt "")
+  "kind" $kind
+  "resource" $resource
+-}}

@@ -1,0 +1,7 @@
+# tag 里有斜杠 —— 它会拼进 URL 路径，带斜杠就分不清哪一段是 tag。
+version: "1.0.0"
+tag: release/1.0.0
+channels:
+  - id: a
+    kind: rolling
+    title: 坏 tag

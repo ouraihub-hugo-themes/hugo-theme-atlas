@@ -1,0 +1,62 @@
+# 步骤与校验和的错误。断言在 tests/invalid/download.md。
+version: "1.0.0"
+repo: owner/project
+channels:
+  - id: steps
+    kind: pinned
+    title: 步骤都写错了
+    steps:
+      # 不是数组的情况在下一个渠道里
+      - 字符串不是步骤
+      - code: echo ok
+        lng: shell
+      - lang: shell
+      - code: "   "
+      - code: echo ok
+        lang: "not a lexer token"
+      - code: echo ok
+        title: "  "
+      - code: echo ok
+        title: 装 ${version}
+      # 好的那一步
+      - code: echo good
+        lang: shell
+        title: 这一步是好的
+
+  - id: notalist
+    kind: rolling
+    title: steps 不是数组
+    steps: 一个字符串
+
+  - id: badsums
+    kind: pinned
+    title: 校验和不是字符串
+    checksums: 42
+
+  - id: blanksums
+    kind: pinned
+    title: 校验和是空白
+    checksums: "   "
+
+  - id: interpsums
+    kind: pinned
+    title: 校验和里插值
+    checksums: aaa ${version}
+
+  - id: bothsums
+    kind: pinned
+    title: 两个键都给了
+    checksums: |
+      9f1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f8  a.tar.gz
+    checksums_src: snippets/checksums.txt
+
+  - id: missingsrc
+    kind: pinned
+    title: src 指的资源不存在
+    checksums_src: nowhere/sums.txt
+
+  - id: rollingsums
+    kind: rolling
+    title: rolling 不该有校验和
+    checksums: |
+      9f1a2b3c4d5e6f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4c5d6e7f8  a.tar.gz

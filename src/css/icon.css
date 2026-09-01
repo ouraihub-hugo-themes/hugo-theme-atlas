@@ -1,0 +1,21 @@
+/* SVG sprite 图标。
+   尺寸随字号（1em）、颜色随 currentColor —— 图标跟着它所在的文本走，
+   不需要每个使用点各自设定。 */
+
+@layer components {
+  .td-icon {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+
+    /* 图标的视觉重心比字母低。基线对齐会让它看着往上飘，-0.125em 把它
+       压回文本的视觉中线。 */
+    vertical-align: -0.125em;
+
+    /* fill 而非 stroke：FA 的图标是填充路径。 */
+    fill: currentcolor;
+
+    /* flex 容器里不被压缩 —— 图标缩小就成了色块。 */
+    flex: none;
+  }
+}

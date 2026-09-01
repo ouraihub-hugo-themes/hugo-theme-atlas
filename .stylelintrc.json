@@ -1,0 +1,41 @@
+{
+  "extends": "stylelint-config-standard",
+  "rules": {
+    "at-rule-no-unknown": [
+      true,
+      {
+        "ignoreAtRules": ["theme", "source", "utility", "variant", "custom-variant", "apply", "layer"]
+      }
+    ],
+    "custom-property-pattern": "^(td|color|font|duration|ease|breakpoint|spacing|radius|shadow|text|leading|tracking)-[a-z0-9-]+$",
+    "selector-class-pattern": "^[a-z0-9]+(-[a-z0-9]+)*(--[a-z0-9]+(-[a-z0-9]+)*)?$",
+    "declaration-property-value-no-unknown": null,
+    "comment-empty-line-before": null
+  },
+  "overrides": [
+    {
+      "comment": "@utility 建立作用域，stylelint 不认识它 —— 既不认嵌套根，也把其中嵌套 @media 里的声明判为位置非法",
+      "files": ["src/css/prose.css", "src/css/shell.css", "src/css/featured.css", "src/css/components/*.css"],
+      "rules": {
+        "nesting-selector-no-missing-scoping-root": null,
+        "no-invalid-position-declaration": null,
+        "selector-id-pattern": null
+      }
+    },
+    {
+      "comment": "Tailwind 入口与 @import：构建期指令，裸字符串是其语法",
+      "files": ["src/css/main.css", "src/css/code.css"],
+      "rules": {
+        "import-notation": null,
+        "no-invalid-position-at-import-rule": null
+      }
+    }
+  ],
+  "ignoreFiles": [
+    "assets/dist/**",
+    "public/**",
+    "resources/**",
+    "exampleSite/**",
+    "src/css/vendor/**"
+  ]
+}

@@ -1,0 +1,39 @@
+{{- /* LaTeX → MathML。`math` / `chem` 两个围栏与行内 `$…$` 共用。
+
+     用 Hugo 内建的 `transform.ToMath`（它内嵌 KaTeX），不装浏览器运行时：
+     公式在构建时就渲染成标记，正常构建不下载任何东西，读者也不必等一个
+     300 KB 的 JS 才看见公式。
+
+     **输出只要 MathML，不要 `htmlAndMathml`。** 后者一条公式发两份标记：一份
+     KaTeX 的 HTML 给视觉，一份 MathML 给朗读 —— 那就必须跟着发 katex.min.css
+     与 1.5 MB 字体（60 个文件）。而 MathML Core 现在三大引擎都原生渲染，一份
+     就够：同一条公式 260 字节对 1184 字节，不需要 CSS、不需要字体、没有 FOUT。
+     代价是很老的浏览器会退化成线性文本 —— 那是可读的退化，不是空白。
+
+     `\ce{}`（mhchem）不需要另开一条路：内建的 KaTeX 已经带这个扩展，`chem`
+     与 `math` 的区别只在作者写什么。
+
+     出错 warn 并原样留下作者写的文本，不吞掉：一条写错的公式留在页面上，作者
+     一眼能看到问题在哪；渲染成空白则要去翻构建日志才知道发生了什么。
+
+     入参 dict：expression、display（块级为真）、position
+     返回：MathML 字符串；失败时返回空串（调用方负责回退） */ -}}
+{{- $expr := .expression -}}
+{{- $display := .display | default false -}}
+{{- $position := .position | default "unknown position" -}}
+{{- $out := "" -}}
+
+{{- with try (transform.ToMath $expr (dict "output" "mathml" "displayMode" $display)) -}}
+  {{- with .Err -}}
+    {{- warnf "math: KaTeX could not render the expression at %s: %s; leaving it as written" $position . -}}
+  {{- else -}}
+    {{- $out = printf "%s" .Value -}}
+    {{- /* 块级公式加 tabindex：一条长公式会横向溢出，而溢出容器必须能聚焦，
+           否则键盘用户滚不动它。行内的不加 —— 那会在正文里塞满 tab 停靠点。 */ -}}
+    {{- if $display -}}
+      {{- $out = replace $out `<span class="katex">` `<span class="katex" tabindex="0">` -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- return $out -}}

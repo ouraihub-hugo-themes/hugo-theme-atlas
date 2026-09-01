@@ -1,0 +1,62 @@
+{{- /* ```filetree {title="项目结构"} —— 一段目录树变成带图标的可折叠树。
+
+     用 `<ul>` + `<details>` 而不是保留 `<pre>` 里的画线字符：画线字符在屏幕
+     阅读器里被逐个念出来（"竖线 横线 横线 src"），而列表嵌套本身就是"这个在
+     那个里面"这个语义。折叠交给 `<details>`，不写 JS。
+
+     深度用 `--td-filetree-depth` 传给 CSS 而不是嵌套 padding：行要整行铺满
+     （底色、hover 都靠它），缩进只作用于名字那一格。 */ -}}
+{{- $page := .PageInner | default .Page -}}
+{{- $policy := partial "content/attributes.html" (dict
+  "attributes" .Attributes "allowed" (slice "title")
+  "position" .Position "kind" "filetree"
+) -}}
+{{- $title := strings.TrimSpace (index $policy.consumed "title" | default "") -}}
+{{- if and (isset $policy.consumed "title") (not $title) -}}
+  {{- warnf "filetree: title must not be empty at %s; dropping it" .Position -}}
+{{- end -}}
+
+{{- $inner := printf "%s" .Inner -}}
+{{- if not (strings.ContainsNonSpace $inner) -}}
+  {{- warnf "filetree: the fence requires tree entries at %s; rendering nothing" .Position -}}
+{{- else -}}
+  {{- $parsed := partial "content/filetree-parse.html" (dict "source" $inner "position" .Position) -}}
+  {{- $nodes := $parsed.nodes -}}
+  {{- with $nodes -}}
+    {{- $classes := slice "td-filetree" -}}
+    {{- if not $parsed.hasComments }}{{ $classes = $classes | append "td-filetree--plain" }}{{ end -}}
+    {{- with $policy.class }}{{ $classes = $classes | append . }}{{ end -}}
+    {{- $count := len $nodes -}}
+{{- /* 名字列宽只能是内联样式：它按这一段的内容算出来，每个围栏一个值。 */ -}}
+<div class="{{ delimit $classes " " }}" style="--td-filetree-name-col:{{ printf "%.1f" $parsed.nameWidth }}ch"{{ partial "content/attrs.html" $policy.generic | safeHTMLAttr }}>
+  {{- with $title }}<p class="td-filetree-title">{{ . }}</p>{{ end }}
+  <ul class="td-filetree-list">
+    {{- range $i, $node := $nodes -}}
+      {{- $row := partial "content/filetree-row.html" (dict
+        "node" $node "hasComments" $parsed.hasComments
+        "icons" (partial "content/filetree-icon.html" (dict
+          "name" $node.name "kind" $node.kind "icon" $node.icon))
+      ) -}}
+
+      {{- /* 下一行的深度决定这一行之后要闭掉几层。范围里看不到"后面的行"，
+             所以闭合标签就着 $nextDepth 在这里拼出来。最后一行的 nextDepth
+             是 0，于是所有还开着的层都在它之后闭上。 */ -}}
+      {{- $nextDepth := 0 -}}
+      {{- if lt (add $i 1) $count }}{{ $nextDepth = (index $nodes (add $i 1)).depth }}{{ end -}}
+      {{- $closes := sub $node.depth $nextDepth -}}
+      {{- if $node.children }}{{ $closes = sub (add $node.depth 1) $nextDepth }}{{ end -}}
+
+      {{- if $node.children -}}
+        <li class="td-filetree-item td-filetree-item--{{ $node.kind }} td-filetree-item--parent"
+          ><details class="td-filetree-details"{{ if $node.open }} open{{ end }}
+          ><summary class="td-filetree-summary">{{ $row }}</summary
+          ><ul class="td-filetree-list">
+      {{- else -}}
+        <li class="td-filetree-item td-filetree-item--{{ $node.kind }}">{{ $row }}</li>
+      {{- end -}}
+      {{- if gt $closes 0 }}{{ range seq $closes }}</ul></details></li>{{ end }}{{ end -}}
+    {{- end }}
+  </ul>
+</div>
+  {{- end -}}
+{{- end -}}

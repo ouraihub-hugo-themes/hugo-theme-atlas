@@ -1,0 +1,3 @@
+# channels 不是数组。
+version: "1.0.0"
+channels: 一个字符串

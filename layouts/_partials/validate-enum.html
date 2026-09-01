@@ -1,0 +1,27 @@
+{{- /* 枚举参数校验：合法则原值，否则 warn 并回退。
+
+     只管枚举一种，不做 enum/bool/int/url 四合一的通用校验器 —— 那四种各自的
+     失败模式不同，塞进一个 partial 只会让每个调用点都要读一遍它不关心的分支。
+
+     warnidf 而非 warnf：同一个错值在几百个页面上只报一次。id 里带 key，
+     不同参数用了同一个错值时不会互相吞掉。
+
+     入参 dict：
+       value    原始值，通常来自 .Param 或 site.Params.*
+       allowed  合法值 slice
+       fallback 非法或缺失时用的值
+       key      参数路径，只用于消息文本
+       where    可选，出错位置（页面路径或 "site configuration"） */ -}}
+{{- $result := .fallback -}}
+{{- with .value -}}
+  {{- $raw := lower (printf "%v" .) -}}
+  {{- if in $.allowed $raw -}}
+    {{- $result = $raw -}}
+  {{- else -}}
+    {{- $at := cond (ne $.where "") (printf " at %s" $.where) "" -}}
+    {{- warnidf (printf "%s:%s" $.key $raw)
+        "invalid %s %q%s (allowed: %s) -- using %q"
+        $.key $raw $at (delimit $.allowed " | ") $.fallback -}}
+  {{- end -}}
+{{- end -}}
+{{- return $result -}}

@@ -1,0 +1,144 @@
+/* 标签页。由 layouts/_shortcodes/tabs.html 渲染，运行时在 src/ts/tabs.ts。
+
+   外框沿用代码块那张卡：同一套画布、边框、圆角与标题栏底色 —— 一组带标签的
+   代码和一个单独的代码块要读成同一族东西。 */
+
+@layer components {
+  .td-tabs {
+    position: relative;
+    max-width: 100%;
+    margin-block: 1.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-code);
+    background: var(--color-pre);
+
+    /* 圆角要裁掉标签栏与 panel 的方角。 */
+    overflow: hidden;
+  }
+
+  .td-tabs-list {
+    display: flex;
+
+    /* 标签多时横向滚而不是折行：折行会让这一栏的高度随宽度跳变。 */
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+    padding-inline: 0.5rem;
+    border-block-end: 1px solid var(--color-border);
+    background: var(--color-surface-raised);
+    overflow-x: auto;
+    scrollbar-width: thin;
+  }
+
+  .td-tabs-tab {
+    flex: 0 0 auto;
+    padding: 0.6rem 0.65rem;
+    border: 0;
+
+    /* 指示条就是这条下边框，未选中时透明。负的下外边距让它压住标签栏自己
+       的下边框 —— 两条线错开 1px 会看出一道台阶。 */
+    border-block-end: 2px solid transparent;
+    margin-block-end: -1px;
+    border-radius: 0;
+    background: transparent;
+    color: var(--color-ink-muted);
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.25;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color var(--duration-fast) var(--ease-color);
+
+    &:hover {
+      color: var(--color-ink-strong);
+    }
+
+    &:focus-visible {
+      /* 内描边：标签紧贴容器边缘，外描边会被 overflow: hidden 裁掉。 */
+      outline: 2px solid var(--color-accent);
+      outline-offset: -2px;
+    }
+
+    /* 选中态由颜色加指示条两重表达，不只靠颜色。 */
+    &[aria-selected="true"] {
+      border-block-end-color: var(--color-link);
+      color: var(--color-link);
+    }
+  }
+
+  .td-tabs-panel {
+    margin: 0;
+    padding: 0;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: -2px;
+    }
+  }
+
+  /* panel 里重复的标签名。运行时接管后隐藏 —— 那时标签栏已经在说同一件事。
+     没有 JS 时它是唯一的分段线索，所以默认可见。 */
+  .td-tabs-panel-title {
+    padding: 0.5rem 1rem;
+    border-block-end: 1px solid var(--color-border);
+    background: var(--color-surface-raised);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+
+  .td-tabs-panel-body {
+    padding: 1rem 1.1rem;
+
+    > :first-child {
+      margin-block-start: 0;
+    }
+
+    > :last-child {
+      margin-block-end: 0;
+    }
+  }
+
+  /* 代码块在标签页里不再画自己的外框：外框由标签页那张卡承担，套两层会出现
+     双边框和两个圆角。 */
+  .td-tabs-panel-body > .td-code:only-child {
+    margin-block: -1rem -1.1rem;
+    border: 0;
+    border-radius: 0;
+  }
+}
+
+/* 运行时就绪后隐藏 panel 标题。类由 tabs.ts 加在 <html> 上 —— 加在每个组上
+   要等脚本遍历到它，中间会闪一下标题。 */
+.td-js-tabs .td-tabs-panel-title {
+  display: none;
+}
+
+@media print {
+  /* 纸上所有 panel 都摊开，标题回来当分段线索。横向滚的标签栏在纸上是死的。 */
+  .td-tabs-panel[hidden] {
+    display: block !important;
+  }
+
+  .td-tabs-list {
+    display: none;
+  }
+
+  .td-js-tabs .td-tabs-panel-title {
+    display: block;
+  }
+
+  .td-tabs {
+    break-inside: avoid;
+  }
+}
+
+@media (forced-colors: active) {
+  /* 强制配色下颜色被系统接管，选中态只剩指示条可用，把它加粗。 */
+  .td-tabs-tab[aria-selected="true"] {
+    border-block-end-width: 3px;
+  }
+}

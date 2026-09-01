@@ -1,0 +1,43 @@
+{{- /* 目录树的一行。名字格 + 注释格，整行铺满。
+
+     独立成 partial 而不是 `define`：`define` 是全站一个命名空间，和页面模板
+     的 `main` 同级，在 render hook 里定义一个叫 `row` 的模板会跟任何后来
+     同名的定义撞上，而撞了之后是静默地用了另一份。
+
+     入参 dict：node、icons、hasComments */ -}}
+{{- $node := .node -}}
+{{- $icons := .icons -}}
+{{- $iconClass := printf "td-filetree-icon td-filetree-icon--%s" $node.kind -}}
+{{- with $node.tone }}{{ $iconClass = printf "%s td-filetree-icon--%s" $iconClass . }}{{ end -}}
+<span class="td-filetree-row" style="--td-filetree-depth:{{ $node.depth }}">
+  <span class="td-filetree-name-cell">
+    <span class="{{ $iconClass }}">
+      {{- range $i, $icon := $icons -}}
+        {{- $class := "td-filetree-glyph" -}}
+        {{- if eq (len $icons) 2 -}}
+          {{- $class = cond (eq $i 0) "td-filetree-glyph td-filetree-glyph--closed" "td-filetree-glyph td-filetree-glyph--open" -}}
+        {{- end -}}
+        {{- partial "content/icon.html" (dict "name" $icon "class" $class) -}}
+      {{- end -}}
+    </span>
+    {{- /* title：名字列窄屏会截断，悬停看全文。 */ -}}
+    <span class="td-filetree-name" title="{{ $node.name }}">
+      {{- with $node.href -}}
+        <a href="{{ . }}"{{ if $node.external }} rel="external"{{ end }}>{{ $node.name }}</a>
+      {{- else -}}
+        {{- $node.name -}}
+      {{- end -}}
+    </span>
+  </span>
+  {{- /* 注释列靠 grid 对齐，所以没有注释的行也要占一个空格子 —— 缺了它后面
+         的行会整体左移。整段都没注释时容器带 --plain，这一格根本不生成。 */ -}}
+  {{- if .hasComments -}}
+    {{- with $node.comment -}}
+      <span class="td-filetree-comment" title="{{ . }}"
+        ><span class="td-filetree-hash" aria-hidden="true">#</span
+        ><span class="td-filetree-comment-text">{{ . }}</span></span>
+    {{- else -}}
+      <span class="td-filetree-comment" aria-hidden="true"></span>
+    {{- end -}}
+  {{- end -}}
+</span>

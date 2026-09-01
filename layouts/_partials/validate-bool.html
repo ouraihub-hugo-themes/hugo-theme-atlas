@@ -1,0 +1,23 @@
+{{- /* 布尔属性校验。
+
+     Markdown 块属性的值一律是字符串，`true` 与 `"true"` 在这里没有区别。
+     只认这两个字面量：写 yes / on / 1 的作者以为开了，那必须是一条警告，
+     不是静默回退。
+
+     入参 dict：value、fallback、key（消息里的属性名）、position
+     返回：bool */ -}}
+{{- $fallback := .fallback | default false -}}
+{{- $key := .key | default "value" -}}
+{{- $position := .position | default "unknown position" -}}
+{{- $result := $fallback -}}
+{{- with .value -}}
+  {{- $raw := lower (strings.TrimSpace (printf "%v" .)) -}}
+  {{- if eq $raw "true" -}}
+    {{- $result = true -}}
+  {{- else if eq $raw "false" -}}
+    {{- $result = false -}}
+  {{- else -}}
+    {{- warnf "%s must be true or false; got %q at %s; using %v" $key $raw $position $fallback -}}
+  {{- end -}}
+{{- end -}}
+{{- return $result -}}

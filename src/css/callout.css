@@ -1,0 +1,196 @@
+/* 提示框（GFM / Obsidian 风格的 `> [!TYPE]± 标题` 引用块）。
+   由 layouts/_markup/render-blockquote-alert.html 渲染。
+
+   一个组件 + 类型修饰类，类型只改两个变量。不给每个类型写一套几何 ——
+   十一个类型的边距各自漂移是维护不动的。 */
+
+@layer components {
+  .td-callout {
+    --td-callout-accent: var(--color-status-info);
+    --td-callout-title: var(--td-status-info-emphasis);
+    --td-callout-bg: color-mix(in srgb, var(--td-callout-accent) 7%, var(--color-canvas));
+
+    position: relative;
+    margin-block: 1.5rem;
+    padding: 0.85rem 1.1rem 0.9rem 1.15rem;
+    border: 1px solid color-mix(in srgb, var(--td-callout-accent) 22%, var(--color-border));
+
+    /* 起始边加粗成色条。用逻辑属性，RTL 下自动换到右侧。 */
+    border-inline-start: 4px solid var(--td-callout-accent);
+    border-radius: 0.5rem;
+    background: var(--td-callout-bg);
+    color: var(--color-ink);
+
+    /* 提示框被分页切断会丢掉它与正文的关联。 */
+    break-inside: avoid;
+
+    & > :last-child,
+    & .td-callout-body > :last-child {
+      margin-block-end: 0;
+    }
+
+    & .td-callout-body > :first-child {
+      margin-block-start: 0;
+    }
+  }
+
+  .td-callout-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0 0 0.45rem;
+    color: var(--td-callout-title);
+    font-family: var(--font-sans);
+    font-size: 0.95rem;
+    font-weight: 600;
+    line-height: 1.35;
+
+    & code {
+      font-size: 0.9em;
+    }
+  }
+
+  .td-callout-body {
+    font-size: 0.95rem;
+  }
+
+  /* ---- 类型着色 ----
+     每个类型只改 accent 与 title 两个变量，几何全部继承。 */
+  .td-callout--note {
+    --td-callout-accent: var(--color-status-info);
+    --td-callout-title: var(--td-status-info-emphasis);
+  }
+
+  .td-callout--tip,
+  .td-callout--success {
+    --td-callout-accent: var(--color-status-success);
+    --td-callout-title: var(--td-status-success-emphasis);
+  }
+
+  .td-callout--important,
+  .td-callout--example {
+    --td-callout-accent: var(--color-status-accent);
+    --td-callout-title: var(--td-status-accent-emphasis);
+  }
+
+  .td-callout--warning {
+    --td-callout-accent: var(--color-status-warning);
+    --td-callout-title: var(--td-status-warning-emphasis);
+  }
+
+  .td-callout--caution,
+  .td-callout--danger {
+    --td-callout-accent: var(--color-status-danger);
+    --td-callout-title: var(--td-status-danger-emphasis);
+  }
+
+  .td-callout--question {
+    --td-callout-accent: var(--color-status-info);
+    --td-callout-title: var(--td-status-info-emphasis);
+  }
+
+  .td-callout--quote {
+    --td-callout-accent: var(--color-status-neutral);
+    --td-callout-title: var(--td-status-neutral-emphasis);
+
+    & .td-callout-body {
+      color: var(--color-ink-muted);
+      font-style: italic;
+    }
+  }
+
+  /* details 是"折叠一段内容"，不是一种提示 —— 不着色，色条退回 1px。 */
+  .td-callout--details {
+    --td-callout-accent: var(--color-status-neutral);
+    --td-callout-title: var(--color-ink);
+    --td-callout-bg: var(--color-surface);
+
+    border-inline-start-width: 1px;
+  }
+
+  /* ---- 可折叠 ----
+     内边距从容器移进 summary 与 body，让整条标题栏可点，而不是只有文字。 */
+  .td-callout--collapsible {
+    padding: 0;
+
+    & > summary {
+      margin: 0;
+      padding: 0.75rem 1.1rem;
+      padding-inline-start: 1.15rem;
+      cursor: pointer;
+
+      /* 去掉浏览器自带的三角，标记由 .td-callout-marker 承担。
+         list-style 管 Firefox/Chrome，::-webkit-details-marker 管旧 Safari。 */
+      list-style: none;
+      user-select: none;
+
+      &::-webkit-details-marker {
+        display: none;
+      }
+
+      &:focus-visible {
+        border-radius: 0.4rem;
+        outline: 2px solid var(--td-callout-accent);
+
+        /* 向内偏移：summary 紧贴容器边框，向外画会被圆角裁掉。 */
+        outline-offset: -2px;
+      }
+
+      & > .td-callout-label {
+        flex: 1 1 auto;
+      }
+    }
+
+    & > .td-callout-body {
+      padding: 0 1.1rem 0.9rem;
+      padding-inline-start: 1.15rem;
+
+      /* summary 保持上下对称的 0.75rem，展开时它的盒子才不跳动；把 body
+         往上拉回静态版本 0.45rem 的标题—正文节奏。 */
+      margin-block-start: -0.3rem;
+    }
+
+    /* print/rss 下折叠提示框渲染成静态版本：外壳一样，但没有 summary。
+       交互版的 summary 带着同一个类，所以这条要排除它 ——
+       `> .td-callout-title`(0,2,0) 会压过 `> summary`(0,1,1)，把 summary
+       的下内边距清零。 */
+    & > .td-callout-title:not(summary) {
+      padding: 0.75rem 1.1rem 0;
+      padding-inline-start: 1.15rem;
+    }
+  }
+
+  .td-callout-marker {
+    font-size: 0.75em;
+    transition: rotate var(--duration-base) var(--ease-collapse);
+
+    /* 静态渲染没有 summary，标记无意义。 */
+    .td-callout-title:not(summary) > & {
+      display: none;
+    }
+
+    [open] > summary > & {
+      rotate: 180deg;
+    }
+  }
+}
+
+/* 强制颜色模式下系统只保留两种颜色，状态色全部失效 —— 边框改用系统色，
+   否则提示框会连边界都看不出。 */
+@media (forced-colors: active) {
+  .td-callout {
+    border-color: canvastext;
+    background: canvas;
+
+    & .td-callout-title {
+      color: canvastext;
+    }
+  }
+}
+
+@media print {
+  .td-callout {
+    border-color: #999;
+    background: transparent;
+  }
+}

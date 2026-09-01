@@ -1,0 +1,72 @@
+# 渠道级的错误：只丢那一个渠道，其余照常。断言在 tests/invalid/download.md。
+# 最后那个 ok 渠道该照常渲染出来 —— 这是"一个写错不赔掉另外四个"的证据。
+version: "1.0.0"
+repo: owner/project
+channels:
+  # 不是 map
+  - 字符串不是渠道
+  # 未知字段
+  - id: unknownfield
+    kind: rolling
+    title: 有多余的键
+    titel: 拼错的标题
+  # id 不合格
+  - id: Bad_ID
+    kind: rolling
+    title: 坏 id
+  # id 重复
+  - id: dup
+    kind: rolling
+    title: 第一个
+  - id: dup
+    kind: rolling
+    title: 重复的
+  # kind 不在名单里
+  - id: badkind
+    kind: nightly
+    title: 坏 kind
+  # 没有 title
+  - id: notitle
+    kind: rolling
+  # title 是空白
+  - id: blanktitle
+    kind: rolling
+    title: "   "
+  # title 里插值
+  - id: interptitle
+    kind: pinned
+    title: 版本 ${version}
+  # note 是空白
+  - id: blanknote
+    kind: rolling
+    title: 空说明
+    note: "  "
+  # note 里插值
+  - id: interpnote
+    kind: pinned
+    title: 说明里插值
+    note: 装 ${version}
+  # icon 不是字符串
+  - id: badicon
+    kind: rolling
+    title: 坏图标
+    icon: 42
+  # rolling 渠道的 url 里插值
+  - id: rollinginterp
+    kind: rolling
+    title: rolling 插值
+    url: https://example.org/${tag}.tar.gz
+  # 未知插值变量
+  - id: unknownvar
+    kind: pinned
+    title: 未知变量
+    url: https://example.org/${branch}.tar.gz
+  # 插值语法没闭合
+  - id: malformed
+    kind: pinned
+    title: 语法坏了
+    url: https://example.org/${tag.tar.gz
+  # 好的那一个
+  - id: ok
+    kind: rolling
+    title: 这一个是好的

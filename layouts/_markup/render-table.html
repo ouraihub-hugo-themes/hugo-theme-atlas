@@ -1,0 +1,60 @@
+{{- /* 表格。
+
+     hook 存在的唯一理由是那层滚动包裹：Markdown 语法写不出包裹元素，而一张
+     比正文列宽的表必须自己滚，不能把版面撑开。其余（斑马纹、边框、内边距）
+     都是 CSS 的事，不需要模板参与。
+
+     作者标记走 class：`.matrix` 粘连表头与首列，`.full-width` 让表格越出
+     正文列宽。标记留在 <table> 上，修饰类给包裹层 —— 站点若有针对
+     `table.full-width` 的 CSS 仍然有效。
+
+     caption 属性渲染成 <caption>。用原生元素而不是外面套个 <p>：它与表格的
+     关联要能被辅助技术读出来。 */ -}}
+{{- $policy := partial "content/attributes.html" (dict
+  "attributes" .Attributes "allowed" (slice "id" "caption")
+  "position" .Position "kind" "table") -}}
+{{- $classes := split $policy.class " " -}}
+{{- $caption := strings.TrimSpace (index $policy.consumed "caption" | default "") -}}
+{{- $id := strings.TrimSpace (index $policy.consumed "id" | default "") -}}
+{{- $isMatrix := in $classes "matrix" -}}
+{{- $isFull := in $classes "full-width" -}}
+{{- $wrapper := slice "td-table-scroll" -}}
+{{- if $isFull }}{{ $wrapper = $wrapper | append "td-table-scroll--full" }}{{ end -}}
+{{- if $isMatrix }}{{ $wrapper = $wrapper | append "td-table-scroll--matrix" }}{{ end -}}
+{{- /* 可访问名给 scroll-region.ts —— 它只在表格真的溢出时才把这层变成
+       可聚焦区域，那时才需要名字。提前写在这里是因为模板才知道 i18n。 */ -}}
+<div class="{{ delimit $wrapper " " }}" data-td-scroll-label="{{ i18n "scroll_region" }}">
+<table{{ with $id }} id="{{ . }}"{{ end }}{{ with $policy.class }} class="{{ . }}"{{ end }}
+  {{- partial "content/attrs.html" $policy.generic | safeHTMLAttr }}>
+  {{- with $caption }}
+  <caption class="td-table-caption">{{ . }}</caption>
+  {{- end }}
+  {{- /* 对齐走 data 属性而非 style：属性策略里 style 是"不安全直接丢"，
+         模板自己再吐一个行内 style 就自相矛盾了，而且 CSP 的 style-src
+         会把它拦掉。CSS 按属性选择器匹配。 */ -}}
+  <thead>
+    {{- range .THead }}
+    <tr>
+      {{- range . }}
+      <th scope="col"{{ with .Alignment }} data-td-align="{{ . }}"{{ end }}>{{ .Text }}</th>
+      {{- end }}
+    </tr>
+    {{- end }}
+  </thead>
+  <tbody>
+    {{- range .TBody }}
+    <tr>
+      {{- range $i, $cell := . }}
+      {{- /* matrix 的首列是行标题 —— 粘连它需要 th[scope=row]，而这也是
+             正确的语义：那一列在标识行，不是在陈述数据。 */ -}}
+      {{- if and $isMatrix (eq $i 0) }}
+      <th scope="row"{{ with $cell.Alignment }} data-td-align="{{ . }}"{{ end }}>{{ $cell.Text }}</th>
+      {{- else }}
+      <td{{ with $cell.Alignment }} data-td-align="{{ . }}"{{ end }}>{{ $cell.Text }}</td>
+      {{- end }}
+      {{- end }}
+    </tr>
+    {{- end }}
+  </tbody>
+</table>
+</div>

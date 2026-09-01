@@ -1,0 +1,93 @@
+{{- /* 引入一个文件：页面资源、assets 挂载点，或 content/ 下的另一个文件。
+
+     `code=false`（默认）把文件当 Markdown 在当前页的上下文里渲染；`code=true`
+     包成围栏交给代码块 hook —— 复用它意味着引入的代码自动带上文件名标题栏、
+     复制按钮、折叠与行号，不用在这里重写一套。
+
+     找不到文件只 warn 并输出空：引用一个不存在的路径是作者的笔误，代价该是
+     这一个块，不是整站构建。 */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "allowed" (slice "file" "code" "lang")) -}}
+
+{{- /* 位置参数形式下不能按名字取值，先挡住 —— 形式本身的警告归 validate。 */ -}}
+{{- $file := "" -}}
+{{- if not (and .IsNamedParams (isset .Params "file")) -}}
+  {{- warnf "shortcode %q requires parameter file at %s; including nothing" .Name .Position -}}
+{{- else -}}
+  {{- $file = strings.TrimSpace (printf "%v" (.Get "file")) -}}
+  {{- if not $file -}}
+    {{- warnf "shortcode %q: file must not be empty at %s; including nothing" .Name .Position -}}
+  {{- end -}}
+{{- end -}}
+{{- /* `..` 一律拒掉，不做规范化后再判断：这是信任边界，作者输入的路径会直接
+       进 os.ReadFile。允许它就等于允许读 content/ 之外的任何文件。 */ -}}
+{{- if strings.Contains $file ".." -}}
+  {{- warnf "shortcode %q: file must not contain .. at %s; got %q; including nothing" .Name .Position $file -}}
+  {{- $file = "" -}}
+{{- end -}}
+
+{{- /* 参数不存在时 .Get 返回 nil，validate-bool 的 `with` 会跳到回退，所以不
+       必先 isset 再取；但位置参数形式下按名字取值会出错，那一层要挡。 */ -}}
+{{- $code := false -}}
+{{- if .IsNamedParams -}}
+  {{- $code = partial "validate-bool.html" (dict
+    "value" (.Get "code") "fallback" false
+    "key" (printf "shortcode %q code" .Name) "position" .Position) -}}
+{{- end -}}
+
+{{- $lang := "" -}}
+{{- if and .IsNamedParams (isset .Params "lang") -}}
+  {{- $lang = strings.TrimSpace (printf "%v" (.Get "lang")) -}}
+  {{- if not $code -}}
+    {{- warnf "shortcode %q: lang requires code=true at %s; ignoring lang" .Name .Position -}}
+    {{- $lang = "" -}}
+  {{- else if and $lang (not (findRE `^[A-Za-z0-9#+_.-]+$` $lang)) -}}
+    {{- /* 语言名会写进围栏的 info string，空格和反引号会被解析成属性。 */ -}}
+    {{- warnf "shortcode %q: lang %q is not a language name at %s; highlighting nothing" .Name $lang .Position -}}
+    {{- $lang = "" -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* 解析顺序：页面资源 → assets → content/ 下的文件（开头的 `/` 表示
+       content 根，否则相对当前页所在目录）。三处都找不到才算缺失。 */ -}}
+{{- $content := "" -}}
+{{- $found := false -}}
+{{- with $file -}}
+  {{- if not (hasPrefix . "/") -}}
+    {{- with $.Page.Resources.Get . }}{{ $content = .Content }}{{ $found = true }}{{ end -}}
+    {{- if not $found }}{{ with resources.Get . }}{{ $content = .Content }}{{ $found = true }}{{ end }}{{ end -}}
+  {{- end -}}
+  {{- if not $found -}}
+    {{- /* content 根从页面文件反推，所以 contentDir 改成 `docs` 的站点也对。
+           os.ReadFile 只接受项目相对路径，WorkingDir 前缀要去掉。 */ -}}
+    {{- $path := "" -}}
+    {{- with $.Page.File -}}
+      {{- $root := strings.TrimPrefix (add hugo.WorkingDir "/") (strings.TrimSuffix .Path .Filename) -}}
+      {{- if hasPrefix $file "/" -}}
+        {{- $path = path.Join $root (strings.TrimPrefix "/" $file) -}}
+      {{- else -}}
+        {{- $path = path.Join $root (path.Dir .Path) $file -}}
+      {{- end -}}
+    {{- end -}}
+    {{- if and $path (fileExists $path) -}}
+      {{- $content = os.ReadFile $path -}}
+      {{- $found = true -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if not $found -}}
+    {{- warnf "shortcode %q: file %q was not found in page resources, assets, or content/ at %s; including nothing" $.Name . $.Position -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if $found -}}
+  {{- $body := strings.TrimRight "\n" $content -}}
+  {{- if $code -}}
+    {{- /* 围栏要比正文里最长的一串反引号更长 —— 引入的文件本身常常是带围栏的
+           Markdown，用固定三个反引号会在第一个内层围栏处截断。 */ -}}
+    {{- $len := 3 -}}
+    {{- range findRE "`+" $body }}{{ if ge (len .) $len }}{{ $len = add (len .) 1 }}{{ end }}{{ end -}}
+    {{- $fence := strings.Repeat $len "`" -}}
+    {{- $body = printf "%s%s\n%s\n%s" $fence $lang $body $fence -}}
+  {{- end -}}
+  {{- partial "content/render-block.html" (dict
+    "page" .Page "scope" (printf "include%d" .Ordinal) "content" $body) -}}
+{{- end -}}

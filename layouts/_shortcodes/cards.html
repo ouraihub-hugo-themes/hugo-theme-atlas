@@ -1,0 +1,6 @@
+{{- /* 卡片网格。只是 card 的容器，本身不吃参数。
+
+     列数不做参数：网格按可用宽度 auto-fit，侧栏拖窄、进平板、进手机都自己
+     收敛。给一个 cols=3 只会让作者在窄屏上手动改回来。 */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "form" "none") -}}
+<div class="td-cards">{{ .Inner }}</div>

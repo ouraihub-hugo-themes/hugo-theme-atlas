@@ -1,0 +1,69 @@
+{{- /* 按条目名派图标。返回一个 sprite 名字，目录返回两个（关/开）。
+
+     表按图标分组写，不按扩展名铺平。一张扩展名 → 图标的平表要一百多行才能
+     覆盖到约 25 个不同图标，多出来的都是同一个图标的别名；按图标收之后，加
+     一种扩展名是往一个 slice 里加一个词，而不是新起一行并猜该配哪个图标。
+
+     全名匹配优先于扩展名：`go.mod` 该是 Go 而不是"mod 文件"。
+
+     认不出就用通用文件图标，不 warn：作者写的是自己项目的目录树，里面必然
+     有主题没见过的文件名，那不是错误。
+
+     入参 dict：name、kind、icon（作者显式指定，已在 parse 里校验过）
+     返回：sprite 名字的 slice，长度 1 或 2 */ -}}
+{{- $name := .name -}}
+{{- $kind := .kind -}}
+{{- $result := slice -}}
+
+{{- if .icon -}}
+  {{- $result = slice .icon -}}
+{{- else if eq $kind "dir" -}}
+  {{- /* 两个：<details> 展开时换成打开的文件夹。 */ -}}
+  {{- $result = slice "folder" "folder-open" -}}
+{{- else -}}
+  {{- $byName := dict
+    "scale-balanced" (slice "license" "license.md" "license.txt" "copying" "notice")
+    "hammer" (slice "makefile" "justfile" "rakefile")
+    "docker" (slice "dockerfile" "docker-compose.yml" "docker-compose.yaml" "compose.yml" "compose.yaml")
+    "code-branch" (slice ".gitignore" ".gitattributes" ".gitmodules")
+    "key" (slice ".env")
+  -}}
+  {{- $byExt := dict
+    "markdown" (slice "md" "mdx" "markdown")
+    "gear" (slice "yml" "yaml" "toml" "json" "json5" "ini" "conf" "cfg" "properties")
+    "key" (slice "env" "key" "pem" "crt" "cer")
+    "lock" (slice "lock")
+    "terminal" (slice "sh" "bash" "zsh" "fish" "ps1" "bat" "cmd")
+    "python" (slice "py" "pyi")
+    "js" (slice "js" "mjs" "cjs")
+    "html5" (slice "html" "htm")
+    "css3-alt" (slice "css" "scss" "sass" "less")
+    "database" (slice "sql" "db" "sqlite")
+    "image" (slice "png" "jpg" "jpeg" "gif" "svg" "webp" "avif" "ico" "bmp")
+    "file-zipper" (slice "zip" "tar" "gz" "tgz" "bz2" "xz" "zst" "7z" "rar")
+    "file-lines" (slice "txt" "log" "rst" "adoc" "csv")
+    "code" (slice "ts" "tsx" "jsx" "go" "rs" "c" "h" "cc" "cpp" "hpp" "cs" "java" "kt" "swift" "rb" "php" "lua" "pl" "scala")
+  -}}
+
+  {{- /* 目录名可能带路径分隔符（作者写 `src/ts/` 这种压缩形式），取最后一段。 */ -}}
+  {{- $base := lower (strings.TrimSuffix "/" $name) -}}
+  {{- if strings.Contains $base "/" -}}
+    {{- $base = index (last 1 (split $base "/")) 0 -}}
+  {{- end -}}
+  {{- $ext := "" -}}
+  {{- if strings.Contains $base "." -}}
+    {{- $ext = index (last 1 (split $base ".")) 0 -}}
+  {{- end -}}
+
+  {{- range $icon, $names := $byName -}}
+    {{- if and (not $result) (in $names $base) }}{{ $result = slice $icon }}{{ end -}}
+  {{- end -}}
+  {{- if not $result -}}
+    {{- range $icon, $exts := $byExt -}}
+      {{- if and (not $result) $ext (in $exts $ext) }}{{ $result = slice $icon }}{{ end -}}
+    {{- end -}}
+  {{- end -}}
+  {{- if not $result }}{{ $result = slice "file" }}{{ end -}}
+{{- end -}}
+
+{{- return $result -}}

@@ -1,0 +1,93 @@
+{{- /* 唯一的 baseof。两条路：
+
+       列进 params.ui.shell_types 的 type 走阅读外壳；其余走简单文档
+       （首页、独立单页）。
+
+       为什么两个文档都写在这里，而不是抽成 shell/document.html：
+       `{{ block "main" }}` 在解析期对 baseof 的克隆求解，partial 是另一个
+       模板 —— 页面模板里的 `{{ define "main" }}` 到不了 partial 内部的
+       block，正文会静默渲染成空。外壳的组成部分仍各自是 partial，只有
+       block 所在的骨架必须留在这个文件里。
+
+       为什么不给四个 type 各写一份 baseof：Hugo 按 type 查找 baseof 是整体
+       替换而非继承，四份复制意味着任何外壳级改动要改四处，漏改一处不报错。
+       shell_types 的扩展点也靠这个判断生效，站点作者不需要知道 Hugo 的查找
+       顺序和外壳 partial 的名字。
+
+       外壳布局是一个 grid + 修饰类：侧栏与 TOC 的有无都是同一个 grid 的
+       变体，不是几套布局。修饰类的取值在这里算，几何在 shell.css 里。 */ -}}
+{{- $shell := partial "shell/resolve.html" . -}}
+<!DOCTYPE html>
+<html{{ partial "document-attrs.html" . }}>
+<head>
+  {{ partial "head/meta.html" . }}
+  {{ partial "head/css.html" . }}
+  {{ partial "head/theme-script.html" . }}
+</head>
+{{- if $shell.type -}}
+  {{- /* TOC 算一次存起来：既要判有无来定 grid 列数，又要输出，不重复渲染。 */ -}}
+  {{- $toc := partial "shell/toc.html" . -}}
+  {{- $hasToc := strings.ContainsNonSpace $toc -}}
+  {{- $hasSidebar := gt (len .FirstSection.Pages) 0 -}}
+  {{- /* 特征图也算一次：hero 要在栅格外输出、并给栅格加下压类，banner 与 wash
+         由页面模板消费，三者共用这一次解析。 */ -}}
+  {{- $featured := partial "shell/featured.html" . -}}
+  {{- .Store.Set "tdFeatured" $featured -}}
+  {{- $hero := eq $featured.mode "hero" -}}
+<body class="td-shell-{{ $shell.type }}{{ if $hero }} td-shell-chrome--hero{{ end }}">
+  {{ partial "skip-link.html" . }}
+  {{ partial "shell/navbar.html" . }}
+
+  {{- /* 抽屉开关放在栅格外：抽屉开启时正文与 TOC 会被置 inert，而按钮
+         必须仍可达 —— 它是唯一的关闭入口之一，且承载 aria-expanded。 */ -}}
+  {{ if $hasSidebar }}
+    <div class="mx-auto max-w-[100rem] px-4 pt-6 lg:px-8">
+      {{ partial "shell/drawer-toggle.html" . }}
+    </div>
+  {{ end }}
+
+  {{- /* hero 用绝对定位，需要一个定位祖先兼层叠边界 —— 它的 z-index: -1 在
+         没有 isolation 的情况下会穿透到页面背景之后。 */ -}}
+  <div{{ if $hero }} class="td-shell-hero-root"{{ end }}>
+  {{ if $hero }}{{ partial "shell/featured-image.html" $featured }}{{ end }}
+
+  <div class="td-shell td-shell--w-{{ $shell.width }} mx-auto max-w-[100rem] px-4 py-8 lg:px-8
+              {{ if $hero }}td-shell--hero {{ end }}
+              {{ if and (not $hasSidebar) (not $hasToc) }}td-shell--no-sidebar-no-toc
+              {{ else if not $hasSidebar }}td-shell--no-sidebar
+              {{ else if not $hasToc }}td-shell--no-toc{{ end }}">
+    {{ if $hasSidebar -}}
+      <aside id="td-sidebar" class="td-shell-sidebar" data-td-shell-drawer>
+        {{ partial "shell/sidebar.html" . }}
+      </aside>
+      <div class="td-shell-backdrop" data-td-shell-drawer-close></div>
+    {{- end }}
+
+    <main id="td-main" class="td-shell-main" tabindex="-1"
+          {{ if $hasSidebar }}data-td-shell-drawer-inert{{ end }}>
+      {{ partial "shell/breadcrumb.html" . }}
+      {{ block "main" . }}{{ end }}
+      {{ partial "shell/pager.html" . }}
+    </main>
+
+    {{ $toc }}
+  </div>
+  </div>
+
+  {{ partial "shell/footer.html" . }}
+  {{ partial "foot/js.html" . }}
+</body>
+{{- else -}}
+<body>
+  {{ partial "skip-link.html" . }}
+  {{ partial "shell/navbar.html" . }}
+
+  <main id="td-main" class="mx-auto max-w-4xl px-4 py-16" tabindex="-1">
+    {{ block "main" . }}{{ end }}
+  </main>
+
+  {{ partial "shell/footer.html" . }}
+  {{ partial "foot/js.html" . }}
+</body>
+{{- end -}}
+</html>

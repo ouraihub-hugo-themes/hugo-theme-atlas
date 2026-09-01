@@ -1,0 +1,91 @@
+skip_to_content: Skip to content
+main_nav: Main navigation
+breadcrumb_nav: Breadcrumb
+pager_nav: Sequential reading
+pager_prev: Previous
+pager_next: Next
+sidebar_nav: Section navigation
+toggle_theme: Toggle theme
+section_overview: Overview
+toc_nav: On this page
+open_sidebar: Open navigation
+close_sidebar: Close navigation
+heading_anchor: Link to this section
+scroll_region: Scrollable region
+
+callout_note: Note
+callout_tip: Tip
+callout_important: Important
+callout_warning: Warning
+callout_caution: Caution
+callout_success: Success
+callout_danger: Danger
+callout_question: Question
+callout_example: Example
+callout_quote: Quote
+callout_details: Details
+
+code_copy: Copy code
+code_copied: Copied
+code_collapse: Collapse
+# 带 Count 的字符串要走复数形式，否则 1 行的代码块会读作 "Show all 1 lines"。
+code_expand:
+  one: Show all {{ .Count }} line
+  other: Show all {{ .Count }} lines
+
+# tablist 的可访问名字。作者可以用 tabs 的 label 参数覆盖它 —— 一页上有多组
+# 标签页时，屏幕阅读器只报 "Tabs" 分不清哪一组。
+tabs_label: Tabs
+
+# 按键序列里 `+` 的可读版本。屏幕阅读器把 "Ctrl + K" 读成 "Ctrl 加号 K"
+# 是符号，不是意思 —— 这个词代替它。
+kbd_with: with
+
+# 交叉引用目标的标签词。四个键各自独立，不拼字符串 —— 语言之间的词序不同
+# （英文 "Figure 3"，中文"图 3"）。
+book_figure: Figure
+book_table: Table
+book_equation: Equation
+book_example: Example
+
+# 列表的可访问名字。作者可以用 title 参数覆盖 —— 一页上同时有图表目录与表格
+# 目录时，屏幕阅读器的地标列表里两个都叫 "navigation" 就没法选。
+book_toc: Contents
+book_fig_list: List of figures
+book_tbl_list: List of tables
+book_eq_list: List of equations
+book_eg_list: List of examples
+
+# 字段表。required 与 default 是 API 词汇，各语言里通常照搬英文，但仍走 i18n
+# —— 决定要不要译是译者的事，不是模板的事。
+field_required: required
+field_default: default
+field_self_link: Link to this field
+
+# 头像墙的计数。数字由模板单独渲染（它有自己的字号），这里只有名词，所以
+# 单复数要分开 —— "1 contributors" 在英文里是错的。
+contributors_count:
+  one: contributor
+  other: contributors
+
+# 资产表。assets_download 同时做表格的可访问名字与 caption，所以是一个名词
+# 短语而不是一句祈使句 —— 屏幕阅读器会把它当"这个区域叫什么"来读。
+assets_download: Download
+assets_file: File
+assets_checksum: Checksum
+assets_copy: Copy checksum
+assets_copy_all: Copy all
+assets_copied: Copied
+
+# 发布卡片。release_released 是一个形容词短语（"released 2026-08-25"），
+# release_links 是那组链接的可访问名字 —— 两者不能共用一个键：卡片自己的名字
+# 用版本号（tag 就是最准确的标题），而里面那层 nav 需要自己的名字。
+release_view: View release
+release_source: Source
+release_released: Released
+release_links: Release links
+
+# 下载区。download_unpublished 是一个状态而不是一句道歉："版本号定了但资产还
+# 没上传"是发布流程里的正常一段，读者需要知道的是等，不是出错了。
+download_channels: Download channels
+download_unpublished: Not published yet

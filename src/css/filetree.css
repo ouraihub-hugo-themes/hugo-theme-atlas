@@ -1,0 +1,319 @@
+/* filetree 围栏。
+ *
+ * 每行是一个两列 grid：名字格 | 注释格。名字列宽由 render hook 按最长条目
+ * 在构建时算出（`--td-filetree-name-col`，单位 ch），所以 `#` 注释不用 JS
+ * 就能跨层对齐 —— 每一层嵌套是独立的 `<ul>`，也就是独立的 grid 容器，
+ * `max-content` 跨不过去。
+ *
+ * 列宽 clamp 在 50%–70%：注释列不吃掉右半边，超长文件名也不把它挤到 30%
+ * 以下。这条分割线不做拖拽 —— 与侧栏拖拽同一类成本
+ * （指针捕获 + 双向 RTL + 键盘等价 + 持久化），收益只是调一个已经够用的
+ * 比例。等有人真的要求再说。
+ *
+ * 缩进 2.5ch 与 content/filetree-parse.html 里算 nameWidth 的常数必须一致。
+ */
+
+.td-filetree {
+  --td-filetree-indent: 2.5ch;
+  --td-filetree-row: 1.9rem;
+  --td-filetree-gutter: 0.75rem;
+  --td-filetree-name-col: 40ch; /* 由 render hook 内联覆盖 */
+  --td-filetree-split: clamp(50%, var(--td-filetree-name-col), 70%);
+  --td-filetree-folder: #c58f1c;
+
+  margin-block: 1.5rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: var(--color-surface-raised);
+  color: var(--color-ink);
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+/* 深色下文件夹黄要提亮：#c58f1c 在深底上读不出来。 */
+[data-td-theme="dark"] .td-filetree {
+  --td-filetree-folder: #e3b341;
+}
+
+.td-filetree-title {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0.35rem 0.85rem;
+  overflow: hidden;
+  border-block-end: 1px solid var(--color-border);
+  background: var(--color-elev);
+  color: var(--color-ink);
+  font-family: var(--font-meta);
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.td-filetree-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 最外层留一点上下气口；嵌套的 ul 不要，否则每层都多一截。 */
+.td-filetree > .td-filetree-list {
+  padding-block: 0.4rem;
+}
+
+.td-filetree-row {
+  display: grid;
+  grid-template-columns: minmax(0, var(--td-filetree-split)) minmax(0, 1fr);
+  align-items: center;
+  block-size: var(--td-filetree-row);
+  padding-inline: var(--td-filetree-gutter);
+
+  /* 缩进引导线：每个祖先层一条细线，止于父条目图标的中心。
+     用重复渐变而不是每层一个伪元素 —— 层数是变量，伪元素的数量不是。
+     渐变方向是物理的，RTL 在下面翻面。 */
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0 calc(var(--td-filetree-indent) - 1px),
+    var(--color-border) calc(var(--td-filetree-indent) - 1px) var(--td-filetree-indent)
+  );
+  background-repeat: no-repeat;
+  background-position: calc(var(--td-filetree-gutter) + 1ch - var(--td-filetree-indent) + 1px) 0;
+  background-size: calc(var(--td-filetree-depth, 0) * var(--td-filetree-indent)) 100%;
+}
+
+.td-filetree-row:hover {
+  background-color: color-mix(in srgb, var(--color-accent) 8%, transparent);
+}
+
+[dir="rtl"] .td-filetree-row {
+  background-image: repeating-linear-gradient(
+    to left,
+    transparent 0 calc(var(--td-filetree-indent) - 1px),
+    var(--color-border) calc(var(--td-filetree-indent) - 1px) var(--td-filetree-indent)
+  );
+  background-position: right calc(var(--td-filetree-gutter) + 1ch - var(--td-filetree-indent) + 1px) top 0;
+}
+
+/* 整段没有注释时只剩一列，名字铺满。 */
+.td-filetree--plain .td-filetree-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.td-filetree-name-cell {
+  display: flex;
+  min-inline-size: 0;
+  align-items: center;
+  padding-inline: calc(var(--td-filetree-depth, 0) * var(--td-filetree-indent)) 2ch;
+  gap: 0.75ch;
+}
+
+.td-filetree-name {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.td-filetree-name a {
+  color: inherit;
+  text-decoration-color: color-mix(in srgb, currentcolor 40%, transparent);
+}
+
+.td-filetree-name a:hover {
+  color: var(--color-accent);
+}
+
+/* 图标格固定 2ch：文件夹与文件图标宽度不同，不固定的话名字列会逐行错开。 */
+.td-filetree-icon {
+  flex: none;
+  display: inline-flex;
+  inline-size: 2ch;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-ink-muted);
+  font-size: 0.95em;
+  line-height: 1;
+}
+
+.td-filetree-icon--dir {
+  color: var(--td-filetree-folder);
+}
+
+.td-filetree-icon--info {
+  color: var(--color-status-info);
+}
+
+.td-filetree-icon--success {
+  color: var(--color-status-success);
+}
+
+.td-filetree-icon--warning {
+  color: var(--color-status-warning);
+}
+
+.td-filetree-icon--danger {
+  color: var(--color-status-danger);
+}
+
+.td-filetree-glyph {
+  inline-size: 1em;
+  block-size: 1em;
+}
+
+/* 关/开两个字形叠在同一格里，靠 details 的状态切换。 */
+.td-filetree-glyph--open {
+  display: none;
+}
+
+.td-filetree-details[open] > .td-filetree-summary .td-filetree-glyph--closed {
+  display: none;
+}
+
+.td-filetree-details[open] > .td-filetree-summary .td-filetree-glyph--open {
+  display: inline-block;
+}
+
+.td-filetree-details {
+  min-inline-size: 0;
+}
+
+/* summary 的默认三角要摘掉两次：::marker 是标准写法，
+   ::-webkit-details-marker 是旧 Safari。少一条就多一个三角。 */
+.td-filetree-summary {
+  display: block;
+  cursor: pointer;
+  list-style: none;
+}
+
+.td-filetree-summary::marker {
+  content: "";
+}
+
+.td-filetree-summary::-webkit-details-marker {
+  display: none;
+}
+
+.td-filetree-summary:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
+}
+
+.td-filetree-comment {
+  display: flex;
+  min-inline-size: 0;
+  block-size: 100%;
+  align-items: center;
+  padding-inline-start: 0.75rem;
+  border-inline-start: 1px dashed var(--color-border);
+  color: var(--color-ink-muted);
+  font-size: 0.86em;
+  gap: 0.75ch;
+  white-space: nowrap;
+}
+
+.td-filetree-comment-text {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 窄屏：注释挪到名字下面一行，缩进对齐名字。两列挤在 360px 里
+   两边都读不了。 */
+@media (width < 40rem) {
+  .td-filetree-row {
+    grid-template-columns: minmax(0, 1fr);
+    block-size: auto;
+    padding-block: 0.25rem;
+  }
+
+  .td-filetree-comment {
+    padding-inline-start: calc(var(--td-filetree-depth, 0) * var(--td-filetree-indent) + 2.75ch);
+    border: 0;
+    line-height: 1.35;
+    white-space: normal;
+  }
+
+  .td-filetree-comment:empty {
+    display: none;
+  }
+
+  .td-filetree-comment-text {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+}
+
+/* 强制色：所有靠色差表达的东西都要换成系统色，虚线边框也要给出实色。 */
+@media (forced-colors: active) {
+  .td-filetree {
+    border-color: CanvasText;
+  }
+
+  .td-filetree-comment {
+    border-color: CanvasText;
+  }
+
+  .td-filetree-icon,
+  .td-filetree-hash,
+  .td-filetree-comment,
+  .td-filetree-title {
+    color: CanvasText;
+  }
+
+  .td-filetree-row:hover {
+    background-color: Highlight;
+    color: HighlightText;
+  }
+}
+
+/* 打印：全部展开、不截断。纸上没有折叠也没有悬停，截断的名字就是丢信息。
+   details 展开靠 [open]，所以这里只处理静态那一份的字形与换行。 */
+@media print {
+  .td-filetree {
+    overflow: visible;
+    background: transparent;
+    break-inside: avoid;
+  }
+
+  /* 打印时强制展开。折叠是浏览器对非 summary 子元素做的隐藏，覆盖它就展开 ——
+     CSS 加不了 open 属性，所以只能从这一头改。`content-visibility` 是新浏览器
+     实现折叠的方式，两条都要。 */
+  .td-filetree-details:not([open]) > *:not(.td-filetree-summary) {
+    display: block;
+    content-visibility: visible;
+  }
+
+  .td-filetree-row {
+    block-size: auto;
+    min-block-size: var(--td-filetree-row);
+    background-color: transparent;
+    break-inside: avoid;
+  }
+
+  .td-filetree-name,
+  .td-filetree-comment,
+  .td-filetree-comment-text {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .td-filetree-summary {
+    cursor: default;
+  }
+
+  /* 强制展开之后字形也要跟着换成打开的文件夹，否则纸上是"合着的文件夹里
+     列着内容"。 */
+  .td-filetree-details:not([open]) > .td-filetree-summary .td-filetree-glyph--closed {
+    display: none;
+  }
+
+  .td-filetree-details:not([open]) > .td-filetree-summary .td-filetree-glyph--open {
+    display: inline-block;
+  }
+}

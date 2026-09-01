@@ -1,0 +1,79 @@
+{{- /* 交叉引用：`{{< xref fig="2.3" >}}` → "图 2.3"（链到 #fig-2.3）。
+
+     四种 kind 二选一，或者用 `anchor` 指向任意片段。`page` 可以跨页引用。
+
+     链接文字：有 Inner 用 Inner，否则用 kind + num 生成的标签 —— 这是这个
+     shortcode 存在的理由，"图 2.3" 这四个字的词序在每种语言里都不同，作者
+     手写就得为每种语言各写一遍。
+
+     不校验目标是否真的存在：Hugo 渲染 shortcode 时同页后文的目标还没登记，
+     跨页的更是另一个页面的 Store。断链检测要在全站构建完之后做，那是检查器
+     的活，不是这个 shortcode 的。 */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "allowed" (slice "fig" "tbl" "eq" "eg" "page" "anchor")) -}}
+{{- $at := .Position -}}
+{{- $params := dict -}}
+{{- if .IsNamedParams }}{{ $params = .Params }}{{ end -}}
+
+{{- $kinds := slice -}}
+{{- range $kind := slice "fig" "tbl" "eq" "eg" -}}
+  {{- if isset $params $kind }}{{ $kinds = $kinds | append $kind }}{{ end -}}
+{{- end -}}
+{{- if gt (len $kinds) 1 -}}
+  {{- warnf "shortcode %q accepts only one of fig, tbl, eq, or eg at %s; using %q" .Name $at (index $kinds 0) -}}
+{{- end -}}
+
+{{- $kind := "" -}}
+{{- $num := "" -}}
+{{- with $kinds -}}
+  {{- $kind = index . 0 -}}
+  {{- $num = partial "book/validate-num.html" (dict "name" $.Name "value" ($.Get $kind) "position" $at) -}}
+{{- end -}}
+
+{{- $anchor := "" -}}
+{{- if isset $params "anchor" -}}
+  {{- $anchor = partial "book/validate-id.html" (dict "name" .Name "value" (.Get "anchor") "position" $at) -}}
+{{- end -}}
+{{- if and (not $kind) (not $anchor) -}}
+  {{- warnf "shortcode %q requires fig, tbl, eq, eg, or anchor at %s; rendering the text without a link" .Name $at -}}
+{{- end -}}
+{{- if and (not $anchor) $kind }}{{ $anchor = printf "%s-%s" $kind $num }}{{ end -}}
+
+{{- /* 跨页引用。GetPage 找不到就退回本页 —— 生成一个指向不存在页面的链接
+       比不带链接更糟，它看起来是好的。 */ -}}
+{{- $targetPage := .Page -}}
+{{- $pageRef := "" -}}
+{{- if isset $params "page" -}}
+  {{- $ref := .Get "page" -}}
+  {{- if or (ne (printf "%T" $ref) "string") (not (strings.TrimSpace $ref)) -}}
+    {{- warnf "shortcode %q: page must be a non-empty string at %s; resolving on this page" .Name $at -}}
+  {{- else -}}
+    {{- $pageRef = strings.TrimSpace $ref -}}
+    {{- with .Page.GetPage $pageRef -}}
+      {{- $targetPage = . -}}
+    {{- else -}}
+      {{- warnf "shortcode %q: page %q was not found in language %s at %s; rendering the text without a link" $.Name $pageRef $.Page.Language.Lang $at -}}
+      {{- $pageRef = "" -}}
+      {{- $anchor = "" -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $inner := strings.TrimSpace (printf "%s" .InnerDeindent) -}}
+{{- $label := "" -}}
+{{- if $inner -}}
+  {{- $label = .Page.RenderString (dict "display" "inline") $inner -}}
+{{- else if $kind -}}
+  {{- $label = partial "book/label.html" (dict "kind" $kind "num" $num) -}}
+{{- else if $anchor -}}
+  {{- warnf "shortcode %q: an anchor-only reference requires inner link text at %s; using the anchor as its text" .Name $at -}}
+  {{- $label = $anchor -}}
+{{- end -}}
+
+{{- if not $anchor -}}
+  {{- /* 没有可用锚点：把文字原样输出，不生成链接。 */ -}}
+  {{- with $label }}{{ . }}{{ end -}}
+{{- else -}}
+  {{- $href := printf "#%s" $anchor -}}
+  {{- with $pageRef }}{{ $href = printf "%s#%s" $targetPage.RelPermalink $anchor }}{{ end -}}
+<a class="td-book-xref{{ with $kind }} td-book-xref--{{ . }}{{ end }}" href="{{ $href }}"{{ with $kind }} data-td-book-kind="{{ . }}" data-td-book-num="{{ $num }}"{{ end }}>{{ $label }}</a>
+{{- end -}}

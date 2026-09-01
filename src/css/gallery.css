@@ -1,0 +1,72 @@
+/* gallery 围栏。
+ *
+ * 图片带自己的类，不用 `> img` 选：带 `link=` 的条目会被包一层 `<a>`，
+ * 子选择器就够不到了。
+ *
+ * `--described` 修饰类不改栅格：有说明时条目本来就高一截，`auto-fit` 的行
+ * 高按最高的那个算，不需要另给一套列宽。它留给说明文字自己的排版。
+ */
+
+.td-gallery {
+  display: grid;
+  /* min(100%, 16rem)：不加 min() 的话，容器窄于 16rem 时列宽会溢出容器。 */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem;
+  margin-block: 1.25rem 1.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.td-gallery-item {
+  display: flex;
+  min-inline-size: 0;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.6rem;
+  background: var(--color-surface-raised);
+  color: var(--color-ink-muted);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.td-gallery-link {
+  display: block;
+  min-inline-size: 0;
+}
+
+.td-gallery-image {
+  display: block;
+  inline-size: 100%;
+  block-size: auto;
+  border-radius: 0.35rem;
+  object-fit: contain;
+}
+
+.td-gallery-description {
+  margin: 0;
+}
+
+@media (forced-colors: active) {
+  .td-gallery-item {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+  }
+}
+
+/* 打印：改成单列堆叠。纸上一行三张图每张都只有几厘米宽，看不出内容，
+   而图恰恰是这个组件唯一的内容。 */
+@media print {
+  .td-gallery {
+    display: block;
+  }
+
+  .td-gallery-item {
+    margin-block-end: 0.75rem;
+    break-inside: avoid;
+  }
+}

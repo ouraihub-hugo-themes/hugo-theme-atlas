@@ -1,0 +1,107 @@
+{{- /* 发布资产表：一段 sha*sum 输出变成带下载链接与校验和的表格。
+
+     基址有两个来源，互斥：页面的 release_url front matter，或 base 参数。
+     两个都给是作者的误会 —— 一个页面只能属于一个发布。两个都没有则不渲染：
+     猜一个基址会产出指向错误文件的下载链接，比没有表格更糟。
+
+     校验和不联网核对，也不下载文件。这是一张排版表，事实由作者提供。 */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "allowed" (slice "algo" "base" "src" "group")) -}}
+{{- $ok := true -}}
+
+{{- /* algo 是作者声明的期望算法。长度已经能定算法，这个参数的用处是让"拿
+       md5 当 sha256 发布"变成一条明确的警告。 */ -}}
+{{- $algo := "" -}}
+{{- if and .IsNamedParams (isset .Params "algo") -}}
+  {{- $algo = lower (strings.TrimSpace (printf "%v" (.Get "algo"))) -}}
+  {{- if not (in (slice "md5" "sha1" "sha256" "sha512") $algo) -}}
+    {{- warnf "shortcode %q: algo must be md5, sha1, sha256, or sha512 at %s; got %q; skipping the block" .Name .Position $algo -}}
+    {{- $ok = false -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* group 只认 auto，不认列名：分组顺序是主题定的（包格式在前，压缩包在
+       后），让作者排序就等于把一个呈现决定变成一个配置面。 */ -}}
+{{- $grouped := false -}}
+{{- if and $ok .IsNamedParams (isset .Params "group") -}}
+  {{- if eq (printf "%v" (.Get "group")) "auto" -}}
+    {{- $grouped = true -}}
+  {{- else -}}
+    {{- warnf "shortcode %q: group must be auto at %s; ignoring it" .Name .Position -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* InnerDeindent 而非 Inner：作者会把校验和缩进对齐，而行首的空格会让
+       `^<hex>` 匹配不上。
+
+       开头那个换行要去掉：Inner 从开标签之后开始，所以第一行恒为空，作者写
+       的第一行会被报成"line 2"。行号是这批警告唯一的定位手段，差一行就等于
+       让作者自己数。 */ -}}
+{{- $lines := strings.TrimLeft "\n" (printf "%s" .InnerDeindent) -}}
+{{- if and $ok .IsNamedParams (isset .Params "src") -}}
+  {{- $src := strings.TrimSpace (printf "%v" (.Get "src")) -}}
+  {{- if not $src -}}
+    {{- warnf "shortcode %q: src must not be empty at %s; skipping the block" .Name .Position -}}
+    {{- $ok = false -}}
+  {{- else if strings.ContainsNonSpace $lines -}}
+    {{- warnf "shortcode %q: src and inner checksum lines are mutually exclusive at %s; skipping the block" .Name .Position -}}
+    {{- $ok = false -}}
+  {{- else -}}
+    {{- with or (.Page.Resources.Get $src) (resources.Get $src) -}}
+      {{- $lines = printf "%s" .Content -}}
+    {{- else -}}
+      {{- warnf "shortcode %q: src resource %q was not found at %s; skipping the block" $.Name $src $.Position -}}
+      {{- $ok = false -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- if and $ok (not (strings.ContainsNonSpace $lines)) -}}
+  {{- warnf "shortcode %q requires checksum lines or src at %s; skipping the block" .Name .Position -}}
+  {{- $ok = false -}}
+{{- end -}}
+
+{{- $base := "" -}}
+{{- $hasRelease := isset .Page.Params "release_url" -}}
+{{- if and $ok .IsNamedParams (isset .Params "base") -}}
+  {{- if $hasRelease -}}
+    {{- warnf "shortcode %q: base is only valid without release_url front matter at %s; skipping the block" .Name .Position -}}
+    {{- $ok = false -}}
+  {{- else -}}
+    {{- /* 过共享 URL 策略，不另写一套 scheme 判断。查询串与片段额外拒掉 ——
+           基址后面要接文件名，`?v=1` 会让拼出来的地址变成 `?v=1/name`。 */ -}}
+    {{- $policy := partial "content/url.html" (dict
+      "value" (.Get "base") "kind" "link" "parameter" "base"
+      "position" .Position "name" (printf "shortcode %q" .Name)) -}}
+    {{- if not $policy.valid -}}
+      {{- $ok = false -}}
+    {{- else if findRE `[?#]` $policy.raw -}}
+      {{- warnf "shortcode %q: base must not contain a query or fragment at %s; skipping the block" .Name .Position -}}
+      {{- $ok = false -}}
+    {{- else if eq $policy.scheme "mailto" -}}
+      {{- warnf "shortcode %q: base must be an http(s) or root-relative URL at %s; skipping the block" .Name .Position -}}
+      {{- $ok = false -}}
+    {{- else -}}
+      {{- $base = $policy.href -}}
+    {{- end -}}
+  {{- end -}}
+{{- else if and $ok $hasRelease -}}
+  {{- $meta := partial "release/meta.html" (dict "page" .Page "position" .Position) -}}
+  {{- if $meta.valid -}}
+    {{- $base = printf "%s/releases/download/%s" $meta.repoURL (urls.PathEscape $meta.tag) -}}
+  {{- else -}}
+    {{- /* meta 自己已经就 front matter 警告过了。 */ -}}
+    {{- $ok = false -}}
+  {{- end -}}
+{{- else if $ok -}}
+  {{- warnf "shortcode %q requires release_url front matter or base at %s; skipping the block" .Name .Position -}}
+  {{- $ok = false -}}
+{{- end -}}
+
+{{- if $ok -}}
+  {{- $entries := partial "release/assets-parse.html" (dict
+    "content" $lines "position" .Position "base" $base "algo" $algo) -}}
+  {{- with $entries -}}
+    {{- /* 页面级能力标记：foot/js.html 在正文渲染之后读它。 */ -}}
+    {{- $.Page.Store.Set "hasAssetList" true -}}
+    {{- partial "release/assets-table.html" (dict "entries" . "grouped" $grouped) -}}
+  {{- end -}}
+{{- end -}}

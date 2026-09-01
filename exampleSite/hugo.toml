@@ -1,0 +1,80 @@
+baseURL = "https://example.org/"
+locale = "en-US"
+title = "Atlas"
+theme = "hugo-theme-atlas"
+
+# 期 0 不做分类法。启用时连同 taxonomy/term 模板一起加。
+disableKinds = ["taxonomy", "term"]
+
+[params]
+description = "Documentation theme. TypeScript + Tailwind CSS, compiled to plain assets."
+
+# `{{< param >}}` 的回落路径要有覆盖：这个键只在站点一级存在，任何页面上
+# 取它都走站点配置。见 docs/components/marker。
+product_version = "0.1.0"
+
+# navbar 菜单。不配也能跑 —— navbar 会退回顶层 section。这里显式配置是
+# 为了让两条路径都有验证覆盖。
+[[menu.main]]
+name = "Docs"
+pageRef = "/docs"
+weight = 10
+
+[[menu.main]]
+name = "Home"
+pageRef = "/"
+weight = 20
+
+# 页脚链接列。params.column 是列标题，同一个 column 的项归为一列。
+# 不配 menu.footer 也能跑 —— 页脚只出品牌与版权，不画空列。
+[[menu.footer]]
+name = "Shell"
+pageRef = "/docs/shell"
+weight = 10
+[menu.footer.params]
+column = "Docs"
+
+[[menu.footer]]
+name = "Typography"
+pageRef = "/docs/typography"
+weight = 20
+[menu.footer.params]
+column = "Docs"
+
+[[menu.footer]]
+name = "Hugo"
+url = "https://gohugo.io/"
+weight = 30
+[menu.footer.params]
+column = "Elsewhere"
+
+[markup.goldmark.renderer]
+unsafe = true
+
+# 独占一段的图不再包在 <p> 里。默认包着，那样 .IsBlock 恒为假，render hook
+# 拿不到块属性，figure 与尺寸覆盖都无从生效。
+[markup.goldmark.parser]
+wrapStandAloneImageWithinParagraph = false
+
+# 块属性（`{class="x"}` 跟在块后面）。默认关，不开的话那一行会当普通文本
+# 渲染出来。提示框、表格、图片的属性策略都靠它。
+[markup.goldmark.parser.attribute]
+block = true
+
+# 行内与块级数学定界符。**Hugo 忽略主题设置的 markup**，所以这一段必须写在
+# 消费方的配置里，主题给不了默认值 —— 不写的话 `$E = mc^2$` 原样渲染成
+# 带美元号的文本。```math 围栏不受影响，那条路不经过 passthrough。
+#
+# `\(…\)` 与 `\[…\]` 一并收：LaTeX 作者贴过来的公式常常是这两种，而 `$`
+# 在正文里还要表示货币。
+[markup.goldmark.extensions.passthrough]
+enable = true
+
+[markup.goldmark.extensions.passthrough.delimiters]
+inline = [['$', '$'], ['\(', '\)']]
+block = [['$$', '$$'], ['\[', '\]']]
+
+# 必需。noClasses=true（Hugo 默认）会让 Chroma 输出内联样式，深浅色
+# 切换就失效 —— 浅色页面里会出现深色代码块。主题的样式表按类名匹配。
+[markup.highlight]
+noClasses = false

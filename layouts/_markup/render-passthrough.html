@@ -1,0 +1,59 @@
+{{- /* 行内 `$…$` 与块级 `$$…$$` 的数学定界符。
+
+     **这个 hook 只有消费方在自己的配置里开了 passthrough 扩展才会被调用。**
+     Hugo 忽略主题设置的 `markup`，所以主题给不了默认值 —— 见 exampleSite 的
+     hugo.toml。没开的时候这个文件不做任何事，也不报错：`$` 在正文里本来就
+     是货币符号，为一个没开的扩展警告等于对所有写价格的作者喊话。
+
+     块级形式支持 `{num=…}` 属性登记进交叉引用表，作用与 `{{< eq >}}` 相同。
+     两种写法并存的理由：`$$` 是 LaTeX 作者的肌肉记忆，而 shortcode 形式在
+     Markdown 编辑器里不会被当成数学高亮。 */ -}}
+{{- $page := .PageInner | default .Page -}}
+{{- $isBlock := ne .Type "inline" -}}
+{{- $expr := strings.TrimSpace (printf "%s" .Inner) -}}
+{{- $attrs := .Attributes | default dict -}}
+
+{{- if not $expr -}}
+  {{- /* 空定界符对：`$$` 紧跟 `$$`。原样不输出，不警告 —— 更可能是作者在写
+         两个美元号，而不是一条空公式。 */ -}}
+{{- else if and $isBlock (gt (len $attrs) 0) -}}
+  {{- $policy := partial "content/attributes.html" (dict
+    "attributes" $attrs "allowed" (slice "num" "id" "caption")
+    "position" .Position "kind" "math"
+  ) -}}
+  {{- $numRaw := index $policy.consumed "num" | default "" -}}
+  {{- if not $numRaw -}}
+    {{- warnf "math: id/caption attributes require num at %s; ignoring them" .Position -}}
+  {{- end -}}
+  {{- $num := partial "book/validate-num.html" (dict "name" "math" "value" $numRaw "position" .Position) -}}
+  {{- $id := printf "eq-%s" $num -}}
+  {{- with index $policy.consumed "id" -}}
+    {{- $id = partial "book/validate-id.html" (dict "name" "math" "value" . "position" $.Position) -}}
+  {{- end -}}
+  {{- $caption := strings.TrimSpace (index $policy.consumed "caption" | default "") -}}
+  {{- partial "book/register-target.html" (dict
+    "page" $page "kind" "eq" "num" $num "id" $id "caption" $caption
+    "position" .Position "ordinal" .Ordinal
+  ) -}}
+  {{- $label := partial "book/label.html" (dict "kind" "eq" "num" $num) -}}
+  {{- $html := partial "content/math.html" (dict "expression" $expr "display" true "position" .Position) -}}
+<figure{{ with $id }} id="{{ . }}"{{ end }} class="td-book-figure td-book-figure--eq{{ with $policy.class }} {{ . }}{{ end }}" data-td-book-kind="eq" data-td-book-num="{{ $num }}"{{ partial "content/attrs.html" $policy.generic | safeHTMLAttr }}>
+  <div class="td-book-figure-body td-math">
+    {{- if $html }}{{ $html | safeHTML }}{{ else }}<pre class="td-math-source"><code>{{ $expr }}</code></pre>{{ end -}}
+  </div>
+  <figcaption><span class="td-book-figure-label">{{ $label }}</span>{{ with $caption }} <span class="td-book-figure-caption">{{ . }}</span>{{ end }}</figcaption>
+</figure>
+{{- else -}}
+  {{- $html := partial "content/math.html" (dict
+    "expression" $expr "display" $isBlock "position" .Position
+  ) -}}
+  {{- if not $html -}}
+    {{- /* 渲染失败：原样把作者写的东西还回去，连定界符一起 —— 缺了它作者
+           在页面上看到一段裸 LaTeX，认不出是哪条公式没渲染。 */ -}}
+    {{- if $isBlock }}{{ printf "$$%s$$" $expr }}{{ else }}{{ printf "$%s$" $expr }}{{ end -}}
+  {{- else if $isBlock -}}
+<div class="td-math">{{ $html | safeHTML }}</div>
+  {{- else -}}
+    {{- $html | safeHTML -}}
+  {{- end -}}
+{{- end -}}

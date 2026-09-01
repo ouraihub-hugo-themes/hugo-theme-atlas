@@ -1,0 +1,44 @@
+{{- /* shortcode 参数形式与名单校验。
+
+     作者把 `title` 拼成 `titel` 时，Hugo 不会报错 —— 那个参数只是静默地不
+     存在，页面上少一行字。这是 shortcode 最常见的一类 bug，也是最难自己发
+     现的，所以未知参数必须 warn。
+
+     入参 dict：
+       shortcode  shortcode 上下文（传 `.`）
+       allowed    合法参数名 slice；form 为 "none" 时不用给
+       form       "named"（默认）、"none" 或 "positional"
+                  none        只吃 Inner，任何参数都是作者的误会
+                  positional  只吃位置参数（`{{< kbd Ctrl C >}}`），给了
+                              名字参数说明作者以为它支持 key="..."
+       at         可选，覆盖消息里的位置。嵌套 shortcode 的 .Position 相对的
+                  是父级 Inner 那个独立文档，恒为 `文件:1:1`，调用方要自己给
+                  一个能定位的说法
+
+     "any" 形式不做：同时接受两种形式的 shortcode 一个都没有，等真需要再加。 */ -}}
+{{- $sc := .shortcode -}}
+{{- $form := .form | default "named" -}}
+{{- $allowed := .allowed | default slice -}}
+{{- $at := .at | default $sc.Position -}}
+{{- $count := 0 -}}
+{{- with $sc.Params }}{{ $count = len . }}{{ end -}}
+{{- if eq $form "none" -}}
+  {{- if gt $count 0 -}}
+    {{- warnf "shortcode %q takes no parameters at %s; ignoring them" $sc.Name $at -}}
+  {{- end -}}
+{{- else if eq $form "positional" -}}
+  {{- if and (gt $count 0) $sc.IsNamedParams -}}
+    {{- warnf "shortcode %q takes positional parameters only at %s; ignoring the named ones" $sc.Name $at -}}
+  {{- end -}}
+{{- else -}}
+  {{- if and (gt $count 0) (not $sc.IsNamedParams) -}}
+    {{- warnf "shortcode %q takes named parameters only at %s; ignoring the positional ones" $sc.Name $at -}}
+  {{- else -}}
+    {{- range $name, $_ := $sc.Params -}}
+      {{- if not (in $allowed $name) -}}
+        {{- warnf "shortcode %q: unknown parameter %q at %s (allowed: %s); ignoring it" $sc.Name $name $at (delimit $allowed ", ") -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return "" -}}

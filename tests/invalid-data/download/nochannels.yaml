@@ -1,0 +1,3 @@
+# channels 是空数组。
+version: "1.0.0"
+channels: []

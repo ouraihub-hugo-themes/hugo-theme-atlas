@@ -1,0 +1,145 @@
+/* 下载区。由 layouts/_partials/download/render.html 渲染。
+
+   一个渠道一段，段之间一道线：渠道是并列关系（包管理器 / 二进制 / 源码），
+   不是流程。顶上那排链接是目录，不是标签页 —— 读者要能把某一个渠道的地址
+   发给同事。 */
+
+@layer components {
+  .td-download {
+    margin-block: 1.5rem;
+  }
+
+  .td-download-channels {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-block-end: 2rem;
+  }
+
+  /* 药丸形的锚点链接。是链接不是按钮，所以没有 cursor: pointer 之类的伪装。 */
+  .td-download-chip {
+    padding: 0.35rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    background: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-meta);
+    font-size: 0.85rem;
+    text-decoration: none;
+
+    &:is(:hover, :focus-visible) {
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+      text-decoration: none;
+    }
+  }
+
+  .td-download-channel {
+    padding-block: 0.5rem 2rem;
+
+    /* 从上面那排链接跳过来时不能被吸顶导航挡住。 */
+    scroll-margin-block-start: calc(var(--td-shell-nav-h) + 1rem);
+
+    /* 分隔线只在段之间。 */
+    & + & {
+      padding-block-start: 2rem;
+      border-block-start: 1px solid var(--color-border);
+    }
+  }
+
+  .td-download-heading {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    align-items: center;
+
+    > h2 {
+      display: flex;
+      gap: 0.65rem;
+      align-items: center;
+      min-width: 0;
+      margin: 0;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  .td-download-icon {
+    /* 图标跟着标题的字号走，不写死像素 —— 标题在窄屏上会缩。 */
+    inline-size: 1em;
+    block-size: 1em;
+    flex: none;
+  }
+
+  /* 未发布的状态章。用 warning 色而不是 danger：这是"等一下"，不是"出错了"。 */
+  .td-download-state {
+    padding: 0.2rem 0.65rem;
+    border: 1px solid color-mix(in srgb, var(--color-status-warning) 30%, transparent);
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--color-status-warning) 12%, var(--color-canvas));
+    color: var(--td-status-warning-emphasis);
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .td-download-note {
+    margin-block: 0.75rem 1rem;
+    color: var(--color-ink-muted);
+
+    > :last-child {
+      margin-block-end: 0;
+    }
+  }
+
+  /* 主行动按钮。描边而非实心：一页上可能有五个渠道，五个实心按钮就没有主次。 */
+  .td-download-action {
+    display: inline-flex;
+    margin-block: 0.75rem 1rem;
+    padding: 0.5rem 0.85rem;
+    border: 1px solid var(--color-accent);
+    border-radius: 0.5rem;
+    color: var(--color-accent);
+    text-decoration: none;
+
+    &:is(:hover, :focus-visible) {
+      background: color-mix(in srgb, var(--color-accent) 10%, var(--color-canvas));
+      text-decoration: none;
+    }
+
+    /* 置灰的那份是 span，不是禁用的 a —— 一个能聚焦却点不动的链接更让人困惑。 */
+    &.td-is-disabled {
+      border-color: var(--color-border);
+      color: var(--color-ink-muted);
+      cursor: not-allowed;
+    }
+  }
+
+  /* 步骤标题。比 h3 轻：它是一句"接下来做什么"，不是一级结构。 */
+  .td-download-step-title {
+    margin-block: 1rem 0.35rem;
+    color: var(--color-ink-strong);
+    font-family: var(--font-meta);
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+}
+
+@media print {
+  /* 纸上没有"跳到某个渠道"这回事。 */
+  .td-download-channels {
+    display: none;
+  }
+
+  .td-download-action {
+    padding-inline: 0;
+    border: 0;
+  }
+}
+
+@media (forced-colors: active) {
+  .td-download-chip,
+  .td-download-state,
+  .td-download-action {
+    border-color: CanvasText;
+  }
+}

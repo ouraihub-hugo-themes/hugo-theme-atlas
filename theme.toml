@@ -1,0 +1,12 @@
+name = "Atlas"
+license = "Apache-2.0"
+min_version = "0.160.1"
+description = "Documentation and Landing theme for Hugo, built with TypeScript and Tailwind CSS."
+homepage = "https://github.com/ouraihub-hugo-themes/hugo-theme-atlas"
+demosite = "https://github.com/ouraihub-hugo-themes/hugo-theme-atlas"
+tags = ["documentation", "landing", "tailwind", "typescript", "multilingual", "dark mode"]
+features = ["documentation", "landing page", "dark mode", "search", "i18n", "RTL", "print"]
+
+[[authors]]
+  name = "ouraihub"
+  homepage = "https://github.com/ouraihub-hugo-themes"

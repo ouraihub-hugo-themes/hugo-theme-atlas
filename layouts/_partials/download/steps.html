@@ -1,0 +1,82 @@
+{{- /* 校验一个渠道的安装步骤。
+
+     每步是一段命令加可选标题。坏的那一步跳过，其余照常 —— 三步里第二步写错，
+     第一步和第三步仍然是有用的。
+
+     入参 dict：page、channel、at、kind、version、tag
+     返回：步骤 slice，每项 title / code / lang / position */ -}}
+{{- $page := .page -}}
+{{- $kind := .kind -}}
+{{- $steps := slice -}}
+
+{{- with index .channel "steps" -}}
+  {{- if not (reflect.IsSlice .) -}}
+    {{- warnf "%s: steps must be an array; dropping the steps" $.at -}}
+  {{- else -}}
+    {{- range $index, $step := . -}}
+      {{- $at := printf "%s step %d" $.at (add $index 1) -}}
+      {{- if not (reflect.IsMap $step) -}}
+        {{- warnf "%s: must be a map; skipping the step" $at -}}
+        {{- continue -}}
+      {{- end -}}
+
+      {{- $fieldsOk := true -}}
+      {{- range $name, $_ := $step -}}
+        {{- if not (or (in (slice "code" "lang") $name) (findRE `^title(_[a-z0-9_]+)?$` $name)) -}}
+          {{- warnf "%s: has unsupported field %q; skipping the step" $at $name -}}
+          {{- $fieldsOk = false -}}
+        {{- end -}}
+      {{- end -}}
+      {{- if not $fieldsOk }}{{ continue }}{{ end -}}
+
+      {{- if not (isset $step "code") -}}
+        {{- warnf "%s: code is required; skipping the step" $at -}}
+        {{- continue -}}
+      {{- end -}}
+      {{- $code := partial "download/interpolate.html" (dict
+        "value" $step.code "field" "step code" "kind" $kind
+        "version" $.version "tag" $.tag "position" $at) -}}
+      {{- $code = strings.TrimRight "\r\n" $code -}}
+      {{- /* 判空用 TrimSpace，取值不用：命令的缩进有意义（YAML 块里的续行），
+             但一段只有空格的 code 会渲染成一个空围栏。插值失败也走这条 ——
+             interpolate 返回空串，它自己已经警告过原因。 */ -}}
+      {{- if not (strings.TrimSpace $code) -}}
+        {{- warnf "%s: code must not be empty; skipping the step" $at -}}
+        {{- continue -}}
+      {{- end -}}
+
+      {{- /* lang 进围栏的 info string，限成一个词。默认 text 而不是 shell ——
+             猜错语言会把命令高亮成一片乱色，不高亮反而干净。 */ -}}
+      {{- $lang := "text" -}}
+      {{- with index $step "lang" -}}
+        {{- if ne (printf "%T" .) "string" -}}
+          {{- warnf "%s: lang must be a string; using text" $at -}}
+        {{- else if not (findRE `^[A-Za-z0-9_+.-]+$` (strings.TrimSpace .)) -}}
+          {{- warnf "%s: lang must be one lexer token; got %q; using text" $at . -}}
+        {{- else -}}
+          {{- $lang = strings.TrimSpace . -}}
+        {{- end -}}
+      {{- end -}}
+
+      {{- $title := partial "content/localized.html" (dict "record" $step "key" "title" "page" $page) -}}
+      {{- if eq $title false -}}
+        {{- $title = "" -}}
+      {{- else if ne (printf "%T" $title) "string" -}}
+        {{- warnf "%s: title must resolve to a string; dropping the title" $at -}}
+        {{- $title = "" -}}
+      {{- else -}}
+        {{- $title = strings.TrimSpace $title -}}
+        {{- if not $title -}}
+          {{- warnf "%s: title must not be empty; dropping the title" $at -}}
+        {{- else if strings.Contains $title "${" -}}
+          {{- warnf "%s: title must not interpolate version facts; dropping the title" $at -}}
+          {{- $title = "" -}}
+        {{- end -}}
+      {{- end -}}
+
+      {{- $steps = $steps | append (dict
+        "title" $title "code" $code "lang" $lang "position" $at) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return $steps -}}

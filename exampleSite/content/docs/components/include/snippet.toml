@@ -1,0 +1,5 @@
+# 这个文件是 include/index.md 的页面资源，用来演示解析顺序的第一档。
+[params.ui]
+shell_type = "docs"
+reading_width = "normal"
+sidebar = true

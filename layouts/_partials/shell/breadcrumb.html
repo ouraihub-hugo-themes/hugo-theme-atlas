@@ -1,0 +1,20 @@
+{{- /* 面包屑。祖先链自底向上，反转后输出。
+       顶层页面只有一节，那条路径没有信息量 —— 直接不渲染，而不是画一个
+       只有站点名的面包屑。 */ -}}
+{{- $trail := slice -}}
+{{- range .Ancestors.Reverse -}}
+  {{- $trail = $trail | append . -}}
+{{- end -}}
+{{- if gt (len $trail) 1 -}}
+  <nav class="td-breadcrumb" aria-label="{{ i18n "breadcrumb_nav" }}">
+    <ol class="td-breadcrumb-list">
+      {{- range $trail }}
+        <li class="td-breadcrumb-item">
+          <a class="td-breadcrumb-link" href="{{ .RelPermalink }}">{{ .LinkTitle }}</a>
+        </li>
+      {{- end }}
+      {{- /* 当前页是终点，不作链接。aria-current 让辅助技术知道这是此刻位置。 */}}
+      <li class="td-breadcrumb-item" aria-current="page">{{ .LinkTitle }}</li>
+    </ol>
+  </nav>
+{{- end -}}

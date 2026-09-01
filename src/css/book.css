@@ -1,0 +1,187 @@
+/* 带编号的交叉引用目标（fig / tbl / eq / eg）与指向它们的引用。
+
+   三种版式约定，取自出版惯例而不是随手定的：
+     fig  题注在下、居中          —— 插图的通行做法
+     tbl  题注在上、靠前对齐、标题脸 —— Chicago / O'Reilly 的表格约定
+     eg   题注是画框的头栏，正文在框内 —— 编号、说明、代码读作一个整体 */
+
+@layer components {
+  .td-book-figure {
+    max-width: 100%;
+    margin-block: 2rem;
+
+    /* 从 xref 跳进来时不能被吸顶导航挡住。跟 base.css 里根元素的
+       scroll-padding-top 同一个算式 —— 那条管键盘与目录跳转，这条管
+       锚点落点。 */
+    scroll-margin-block-start: calc(var(--td-shell-nav-h) + 1rem);
+    text-align: center;
+
+    /* 图与它的说明被分页切断就失去了关联。 */
+    break-inside: avoid;
+  }
+
+  /* 正文靠前对齐：居中只对图片成立，代码、表格、列表居中就没法读了。
+     min-width: 0 让宽表格能在 flex/grid 里收缩而不是撑破容器。 */
+  .td-book-figure-body {
+    min-width: 0;
+    text-align: start;
+  }
+
+  .td-book-figure > figcaption {
+    margin-block-start: 0.75rem;
+    color: var(--color-ink-muted);
+    font-size: 0.9rem;
+    line-height: 1.55;
+    text-align: center;
+  }
+
+  /* 编号标签跟正文同一个字族：CJK 语言下换字族会把"图 2-1"劈成两种脸 ——
+     等宽字体只带拉丁字形，中文那个字会掉到回落字体上。粗体已经够区分了。
+     tabular-nums 让相邻几个编号的数字对齐。 */
+  .td-book-figure-label {
+    color: var(--color-ink);
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+  }
+
+  /* ---- 表格：题注在上 ----
+     column-reverse 而不是把 figcaption 写在前面：figure 的语义是 figcaption
+     可以在任一端，但 DOM 顺序决定屏幕阅读器的朗读顺序 —— 标题该先读。 */
+  .td-book-figure--tbl {
+    display: flex;
+    flex-direction: column-reverse;
+
+    > .td-book-figure-body > :is(.td-table-scroll, table) {
+      margin-inline: auto;
+    }
+
+    /* 滚动包裹自带下边距，在这里会挤开题注与表格。 */
+    > .td-book-figure-body > .td-table-scroll {
+      margin-block-end: 0;
+    }
+
+    > figcaption {
+      margin: 0 0 0.6rem;
+      color: var(--color-ink-strong);
+      font-family: var(--font-heading);
+      font-size: 1.05rem;
+      font-weight: 700;
+      line-height: 1.35;
+      text-align: start;
+    }
+
+    /* 题注整体已是标题脸，标签不再单独换族。 */
+    > figcaption > .td-book-figure-label {
+      font-family: inherit;
+    }
+
+    > figcaption > .td-book-figure-caption {
+      font-weight: 600;
+    }
+  }
+
+  /* ---- 示例：一个画框 ---- */
+  .td-book-figure--eg {
+    /* 正文的角要跟着框的圆角。 */
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-inline-start: 4px solid var(--color-accent);
+    border-radius: 0.5rem;
+    text-align: start;
+
+    > figcaption {
+      display: flex;
+      gap: 0.35em;
+      align-items: baseline;
+      margin: 0;
+      padding: 0.7rem 0.9rem;
+      border-block-end: 1px solid var(--color-border);
+      background: var(--color-surface);
+      color: var(--color-ink);
+      font-family: var(--font-sans);
+      font-size: 0.95rem;
+      line-height: 1.5;
+      text-align: start;
+    }
+
+    > .td-book-figure-body {
+      padding: 0.9rem;
+
+      > :first-child {
+        margin-block-start: 0;
+      }
+
+      > :last-child {
+        margin-block-end: 0;
+      }
+    }
+
+    /* 正文恰好是一个代码块（最常见的情况）时贴着框边：框已经画了边和圆角，
+       代码块不该再画第二层。:has() 不支持的浏览器保留上面那份带内边距的
+       版式 —— 那也是对的，只是安静一些。 */
+    > .td-book-figure-body:has(> .td-code:only-child) {
+      padding: 0;
+
+      > .td-code {
+        margin: 0;
+        border: 0;
+        border-radius: 0;
+      }
+    }
+  }
+
+  /* 引用不折行："图 2-1" 断在中间就不是一个记号了。 */
+  .td-book-xref {
+    white-space: nowrap;
+  }
+
+  /* ---- 目录与列表 ----
+     两者共用几何：都是一列链接，只是数据源不同。 */
+  .td-book-toc,
+  .td-book-list {
+    max-width: 100%;
+    margin-block: 1.5rem;
+  }
+
+  .td-book-list-title {
+    margin-block-end: 0.5rem;
+    color: var(--color-ink-strong);
+    font-family: var(--font-heading);
+    font-weight: 700;
+  }
+
+  /* ol 由这里给缩进：正文的列表规则用 .td-prose 选择器接管不到 nav 里面。 */
+  :is(.td-book-toc, .td-book-list) ol {
+    padding-inline-start: 1.4rem;
+    list-style: decimal;
+  }
+
+  :is(.td-book-toc, .td-book-list) li + li {
+    margin-block-start: 0.3rem;
+  }
+
+  /* 嵌套一层的目录：子列表贴着父项，不再加一次段间距。 */
+  .td-book-toc-list .td-book-toc-list {
+    margin-block-start: 0.3rem;
+  }
+}
+
+@media print {
+  /* 纸上题注跟着图走，颜色压到能印出来的深度。 */
+  .td-book-figure > figcaption {
+    color: #444;
+  }
+
+  /* 引用在纸上不是链接，但编号仍要能读。 */
+  .td-book-xref {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+@media (forced-colors: active) {
+  /* 强制配色下背景色被系统接管，画框的边界只剩描边。 */
+  .td-book-figure--eg > figcaption {
+    border-block-end: 1px solid CanvasText;
+  }
+}

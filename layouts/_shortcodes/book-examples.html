@@ -1,0 +1,5 @@
+{{- /* 本页（或 page= 指定的页）所有 eg 目标的列表，按正文里出现的顺序。
+
+     参数：page、title、class */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "allowed" (slice "page" "title" "class")) -}}
+{{- partial "book/figure-list.html" (dict "shortcode" . "kind" "eg") -}}

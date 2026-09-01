@@ -1,0 +1,269 @@
+/* ============================================================
+   Token 层
+   调色板在普通 CSS（可运行时切换），@theme inline 只做映射。
+   https://tailwindcss.com/docs/theme#referencing-other-variables
+   ============================================================ */
+
+:root {
+  /* SVG 经 <img> 载入时按宿主文档的 used color scheme 解析。两个方向都显式
+     声明 —— 否则读者覆盖了站点主题后，logo 仍跟随操作系统。 */
+  color-scheme: light;
+
+  /* ---- 画布与文字 ---- */
+  --td-canvas: #f1f4f8;
+  --td-ink: #16222e;
+  --td-ink-strong: #0d161f;
+  --td-ink-muted: #3d4e61;
+  --td-ink-faint: #586b80;
+  --td-surface: #e9eef4;
+  --td-surface-raised: #f6f9fc;
+  --td-elev: #fff;
+  --td-border: oklch(42% 0.06 250deg / 14%);
+
+  /* navbar 底色。半透明 + backdrop blur：内容在其下滚过时可见但读不出细节，
+     所以不透明度不能太高。深色下要更实 —— 深色画布上的模糊层次感更弱。 */
+  --td-nav-bg: rgb(241 244 248 / 85%);
+  --td-nav-shadow: 0 2px 10px rgb(23 42 66 / 8%);
+
+  /* 暖色副调。品牌标记的第二个端点，也是页脚那层极薄渐变的来源。
+     不参与正文任何着色 —— 它是 chrome 的调子。 */
+  --td-copper: #b4762e;
+
+  /* ---- 链接族：theme_color 永不触碰 ----
+     正文链接在每个 section 都是这个藏蓝：一个着色的 section 不该把
+     正文变成第二种东西。hover 离开沉静的藏蓝转向明亮的蔚蓝 —— 饱和度
+     和明度各担一半工作。 */
+  --td-link: #245f94;
+  --td-link-hover: #1d6fc4;
+
+  /* ---- 强调色：theme_color 只改这两个 ----
+     管底色与 hover（选中行、hover wash、outline pill），不管正文链接。 */
+  --td-accent: var(--td-link);
+  --td-accent-hover: var(--td-link-hover);
+
+  /* ---- 状态色族：提示框、徽章、字段标记共用 ----
+     每个状态两个值：accent 管边框与图标，emphasis 管标题文字。
+     标题不能直接用 accent —— 那是给 1px 边框调的饱和度，铺成文字在浅色
+     淡底上对比度不够。emphasis 是同色相压暗后的版本，两种模式下都过 4.5:1。
+
+     theme_color 不改这些：状态是阅读约定，绿色永远意味着成功。 */
+  --td-status-info: #245f94;
+  --td-status-info-emphasis: #14456f;
+  --td-status-success: #1b7f4d;
+  --td-status-success-emphasis: #11603a;
+  --td-status-warning: #b8791c;
+  --td-status-warning-emphasis: #8a5a12;
+  --td-status-danger: #b02a37;
+  --td-status-danger-emphasis: #8a1f29;
+  --td-status-accent: #6f42c1;
+  --td-status-accent-emphasis: #56309b;
+  --td-status-neutral: #5d7189;
+  --td-status-neutral-emphasis: #3d4e61;
+
+  /* ---- 代码墨色：阅读约定，theme_color 不改 ----
+     绛红。一页密集的标识符应当读作「代码与正文」，而不是「代码与链接」
+     —— 与链接蓝只差一步的蔚蓝做不到这件事。 */
+  --td-code: #b02a37;
+
+  /* ---- 代码块画布 ----
+     代码块底色不用 surface：Chroma 生成的调色板自带 github 的灰
+     (#f7f7f7 / #0d1117)，那是别人家的画布。这个 token 覆盖掉它，让代码块
+     与它的外框、与页面属于同一套颜色。 */
+  --td-pre: #fff;
+
+  /* ---- 外壳表面层级 ----
+     page（canvas）→ sidebar（card）→ popover。每层比下层亮一档，
+     不靠阴影分层 —— 阴影在深色画布上不可见。 */
+  --td-shell-card: color-mix(in srgb, var(--td-canvas) 96%, var(--td-ink) 4%);
+  --td-shell-popover: var(--td-elev);
+  --td-shell-rail: oklch(22% 0.03 250deg / 10%);
+
+  /* 选中态底色。够强到读作「主题色」而非灰 —— 14% 下即使饱和的紫也呈暖
+     中性 —— 且停在 accent 文字在该底色上仍过 AA 的上限。 */
+  --td-shell-selected: color-mix(in srgb, var(--td-accent) 14%, transparent);
+
+  /* 同一 accent 更薄的一层，给必须明显低于选中态的 hover。 */
+  --td-shell-wash: color-mix(in srgb, var(--td-accent) 7%, transparent);
+
+  /* ---- 运行时几何：由 JS 与 body class 改写，不是设计常量 ---- */
+
+  /* navbar 高度。粘顶偏移、阅读线、抽屉让位都算这个值，所以它是常量而非
+     内容高度 —— 一个会变的 chrome 高度会让所有依赖它的几何跟着抖。 */
+  --td-nav-h: 50px;
+
+  /* 视口固定 chrome 的高度，粘顶与 fixed 元素要避开它。每个阅读外壳都有
+     navbar，所以默认等于它；print 下归零。 */
+  --td-shell-nav-h: var(--td-nav-h);
+
+  /* 侧栏宽度。min/max 目前只被窄屏抽屉的宽度用到；拖拽调节有意未做
+     （见 docs/PLAN.md 期 2），三个 token 先按默认值就位。 */
+  --td-shell-sidebar-w: 268px;
+  --td-shell-sidebar-min: 220px;
+  --td-shell-sidebar-max: 480px;
+
+  /* 阅读宽度的三档量度，对应 reading_width: slim | normal | wide。
+     wide 不需要 token —— 它就是没有上限。站点可覆盖这两个值来改量度，
+     不必替换布局。 */
+  --td-shell-read-slim: 48rem;
+  --td-shell-read-normal: 70rem;
+
+  /* ---- 字族角色 ----
+     六个语义角色，两个预设。default 用随主题分发的 Inter；system 退回平台
+     字体栈。平台栈始终在 Inter 之后兜底 —— CJK、emoji、Inter 缺的字形都由
+     它渲染。 */
+  --td-font-platform-sans: system-ui, -apple-system, "Segoe UI", roboto,
+    "Helvetica Neue", arial, "Noto Sans", sans-serif, "Apple Color Emoji",
+    "Segoe UI Emoji";
+  --td-font-platform-mono: sfmono-regular, "Cascadia Code", "Roboto Mono", menlo,
+    consolas, "Liberation Mono", "Sarasa Mono SC", "Noto Sans Mono CJK SC",
+    monospace;
+
+  /* 正文与标题同族：文档正文由字号台阶承担层级，不靠换字族。display 属于
+     chrome（navbar brand、footer、landing hero），不进正文。 */
+  --td-font-ui: "Inter", var(--td-font-platform-sans);
+  --td-font-body: var(--td-font-ui);
+  --td-font-heading: var(--td-font-body);
+  --td-font-code: "IBM Plex Mono", var(--td-font-platform-mono);
+  --td-font-display: "Chakra Petch", var(--td-font-ui);
+  --td-font-meta: "IBM Plex Mono", var(--td-font-code);
+
+  /* 打印自成一角色，站点可以给纸张换脸。主题不分发 print 专用字体，
+     默认跟随正文。 */
+  --td-font-print: var(--td-font-body);
+}
+
+/* system 预设：完全退出随主题分发的字体，用平台栈。两个预设编译进同一张
+   样式表，不带运行时。默认预设是 technical，见 typography-preset.html。 */
+[data-td-typography="system"] {
+  --td-font-ui: var(--td-font-platform-sans);
+  --td-font-code: var(--td-font-platform-mono);
+  --td-font-display: var(--td-font-ui);
+  --td-font-meta: var(--td-font-ui);
+}
+
+[data-td-theme="dark"] {
+  color-scheme: dark;
+
+  --td-canvas: #0d161f;
+  --td-ink: #dbe4ee;
+  --td-ink-strong: #f1f4f8;
+  --td-ink-muted: #9fb0c2;
+  --td-ink-faint: #7d8fa3;
+  --td-surface: #16222e;
+  --td-surface-raised: #1c2b39;
+  --td-elev: #16222e;
+  --td-border: oklch(75% 0.04 250deg / 16%);
+  --td-link: #7db3e0;
+  --td-link-hover: #a5cef0;
+  --td-code: #f0868f;
+  --td-pre: #0a0f16;
+
+  /* 比浅色更实：深色画布上模糊产生的层次感更弱，同样的不透明度会让
+     navbar 看起来是"糊掉的正文"而不是一层 chrome。 */
+  --td-nav-bg: rgb(11 17 25 / 92%);
+  --td-nav-shadow: 0 4px 18px rgb(2 8 18 / 35%);
+
+  /* 深色下提亮：同一个铜色在深画布上会暗成褐色。 */
+  --td-copper: #e0a35c;
+
+  /* 状态色族在深色下整体提亮，且 emphasis 比 accent 更亮而非更暗 ——
+     深画布上"压暗以提高对比"是反的。 */
+  --td-status-info: #5da2dd;
+  --td-status-info-emphasis: #8fc3ec;
+  --td-status-success: #4cb782;
+  --td-status-success-emphasis: #7fd3a8;
+  --td-status-warning: #dda842;
+  --td-status-warning-emphasis: #ecc677;
+  --td-status-danger: #e8737f;
+  --td-status-danger-emphasis: #f2a1a9;
+  --td-status-accent: #a583e8;
+  --td-status-accent-emphasis: #c3aef0;
+  --td-status-neutral: #93a3b8;
+  --td-status-neutral-emphasis: #b6c2d2;
+
+  /* 深色画布上每层向上走，card 混白而非混墨色。 */
+  --td-shell-card: color-mix(in srgb, var(--td-canvas) 96%, #fff 4%);
+  --td-shell-rail: oklch(95% 0.01 250deg / 10%);
+}
+
+
+/* ============================================================
+   映射进 utility 生成
+   inline 让 utility 直接解析到底层变量，少一层间接，且避开文档警告的
+   作用域陷阱。
+   ============================================================ */
+
+@theme inline {
+  --color-canvas: var(--td-canvas);
+  --color-ink: var(--td-ink);
+  --color-ink-strong: var(--td-ink-strong);
+  --color-ink-muted: var(--td-ink-muted);
+  --color-ink-faint: var(--td-ink-faint);
+  --color-surface: var(--td-surface);
+  --color-surface-raised: var(--td-surface-raised);
+  --color-elev: var(--td-elev);
+  --color-border: var(--td-border);
+  --color-link: var(--td-link);
+  --color-link-hover: var(--td-link-hover);
+  --color-accent: var(--td-accent);
+  --color-accent-hover: var(--td-accent-hover);
+  --color-code: var(--td-code);
+  --color-pre: var(--td-pre);
+  --color-shell-card: var(--td-shell-card);
+  --color-shell-popover: var(--td-shell-popover);
+  --color-shell-rail: var(--td-shell-rail);
+  --color-shell-selected: var(--td-shell-selected);
+  --color-shell-wash: var(--td-shell-wash);
+  --color-nav: var(--td-nav-bg);
+  --color-copper: var(--td-copper);
+  --color-status-info: var(--td-status-info);
+  --color-status-success: var(--td-status-success);
+  --color-status-warning: var(--td-status-warning);
+  --color-status-danger: var(--td-status-danger);
+  --color-status-accent: var(--td-status-accent);
+  --color-status-neutral: var(--td-status-neutral);
+  --shadow-nav: var(--td-nav-shadow);
+  --font-sans: var(--td-font-ui);
+  --font-mono: var(--td-font-code);
+  --font-display: var(--td-font-display);
+  --font-meta: var(--td-font-meta);
+  --font-heading: var(--td-font-heading);
+}
+
+/* ============================================================
+   设计常量：不随主题或预设切换
+   ============================================================ */
+
+@theme {
+  /* 正文行高。文档正文比营销页需要更松的行距。 */
+  --leading-body: 1.7;
+
+  /* 代码块圆角。比 rounded-lg 大一档 —— 代码块是页面上最大的实心块，
+     跟着按钮的圆角会显得局促。 */
+  --radius-code: 0.75rem;
+
+  /* 动效三角色。reduced-motion 靠归零这三个实现，不维护逐选择器名单。
+       fast — hover 着色、disclosure、skip link
+       base — 默认：折叠、rail 几何、侧栏宽度、颜色迁移
+       slow — 对话框、移动抽屉、浮动控件入场 */
+  --duration-fast: 100ms;
+  --duration-base: 150ms;
+  --duration-slow: 250ms;
+  --ease-color: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-collapse: cubic-bezier(0.45, 0, 0.55, 1);
+  --ease-dialog: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (width >= 64rem) {
+  :root {
+    --td-shell-sidebar-w: 286px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+    --duration-slow: 0ms;
+  }
+}

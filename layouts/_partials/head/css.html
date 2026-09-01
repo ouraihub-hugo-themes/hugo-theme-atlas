@@ -1,0 +1,14 @@
+{{- /* assets/dist/main.css 是 `pnpm css:build` 的产物。放在 assets/ 下
+       让 Hugo 当资源处理 —— 拿到内容指纹与 integrity；源文件在 src/，
+       不与它撞路径。 */ -}}
+{{- with resources.Get "dist/main.css" -}}
+  {{- if hugo.IsProduction -}}
+    {{- $css := . | fingerprint -}}
+    <link rel="stylesheet" href="{{ $css.RelPermalink }}"
+          integrity="{{ $css.Data.Integrity }}" crossorigin="anonymous">
+  {{- else -}}
+    <link rel="stylesheet" href="{{ .RelPermalink }}">
+  {{- end -}}
+{{- else -}}
+  {{- warnf "stylesheet missing: assets/dist/main.css -- run `pnpm css:build`" -}}
+{{- end -}}

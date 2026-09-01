@@ -1,0 +1,22 @@
+{{- /* 带编号的表格：`{{< tbl num="3" caption="..." >}}` + Markdown 表格正文。
+
+     不做 Markdown 表格自己的样式 —— 正文过 render-block，表格 render hook
+     照常接管滚动包裹与粘连表头。这个 shortcode 只加编号、锚点与题注。
+
+     参数：num（必需）、id、caption、class */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "allowed" (slice "num" "id" "caption" "class")) -}}
+{{- $head := partial "book/target-head.html" (dict "shortcode" . "kind" "tbl") -}}
+
+{{- $inner := strings.TrimSpace (printf "%s" .InnerDeindent) -}}
+{{- if not $inner -}}
+  {{- warnf "shortcode %q requires inner table content at %s; rendering nothing" .Name .Position -}}
+{{- else -}}
+  {{- partial "book/register-target.html" (dict "page" .Page "kind" "tbl"
+    "num" $head.num "id" $head.id "caption" $head.caption
+    "position" .Position "ordinal" .Ordinal) -}}
+  {{- $label := partial "book/label.html" (dict "kind" "tbl" "num" $head.num) -}}
+<figure{{ with $head.id }} id="{{ . }}"{{ end }} class="td-book-figure td-book-figure--tbl{{ with $head.class }} {{ . }}{{ end }}" data-td-book-kind="tbl" data-td-book-num="{{ $head.num }}">
+  <div class="td-book-figure-body">{{ partial "content/render-block.html" (dict "page" .Page "scope" (printf "tbl%d" .Ordinal) "content" $inner) }}</div>
+  <figcaption><span class="td-book-figure-label">{{ $label }}</span>{{ with $head.caption }} <span class="td-book-figure-caption">{{ . }}</span>{{ end }}</figcaption>
+</figure>
+{{- end -}}

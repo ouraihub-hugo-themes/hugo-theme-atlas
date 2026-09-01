@@ -1,0 +1,20 @@
+{{- /* 数据记录里的按语言取值。
+
+     `title` 与 `title_zh_cn` 并存时，中文站点取后者。回退三档：完整语言标签、
+     主标签、无后缀的基名 —— `zh_cn` 找不到就试 `zh`，再退到 `title`。
+
+     下划线而非连字符：YAML 的键名里连字符合法，但 Hugo 的语言标签是 `zh-cn`，
+     两种写法混在一份数据里必然有人写错一种。统一成下划线，只有一种写法。
+
+     找不到返回 false 而不是空字符串：调用方要能区分"没写这个键"（可选字段，
+     不警告）与"写了但是空的"（作者的错，要警告）。
+
+     入参 dict：record、key、page
+     返回：取到的值，或 false */ -}}
+{{- $lang := replace (lower .page.Site.Language.Lang) "-" "_" -}}
+{{- $primary := index (split $lang "_") 0 -}}
+{{- $value := false -}}
+{{- range slice (printf "%s_%s" .key $lang) (printf "%s_%s" .key $primary) .key -}}
+  {{- if and (eq $value false) (isset $.record .) }}{{ $value = index $.record . }}{{ end -}}
+{{- end -}}
+{{- return $value -}}

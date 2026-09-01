@@ -1,0 +1,29 @@
+{{- /* 顺序阅读翻页。用 .PrevInSection / .NextInSection 而非 .Prev / .Next：
+       后者跨 section 走整站顺序，读者读完一节会被丢到无关的另一节。
+
+       方向要调换。Hugo 的 Next/Prev 按集合顺序定义，而默认集合是 weight
+       升序 —— 于是 .NextInSection 指向 weight 更小的页面，也就是阅读顺序
+       里的上一篇。命名与阅读方向相反，这里换回来。 */ -}}
+{{- $prev := .NextInSection -}}
+{{- $next := .PrevInSection -}}
+{{- if or $prev $next -}}
+  <nav class="td-pager" aria-label="{{ i18n "pager_nav" }}">
+    {{- with $prev }}
+      {{- /* title 属性留完整标题：可见文本会被截断，但无障碍名与悬停提示不该被截。 */}}
+      <a class="td-pager-link td-pager-link--prev" href="{{ .RelPermalink }}"
+         title="{{ .LinkTitle }}"
+         aria-label="{{ i18n "pager_prev" }}: {{ .LinkTitle }}">
+        <span class="td-pager-arrow" aria-hidden="true"></span>
+        <span class="td-pager-title">{{ .LinkTitle }}</span>
+      </a>
+    {{- end }}
+    {{- with $next }}
+      <a class="td-pager-link td-pager-link--next" href="{{ .RelPermalink }}"
+         title="{{ .LinkTitle }}"
+         aria-label="{{ i18n "pager_next" }}: {{ .LinkTitle }}">
+        <span class="td-pager-title">{{ .LinkTitle }}</span>
+        <span class="td-pager-arrow" aria-hidden="true"></span>
+      </a>
+    {{- end }}
+  </nav>
+{{- end -}}

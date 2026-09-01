@@ -1,0 +1,353 @@
+/* 抽屉的收起位移。必须 @property 注册 —— 未注册的自定义属性计算类型是
+   token sequence，离散跳变不插值，translate 会瞬移而不是滑出。注册成
+   <length-percentage> 才让它参与过渡。 */
+@property --td-drawer-x {
+  syntax: "<length-percentage>";
+  inherits: false;
+  initial-value: 0%;
+}
+
+/* 阅读外壳的几何。
+   一个容器 + 修饰类驱动全部布局 —— 无侧栏、无 TOC、宽窄页面
+   都是同一个 grid 的变体，不是几套布局。修饰类写在 CSS 里而非模板 utility：
+   窄屏抽屉、print、RTL 三态要集中声明。 */
+
+@utility td-shell {
+  display: grid;
+  gap: 2rem;
+  align-items: start;
+
+  /* 列数随断点走，不靠隐藏元素占位：一个 display:none 的 auto 列会塌成
+     0px 却仍吃掉一个 gap，正文右侧凭空多出 2rem 空白。
+
+       < 48rem  正文独占，侧栏脱流变抽屉
+       ≥ 48rem  侧栏 + 正文
+       ≥ 64rem  侧栏 + 正文 + TOC */
+  grid-template-columns: minmax(0, 1fr);
+
+  @media (width >= 48rem) {
+    grid-template-columns: var(--td-shell-sidebar-w) minmax(0, 1fr);
+  }
+
+  @media (width >= 64rem) {
+    grid-template-columns: var(--td-shell-sidebar-w) minmax(0, 1fr) auto;
+  }
+}
+
+/* 无侧栏（landing、无子页的 section）：正文 + TOC。 */
+@utility td-shell--no-sidebar {
+  @media (width >= 48rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media (width >= 64rem) {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+/* 无 TOC（notoc 或无标题）：侧栏 + 正文，宽屏也不留第三列。 */
+@utility td-shell--no-toc {
+  @media (width >= 64rem) {
+    grid-template-columns: var(--td-shell-sidebar-w) minmax(0, 1fr);
+  }
+}
+
+/* 两者都无：正文独占，所有断点同一列。 */
+@utility td-shell--no-sidebar-no-toc {
+  @media (width >= 48rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  @media (width >= 64rem) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@layer components {
+  /* 抽屉开启时锁背景滚动。挂在 <html> 而非 <body> —— iOS Safari 的滚动
+     容器是根元素。 */
+  .td-scroll-locked {
+    overflow: hidden;
+  }
+
+  /* 抽屉开关。只在窄屏存在 —— 宽屏侧栏本就在栅格里。 */
+  .td-shell-drawer-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.7rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    background: var(--color-shell-card);
+    color: var(--color-ink-muted);
+    font-family: var(--font-meta);
+    font-size: 0.8125rem;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--color-shell-wash);
+      color: var(--color-ink);
+    }
+
+    @media (width >= 48rem) {
+      display: none;
+    }
+  }
+
+  /* 汉堡图标。三条线用 CSS 画，不请求图标字体。 */
+  .td-shell-drawer-toggle-icon {
+    position: relative;
+    width: 0.875rem;
+    height: 2px;
+    background: currentcolor;
+
+    &::before,
+    &::after {
+      content: "";
+      position: absolute;
+      inset-inline: 0;
+      height: 2px;
+      background: currentcolor;
+    }
+
+    &::before {
+      top: -5px;
+    }
+
+    &::after {
+      top: 5px;
+    }
+  }
+
+  /* 侧栏。粘顶并避开固定 chrome，自身滚动 —— 长目录不该带着正文一起滚。 */
+  .td-shell-sidebar {
+    position: sticky;
+    top: calc(var(--td-shell-nav-h) + 1rem);
+    max-height: calc(100dvh - var(--td-shell-nav-h) - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    /* 窄屏下由 JS 切换 data 属性变抽屉。默认藏起。 */
+    @media (width < 48rem) {
+      position: fixed;
+
+      /* 从 navbar 之下开始，不覆盖它。navbar 的 z-index 更高，抽屉若从 0
+         起，顶部一屏的导航项会被压在 navbar 后面点不到；而且抽屉开着时
+         品牌与主题切换仍该可用。 */
+      inset-block: var(--td-shell-nav-h) 0;
+      inset-inline-start: 0;
+      z-index: 40;
+      width: min(var(--td-shell-sidebar-max), 85vw);
+      max-height: calc(100dvh - var(--td-shell-nav-h));
+      background: var(--color-shell-card);
+      border-inline-end: 1px solid var(--color-border);
+
+      /* 收起方向随书写方向翻面。用一个变量承载方向，而不是让方向规则与
+         开启态规则争特异性 —— 两者都是 0,2,0，源序决定胜负，很容易在加
+         规则时静默翻转。开启态只需把变量归零。 */
+      --td-drawer-x: -100%;
+
+      translate: var(--td-drawer-x) 0;
+
+      /* 过渡挂在变量上，不是 translate —— 插值发生在已注册的自定义属性，
+         translate 每帧跟着重算。 */
+      transition: --td-drawer-x var(--duration-slow) var(--ease-dialog);
+
+      &:dir(rtl) {
+        --td-drawer-x: 100%;
+      }
+
+      &[data-td-shell-drawer-open] {
+        --td-drawer-x: 0%;
+      }
+    }
+  }
+
+  .td-shell-main {
+    min-width: 0;
+  }
+
+  /* ---- 阅读宽度 ----
+     `reading_width: slim | normal | wide` 的三档量度，四壳一致生效 ——
+     resolve.html 本来就为每个壳都算了 width，把它限成只有 book 壳能用
+     要多写两条选择器，还多一条例外要记。
+
+     约束挂在主列而不是 .td-prose 上：list 模板的正文是 .td-prose 加一个兄弟
+     列表，挂在 prose 上会让列表溢出到度量之外。
+
+     wide 不写规则 —— 没有上限就是 grid 的 minmax(0, 1fr) 本身。 */
+  .td-shell--w-slim > .td-shell-main {
+    max-width: var(--td-shell-read-slim);
+  }
+
+  .td-shell--w-normal > .td-shell-main {
+    max-width: var(--td-shell-read-normal);
+  }
+
+  /* ---- 侧栏导航 ----
+     一行就是一个 row，链接与 summary 共用同一套几何与状态色，所以折叠标题
+     和叶子项在视觉上属于同一个列表。 */
+  .td-shell-nav {
+    font-size: 0.875rem;
+  }
+
+  .td-shell-nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* 子列表缩进。用 padding-inline-start 而非 margin，逻辑属性在 RTL 下
+     自动翻面。 */
+  .td-shell-nav-list .td-shell-nav-list {
+    padding-inline-start: 0.75rem;
+  }
+
+  .td-shell-nav-row {
+    display: block;
+    padding: 0.3rem 0.6rem;
+    border-radius: 0.375rem;
+    color: var(--color-ink-muted);
+    text-decoration: none;
+    transition:
+      background-color var(--duration-fast) var(--ease-color),
+      color var(--duration-fast) var(--ease-color);
+
+    &:hover {
+      background-color: var(--color-shell-wash);
+      color: var(--color-ink);
+    }
+
+    /* 正在阅读的那一行。底色用 selected（14%），明显高于 hover 的 wash（7%）
+       —— 一串 hover 痕迹不该和读者真正所在的那行竞争。 */
+    &[aria-current="page"] {
+      background-color: var(--color-shell-selected);
+      color: var(--color-accent);
+      font-weight: 500;
+    }
+  }
+
+  /* <details> 的三角由 marker 提供，但它在各浏览器尺寸不一 —— 关掉换自绘。 */
+  .td-shell-nav-summary {
+    cursor: pointer;
+    list-style: none;
+
+    &::-webkit-details-marker {
+      display: none;
+    }
+
+    /* 自绘三角。用 CSS 而非图标字体：一个三角不值一次字体请求。 */
+    &::before {
+      content: "";
+      display: inline-block;
+      width: 0.4em;
+      height: 0.4em;
+      margin-inline-end: 0.45em;
+      border-inline-end: 1.5px solid currentcolor;
+      border-block-end: 1.5px solid currentcolor;
+      rotate: -45deg;
+      translate: 0 -0.1em;
+      transition: rotate var(--duration-base) var(--ease-collapse);
+    }
+  }
+
+  details[open] > .td-shell-nav-summary::before {
+    rotate: 45deg;
+  }
+
+  /* TOC。同样粘顶自滚，但宽度固定 —— 它是导航不是内容。 */
+  .td-shell-toc {
+    position: sticky;
+    top: calc(var(--td-shell-nav-h) + 1rem);
+    width: 16rem;
+    max-height: calc(100dvh - var(--td-shell-nav-h) - 2rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+
+    /* 中屏起才有 TOC：窄屏塞不下第三列。 */
+    @media (width < 64rem) {
+      display: none;
+    }
+  }
+
+  .td-shell-toc-title {
+    margin-block-end: 0.5rem;
+    color: var(--color-ink-faint);
+    font-family: var(--font-meta);
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Hugo 产出的 TOC 是嵌套 ul，id 是它定的 PascalCase，改不了。
+     层级靠缩进不靠字号 —— TOC 里的字号台阶会和正文标题的台阶打架。 */
+  #TableOfContents {
+    font-size: 0.8125rem;
+
+    & ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+
+    & ul ul {
+      padding-inline-start: 0.75rem;
+    }
+
+    & a {
+      display: block;
+      padding: 0.2rem 0;
+      color: var(--color-ink-muted);
+      text-decoration: none;
+      transition: color var(--duration-fast) var(--ease-color);
+
+      &:hover {
+        color: var(--color-ink);
+      }
+    }
+
+    /* scroll-spy 标记的当前小节。期 2 的 TS 负责挂这个属性。 */
+    & a[data-td-toc-active] {
+      color: var(--color-accent);
+      font-weight: 500;
+    }
+  }
+
+  /* 抽屉背景遮罩。只在窄屏且抽屉开启时存在。 */
+  .td-shell-backdrop {
+    display: none;
+
+    @media (width < 48rem) {
+      &[data-td-shell-drawer-open] {
+        display: block;
+        position: fixed;
+
+        /* 与抽屉同起点：navbar 不该被压暗，它上面的控件抽屉开着时仍可用。 */
+        inset: var(--td-shell-nav-h) 0 0;
+        z-index: 30;
+        background: oklch(15% 0.02 250deg / 45%);
+      }
+    }
+  }
+}
+
+/* 打印：外壳全部消失，只留正文单列。 */
+@media print {
+  .td-shell {
+    display: block;
+  }
+
+  .td-shell-sidebar,
+  .td-shell-toc,
+  .td-shell-backdrop {
+    display: none;
+  }
+
+  /* 纸面宽度由纸决定，屏幕上的阅读量度到这里失效 —— 留着会在页面右侧
+     切出一条空白。 */
+  .td-shell--w-slim > .td-shell-main,
+  .td-shell--w-normal > .td-shell-main {
+    max-width: none;
+  }
+}

@@ -1,0 +1,10 @@
+{{- /* 深浅色切换。图标用 CSS 画（见 navbar.css）：两个符号不值一次
+       图标字体请求，而且要跟着当前主题互换显隐。
+       aria-pressed 不合适 —— 这不是一个二态开关的按下，而是在两种外观
+       间切换。用 aria-label 直接说明动作。 */ -}}
+<button type="button" class="td-navbar-button td-theme-toggle"
+        data-td-theme-toggle aria-label="{{ i18n "toggle_theme" }}"
+        title="{{ i18n "toggle_theme" }}">
+  <span class="td-theme-toggle-sun" aria-hidden="true"></span>
+  <span class="td-theme-toggle-moon" aria-hidden="true"></span>
+</button>

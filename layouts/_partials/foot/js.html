@@ -1,0 +1,22 @@
+{{- /* 脚本加载。
+
+     必须在正文渲染之后调用：render hook 与 shortcode 在渲染时往 Page Store
+     写能力标记，这里读它们决定加载哪些运行时。顺序反了标记还是空的，页面会
+     少加载它真正需要的东西。
+
+     每个运行时一个 bundle：一篇没有代码块的文档不该下载代码运行时。 */ -}}
+{{- $runtimes := slice "main" -}}
+{{- if .Store.Get "hasCodeRuntime" }}{{ $runtimes = $runtimes | append "code" }}{{ end -}}
+{{- if .Store.Get "hasTabs" }}{{ $runtimes = $runtimes | append "tabs" }}{{ end -}}
+{{- if .Store.Get "hasAssetList" }}{{ $runtimes = $runtimes | append "assets" }}{{ end -}}
+{{- range $runtimes -}}
+  {{- with resources.Get (printf "dist/%s.js" .) -}}
+    {{- if hugo.IsProduction -}}
+      {{- $js := . | fingerprint -}}
+      <script src="{{ $js.RelPermalink }}" type="module"
+              integrity="{{ $js.Data.Integrity }}" crossorigin="anonymous"></script>
+    {{- else -}}
+      <script src="{{ .RelPermalink }}" type="module"></script>
+    {{- end -}}
+  {{- end -}}
+{{- end -}}

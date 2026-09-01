@@ -1,0 +1,57 @@
+{{- /* 行内徽章：`{{< badge text="Beta" tone="info" >}}`
+
+     参数：text（必需）、tone、link、icon
+     tone 取值 neutral | info | success | warning | danger，缺省 neutral。
+
+     text 是纯文本，不过 Markdown —— 徽章是一个标签，里面出现段落或列表说明
+     作者用错了组件。 */ -}}
+{{- $at := .Position -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "at" $at
+  "allowed" (slice "text" "tone" "link" "icon")) -}}
+
+{{- $ok := true -}}
+{{- /* 无参数的 `{{< badge >}}` 的 .Params 是 nil，对它调 isset 会让 Hugo 报
+       "calling IsSet with unsupported type"。先挡住，后面的 isset 才安全。 */ -}}
+{{- if not .Params -}}
+  {{- warnf "shortcode %q needs text at %s; rendering nothing" .Name $at -}}
+  {{- $ok = false -}}
+{{- end -}}
+
+{{- $text := "" -}}
+{{- if $ok -}}
+  {{- $text = strings.TrimSpace (printf "%v" (.Get "text" | default "")) -}}
+  {{- if not $text -}}
+    {{- warnf "shortcode %q needs a non-empty text at %s; rendering nothing" .Name $at -}}
+    {{- $ok = false -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $tone := "neutral" -}}
+{{- if $ok -}}
+  {{- $tone = partial "validate-enum.html" (dict
+    "value" (.Get "tone")
+    "allowed" (slice "neutral" "info" "success" "warning" "danger")
+    "fallback" "neutral"
+    "key" "tone"
+    "where" $at
+  ) -}}
+{{- end -}}
+
+{{- $href := "" -}}
+{{- $external := false -}}
+{{- if and $ok (isset .Params "link") -}}
+  {{- $url := partial "content/url.html" (dict "name" .Name "parameter" "link"
+    "position" $at "value" (.Get "link") "kind" "link") -}}
+  {{- $href = $url.href -}}
+  {{- $external = $url.external -}}
+{{- end -}}
+
+{{- if $ok -}}
+{{- $icon := "" -}}
+{{- with .Get "icon" }}{{ $icon = partial "content/icon.html" (dict "name" . "class" "td-badge-icon") }}{{ end -}}
+{{- if $href -}}
+<a class="td-badge td-badge--{{ $tone }}" href="{{ $href }}"{{ if $external }} rel="noopener"{{ end }}>{{ $icon }}{{ $text }}</a>
+{{- else -}}
+<span class="td-badge td-badge--{{ $tone }}">{{ $icon }}{{ $text }}</span>
+{{- end -}}
+{{- end -}}

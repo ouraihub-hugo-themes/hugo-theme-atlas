@@ -1,0 +1,38 @@
+{{- /* 下载区：一份 data/download/<key>.yaml 变成分渠道的安装指引。
+
+     一个位置参数，就是数据文件名。版本号、仓库、tag 都是事实，只能来自数据
+     文件 —— 允许在 shortcode 上写，同一页上就可能出现两个互相矛盾的版本号。
+
+     同一份数据在一页上渲染两次会让每个元素 id 都撞车，所以重复调用跳过。 */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "form" "positional") -}}
+{{- $ok := true -}}
+
+{{- $key := "" -}}
+{{- if or .IsNamedParams (ne (len .Params) 1) -}}
+  {{- warnf "shortcode %q requires exactly one positional data key at %s; skipping the block" .Name .Position -}}
+  {{- $ok = false -}}
+{{- else -}}
+  {{- $key = strings.TrimSpace (printf "%v" (.Get 0)) -}}
+{{- end -}}
+
+{{- /* 谁先渲染谁占住这个 key。owner 记的是"哪一次调用"，所以同一个 shortcode
+       被 Hugo 重复渲染（.Content 被取多次）时不会把自己判成重复。 */ -}}
+{{- if $ok -}}
+  {{- $owner := printf "download-%d" .Ordinal -}}
+  {{- $owners := .Page.Store.Get "tdDownloadOwners" | default dict -}}
+  {{- if not (isset $owners $key) -}}
+    {{- .Page.Store.SetInMap "tdDownloadOwners" $key $owner -}}
+  {{- else if ne (index $owners $key) $owner -}}
+    {{- warnf "shortcode %q: duplicate data key %q at %s; skipping the repeat" .Name $key .Position -}}
+    {{- $ok = false -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if $ok -}}
+  {{- $data := partial "download/resolve.html" (dict
+    "page" .Page "key" $key "position" .Position) -}}
+  {{- /* channels 为空说明 resolve 整块丢弃了，它自己已经警告过原因。 */ -}}
+  {{- with $data.channels -}}
+    {{- partial "download/render.html" (dict "page" $.Page "data" $data) -}}
+  {{- end -}}
+{{- end -}}

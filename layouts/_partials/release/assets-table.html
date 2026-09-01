@@ -1,0 +1,98 @@
+{{- /* 资产表。release-assets 与 download 的 pinned 渠道共用。
+
+     校验和列在屏幕上截断显示（前 8 后 4）：一条 sha512 是 128 个字符，完整
+     铺开会把文件名列挤到没有余地，而没人靠肉眼比对校验和 —— 那是复制按钮的
+     活。完整值放在一个仅供朗读与复制的 span 里，不是 aria-label：`<code>` 没有
+     可访问名字的角色，挂在它上面的 aria-label 在多数屏幕阅读器里读不出来。
+
+     打印与无 JS 时铺开完整值：纸上没有复制按钮，截断的校验和就成了废字。
+
+     入参 dict：entries、grouped、disabled（未发布时置灰） */ -}}
+{{- $entries := .entries -}}
+{{- $grouped := .grouped | default false -}}
+{{- $disabled := .disabled | default false -}}
+
+{{- /* 分组顺序由主题定：包格式（装了就能用）在前，压缩包（要自己解）在后，
+       认不出的归 `*` 收尾。 */ -}}
+{{- $groups := slice "" -}}
+{{- if $grouped -}}
+  {{- $groups = slice ".rpm" ".deb" ".apk" ".tar.gz" ".zip" ".exe / .msi" ".dmg / .pkg" "*" -}}
+{{- end -}}
+
+<div class="td-assets" data-td-assets>
+  {{- /* 整段复制按钮由运行时摘掉 hidden：没有 JS 时一个点不动的按钮比没有
+         按钮更糟。播报区是必需的 —— 按钮变色屏幕阅读器读不到。 */ -}}
+  {{- if not $disabled }}
+  <div class="td-assets-toolbar">
+    <button class="td-assets-copy-all" type="button" hidden data-td-assets-copy-all
+            data-td-label-copied="{{ i18n "assets_copied" }}">
+      {{ partial "content/icon.html" (dict "name" "copy") }}<span>{{ i18n "assets_copy_all" }}</span>
+    </button>
+    <span class="sr-only" role="status" aria-live="polite" data-td-assets-status></span>
+  </div>
+  {{- end }}
+
+  {{- range $group := $groups }}
+    {{- $rows := $entries -}}
+    {{- if $grouped }}{{ $rows = where $entries "group" $group }}{{ end -}}
+    {{- if not $rows }}{{ continue }}{{ end -}}
+    {{- if $grouped }}
+    <h3 class="td-assets-group"><code>{{ $group }}</code></h3>
+    {{- end }}
+  {{- /* 表格可横向滚动，所以要能用键盘聚焦并有可访问名字 —— 否则键盘用户
+         到不了滚动条。role="region" 让它进地标列表。 */ -}}
+  <div class="td-assets-scroll" tabindex="0" role="region"
+       aria-label="{{ i18n "assets_download" }}{{ with $group }} · {{ . }}{{ end }}">
+    <table class="td-assets-table">
+      <caption class="sr-only">{{ i18n "assets_download" }}{{ with $group }} · {{ . }}{{ end }}</caption>
+      <thead>
+        <tr>
+          <th scope="col">{{ i18n "assets_file" }}</th>
+          <th scope="col">{{ i18n "assets_checksum" }}</th>
+          {{- /* 操作列的表头留空但有可访问名字：一个空 th 会被读成"空白"。 */ -}}
+          <th scope="col"><span class="sr-only">{{ i18n "assets_copy" }}</span></th>
+        </tr>
+      </thead>
+      <tbody>
+        {{- range $rows }}
+        <tr data-td-asset data-td-asset-hash="{{ .hash }}" data-td-asset-name="{{ .name }}">
+          <td class="td-assets-file">
+            {{ partial "content/icon.html" (dict "name" .icon "class" "td-assets-icon") }}
+            {{- /* dir="auto" 让 RTL 语言里的文件名（本身是 LTR 的）不被镜像。 */ -}}
+            {{- if $disabled -}}
+            <span class="td-assets-name" aria-disabled="true" dir="auto">{{ .name }}</span>
+            {{- else -}}
+            <a class="td-assets-name" href="{{ .url }}" dir="auto">{{ .name }}</a>
+            {{- end }}
+            <span class="td-assets-badges">
+              {{- with .os }}<span class="td-badge td-badge--neutral">{{ . }}</span>{{ end -}}
+              {{- with .arch }}<span class="td-badge td-badge--neutral">{{ . }}</span>{{ end -}}
+              <span class="td-badge td-badge--info">{{ .algorithm }}</span>
+            </span>
+          </td>
+          <td class="td-assets-checksum">
+            {{- /* 两份同一个值：截断的那份 aria-hidden，完整的那份只在朗读、
+                   打印与无 JS 时出现。CSS 决定哪一份可见。 */ -}}
+            <code class="td-assets-hash-short" aria-hidden="true">{{ substr .hash 0 8 }}…{{ substr .hash (sub (len .hash) 4) }}</code>
+            <code class="td-assets-hash-full">{{ .hash }}</code>
+          </td>
+          <td class="td-assets-action">
+            {{- /* 置灰的表不画复制按钮，不是画一个禁用的：那张表里的文件还拿
+                   不到，复制它的校验和没有意义。不画也让 :has() 那条自动把
+                   完整校验和铺开 —— 正是这时候读者需要看见全文。 */ -}}
+            {{- if not $disabled }}
+            <button class="td-assets-copy" type="button" hidden data-td-asset-copy
+                    data-td-label-copied="{{ i18n "assets_copied" }}"
+                    aria-label="{{ i18n "assets_copy" }}: {{ .name }}"
+                    title="{{ i18n "assets_copy" }}">
+              {{ partial "content/icon.html" (dict "name" "copy") }}
+            </button>
+            {{- end }}
+          </td>
+        </tr>
+        {{- end }}
+      </tbody>
+    </table>
+  </div>
+  {{- end }}
+</div>

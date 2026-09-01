@@ -1,0 +1,152 @@
+{{- /* 校验并规范化一份 data/download/<key>.yaml 记录。
+
+     记录级的错误（版本缺失、repo 格式不对、channels 不是数组）整块丢弃：这些
+     是每个渠道都要用的事实，缺了它们渲染出来的每个链接都是错的。渠道级的错误
+     只丢那个渠道 —— 五个渠道里一个写错，另外四个仍然有用。
+
+     整块丢弃也只是 warn，不是 errorf：一个写错的数据文件不该让整站构建失败。
+
+     未知字段一律拒掉而不是忽略：这份数据的每个键都对应一条输出，多出来的键
+     只可能是拼错的键名，而拼错的键名静默丢掉就等于作者写的东西凭空消失。
+
+     入参 dict：page、key、position
+     返回 dict：key、version、repo、tag、published、channels */ -}}
+{{- $page := .page -}}
+{{- $key := .key -}}
+{{- $position := .position | default $page.Path -}}
+{{- $ok := true -}}
+
+{{- /* key 会进 hugo.Data 的索引，限成标识符。 */ -}}
+{{- if not (findRE `^[a-z0-9][a-z0-9_-]*$` $key) -}}
+  {{- warnf "%s: download key must match ^[a-z0-9][a-z0-9_-]*$; got %q; skipping the block" $position $key -}}
+  {{- $ok = false -}}
+{{- end -}}
+
+{{- $raw := dict -}}
+{{- if $ok -}}
+  {{- $found := index (index hugo.Data "download" | default dict) $key -}}
+  {{- if not $found -}}
+    {{- warnf "%s: data/download/%s.yaml was not found; skipping the block" $position $key -}}
+    {{- $ok = false -}}
+  {{- else if not (reflect.IsMap $found) -}}
+    {{- warnf "%s: data/download/%s.yaml must contain a map; skipping the block" $position $key -}}
+    {{- $ok = false -}}
+  {{- else -}}
+    {{- $raw = $found -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if $ok -}}
+  {{- $allowed := slice "version" "repo" "tag" "published" "channels" -}}
+  {{- range $name, $_ := $raw -}}
+    {{- if not (in $allowed $name) -}}
+      {{- warnf "%s: download data has unsupported field %q; skipping the block" $position $name -}}
+      {{- $ok = false -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* version 可以来自记录，也可以来自站点的 params.version —— 一个站点通常
+       只发布一个产品的一个版本，让每份下载数据重复一遍是给自己找不一致。 */ -}}
+{{- $version := "" -}}
+{{- if $ok -}}
+  {{- $source := "" -}}
+  {{- if isset $raw "version" -}}
+    {{- $source = "download version" -}}
+    {{- $version = $raw.version -}}
+  {{- else if isset $page.Site.Params "version" -}}
+    {{- $source = "site params.version" -}}
+    {{- $version = $page.Site.Params.version -}}
+  {{- end -}}
+  {{- if not $source -}}
+    {{- warnf "%s: download version is required in data or site params.version; skipping the block" $position -}}
+    {{- $ok = false -}}
+  {{- else if ne (printf "%T" $version) "string" -}}
+    {{- warnf "%s: %s must be a string; skipping the block" $position $source -}}
+    {{- $ok = false -}}
+  {{- else -}}
+    {{- $version = strings.TrimSpace $version -}}
+    {{- if not $version -}}
+      {{- warnf "%s: %s must not be empty; skipping the block" $position $source -}}
+      {{- $ok = false -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $repo := "" -}}
+{{- if and $ok (isset $raw "repo") -}}
+  {{- if ne (printf "%T" $raw.repo) "string" -}}
+    {{- warnf "%s: download repo must be a string; skipping the block" $position -}}
+    {{- $ok = false -}}
+  {{- else -}}
+    {{- $repo = strings.TrimSpace $raw.repo -}}
+    {{- if not (findRE `^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$` $repo) -}}
+      {{- warnf "%s: download repo must be an owner/repository pair; got %q; skipping the block" $position $repo -}}
+      {{- $ok = false -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* tag 默认是 v 加版本号，这是绝大多数项目的约定；不是的项目显式写 tag。 */ -}}
+{{- $tag := "" -}}
+{{- if $ok -}}
+  {{- $tag = printf "v%s" $version -}}
+  {{- if isset $raw "tag" -}}
+    {{- if ne (printf "%T" $raw.tag) "string" -}}
+      {{- warnf "%s: download tag must be a string; skipping the block" $position -}}
+      {{- $ok = false -}}
+    {{- else -}}
+      {{- $tag = strings.TrimSpace $raw.tag -}}
+    {{- end -}}
+  {{- end -}}
+  {{- /* tag 会拼进 URL 路径。斜杠排除在外 —— 带斜杠的 tag 在路径里分不清
+         哪一段是 tag。 */ -}}
+  {{- if and $ok (not (findRE `^[A-Za-z0-9._+~-]+$` $tag)) -}}
+    {{- warnf "%s: download tag contains unsupported path characters; got %q; skipping the block" $position $tag -}}
+    {{- $ok = false -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* published=false 是"版本号定了但还没发布"：pinned 渠道置灰，rolling 渠道
+       照常可用（它不指向具体版本）。类型不对时按已发布处理并警告 —— 把一个
+       其实可用的下载页整块置灰，比多出一条警告更糟。 */ -}}
+{{- $published := true -}}
+{{- if and $ok (isset $raw "published") -}}
+  {{- if ne (printf "%T" $raw.published) "bool" -}}
+    {{- warnf "%s: download published must be a boolean; using true" $position -}}
+  {{- else -}}
+    {{- $published = $raw.published -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $rawChannels := slice -}}
+{{- if $ok -}}
+  {{- if not (isset $raw "channels") -}}
+    {{- warnf "%s: download channels are required; skipping the block" $position -}}
+    {{- $ok = false -}}
+  {{- else if not (reflect.IsSlice $raw.channels) -}}
+    {{- warnf "%s: download channels must be an array; skipping the block" $position -}}
+    {{- $ok = false -}}
+  {{- else if not $raw.channels -}}
+    {{- warnf "%s: download channels must not be empty; skipping the block" $position -}}
+    {{- $ok = false -}}
+  {{- else -}}
+    {{- $rawChannels = $raw.channels -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $channels := slice -}}
+{{- if $ok -}}
+  {{- $channels = partial "download/channels.html" (dict
+    "page" $page "raw" $rawChannels "position" $position
+    "version" $version "tag" $tag "repo" $repo) -}}
+{{- end -}}
+
+{{- /* 一个 return，一行写完。Hugo 的模板里 `return` 只允许出现一次，而且只吃
+       一个参数 —— 提前 return 一个空记录会报 "wrong number of args"，dict 不加
+       括号则它的 13 个实参会被当成 13 个参数。 */ -}}
+{{- $result := dict "key" $key "version" "" "repo" "" "tag" "" "published" false "channels" slice -}}
+{{- if $ok -}}
+  {{- $result = dict "key" $key "version" $version "repo" $repo "tag" $tag "published" $published "channels" $channels -}}
+{{- end -}}
+{{- return $result -}}

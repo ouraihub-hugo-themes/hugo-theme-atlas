@@ -1,0 +1,9 @@
+{{- /* 作者注释：正文里留话给下一个维护者，不进渲染结果。
+
+     `{{ if false }}` 里那句 `.Inner` 是必需的，而且必须写成永不执行的形式：
+     Hugo 靠静态扫描模板里有没有出现 `.Inner` 来决定这个 shortcode 允不允许成对
+     调用 —— 不出现就报"提供了闭合标签"。而真去取值会把 Inner 当独立文档渲染，
+     嵌在注释里的 shortcode 就跟着跑了，注释掉的 `{{< fig >}}` 照样占掉一个图号。
+     写成不执行的分支，两头都对：成对调用合法，body 不渲染。 */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "form" "none") -}}
+{{- if false }}{{ .Inner }}{{ end -}}

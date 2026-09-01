@@ -1,0 +1,39 @@
+{{- /* 本 section 的目录树：`{{< book-toc depth="2" >}}`
+
+     根取 .FirstSection，跟侧栏同一个 —— 一份 book 的目录就是它侧栏的内容，
+     两处给出不同的树是 bug 而不是特性。
+
+     参数：depth（1–3，默认 2）
+
+     暂不认 book_number / book_status / toc_hide / sidebar_divider 这类 Book
+     元数据键（章节编号、草稿标记、隐藏、分隔线）—— 主题还没有那套元数据，
+     凭空造一套没人配的键等于给自己留四条没有验证覆盖的分支。等 Book 元数据
+     真的排进计划再一起做。 */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "allowed" (slice "depth")) -}}
+{{- $at := .Position -}}
+{{- $params := dict -}}
+{{- if .IsNamedParams }}{{ $params = .Params }}{{ end -}}
+
+{{- $depth := 2 -}}
+{{- if isset $params "depth" -}}
+  {{- $raw := printf "%v" (.Get "depth") -}}
+  {{- /* 数字字符串照收。Hugo 只把不带引号的数字解析成 int，而给 shortcode 参数
+         加引号是更常见的写法 —— `depth="2"` 是作者的明确意图，不是错误。
+         先用正则确认是整数再 int：对非整数调 int 是硬错，不是可 warn 的软失败。 */ -}}
+  {{- if findRE `^[0-9]+$` $raw -}}
+    {{- $depth = int $raw -}}
+  {{- end -}}
+  {{- if or (not (findRE `^[0-9]+$` $raw)) (lt $depth 1) (gt $depth 3) -}}
+    {{- warnf "shortcode %q: depth must be an integer from 1 through 3; got %q at %s; using 2" .Name $raw $at -}}
+    {{- $depth = 2 -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $root := .Page.FirstSection -}}
+{{- if not $root.Pages -}}
+  {{- warnf "shortcode %q found no pages under %s at %s; rendering nothing" .Name $root.Path $at -}}
+{{- else -}}
+<nav class="td-book-toc" aria-label="{{ i18n "book_toc" }}">
+  {{- partial "book/toc-tree.html" (dict "page" $root "depth" $depth "level" 1) -}}
+</nav>
+{{- end -}}

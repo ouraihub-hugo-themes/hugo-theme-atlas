@@ -1,0 +1,63 @@
+{{- /* 从 front matter 的 release_url 解出发布事实。
+
+     只认一个键，而且只认 GitHub 的 release URL 全文：让作者分别写 owner /
+     repo / tag 三个键，就有三处可以各自写错，而错法是静默的（拼错的 owner
+     生成一个 404 链接，看不出是哪一段错了）。一整条 URL 作者可以从浏览器地址
+     栏直接粘过来，对不对一眼就知道。
+
+     所有派生 URL 都从这一条算出来，不再让调用方自己拼 —— 拼串的地方越多，
+     漏掉 PathEscape 的机会越多，而 tag 里的 `+`（`1.0.0+build`）不转义就指向
+     另一个文件。
+
+     入参 dict：page、position、required（缺 release_url 时是否 warn）
+     返回 dict：valid、owner、project、repo、tag、date、dateDisplay、
+              repoURL、releaseURL、sourceTarURL、sourceZipURL */ -}}
+{{- $page := .page -}}
+{{- $position := .position | default $page.Path -}}
+{{- $required := true -}}
+{{- if isset . "required" }}{{ $required = .required }}{{ end -}}
+
+{{- $owner := "" -}}
+{{- $project := "" -}}
+{{- $tag := "" -}}
+{{- $raw := $page.Params.release_url -}}
+{{- if eq $raw nil -}}
+  {{- if $required -}}
+    {{- warnf "%s: release_url front matter is required; skipping the release block" $position -}}
+  {{- end -}}
+{{- else if ne (printf "%T" $raw) "string" -}}
+  {{- warnf "%s: release_url must be a GitHub release URL string; got %v; skipping the release block" $position $raw -}}
+{{- else -}}
+  {{- /* tag 允许的字符与 Git 的 refname 规则对齐（去掉斜杠 —— 带斜杠的 tag
+         在 URL 路径里分不清哪一段是 tag）。 */ -}}
+  {{- with findRESubmatch `^https://github[.]com/([A-Za-z0-9_.-]+)/([A-Za-z0-9_.-]+)/releases/tag/([A-Za-z0-9._+~-]+)/?$` (strings.TrimSpace $raw) -}}
+    {{- $m := index . 0 -}}
+    {{- $owner = index $m 1 -}}
+    {{- $project = index $m 2 -}}
+    {{- $tag = index $m 3 -}}
+  {{- else -}}
+    {{- warnf "%s: release_url must match https://github.com/<owner>/<repo>/releases/tag/<tag>; got %q; skipping the release block" $position $raw -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $result := dict "valid" false "owner" "" "project" "" "repo" "" "tag" ""
+  "date" $page.Date "dateDisplay" "" "repoURL" "" "releaseURL" ""
+  "sourceTarURL" "" "sourceZipURL" "" -}}
+{{- with $tag -}}
+  {{- $repoURL := printf "https://github.com/%s/%s" $owner $project -}}
+  {{- $segment := urls.PathEscape . -}}
+  {{- $result = dict
+    "valid" true
+    "owner" $owner
+    "project" $project
+    "repo" (printf "%s/%s" $owner $project)
+    "tag" .
+    "date" $page.Date
+    "dateDisplay" ($page.Date.Format "2006-01-02")
+    "repoURL" $repoURL
+    "releaseURL" (printf "%s/releases/tag/%s" $repoURL $segment)
+    "sourceTarURL" (printf "%s/archive/refs/tags/%s.tar.gz" $repoURL $segment)
+    "sourceZipURL" (printf "%s/archive/refs/tags/%s.zip" $repoURL $segment)
+  -}}
+{{- end -}}
+{{- return $result -}}

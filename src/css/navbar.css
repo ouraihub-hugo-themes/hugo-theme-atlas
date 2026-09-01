@@ -1,0 +1,193 @@
+/* 站点 navbar。
+   三区栅格 1fr auto 1fr：品牌在起始、站点菜单真居中、工具簇在末端。
+   菜单用 auto 居中而非 flex 的 space-between —— 后者会让菜单随两侧宽度
+   变化左右漂移，而 1fr auto 1fr 让它钉在视口中线上。 */
+
+@layer components {
+  .td-navbar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+
+    /* 固定高度而非内容高度。粘顶偏移、阅读线、抽屉让位都算这个值，一个会
+       变的 chrome 高度会让所有依赖它的几何跟着抖。border-box 下高度含边框，
+       所以下边框不额外占一像素 —— 否则正文列会比固定侧栏低一像素。 */
+    box-sizing: border-box;
+    height: var(--td-nav-h);
+    border-block-end: 1px solid var(--color-border);
+    background: var(--color-nav);
+    transition: box-shadow var(--duration-base) var(--ease-color);
+
+    /* 半透明底色要配模糊，否则其下滚过的正文会读得出来。 */
+    backdrop-filter: blur(8px);
+
+    /* 滚离顶部后加阴影，给出"内容在其下穿过"的层次。属性由 JS 挂。 */
+    &[data-td-nav-scrolled] {
+      box-shadow: var(--shadow-nav);
+    }
+  }
+
+  .td-navbar-inner {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    column-gap: 1rem;
+    height: 100%;
+  }
+
+  .td-navbar-brand {
+    display: flex;
+    align-items: center;
+    justify-self: start;
+    gap: 0.625rem;
+    color: var(--color-ink);
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--color-ink);
+      text-decoration: none;
+    }
+  }
+
+  .td-navbar-logo {
+    display: block;
+    width: 22px;
+    height: 22px;
+  }
+
+  /* 菜单区。min-width: 0 让它在窄屏能被压缩而不是撑破栅格。 */
+  .td-navbar-menu {
+    justify-self: center;
+    min-width: 0;
+
+    /* 窄屏藏起：菜单项进抽屉，navbar 只留品牌与工具簇。 */
+    @media (width < 48rem) {
+      display: none;
+    }
+  }
+
+  .td-navbar-menu-list {
+    display: flex;
+    align-items: center;
+    gap: 0.125rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .td-navbar-link {
+    display: block;
+    padding: 0.375rem 0.625rem;
+    border-radius: 0.5rem;
+    color: var(--color-ink-muted);
+    font-size: 0.875rem;
+    text-decoration: none;
+    transition:
+      background-color var(--duration-fast) var(--ease-color),
+      color var(--duration-fast) var(--ease-color);
+
+    &:hover {
+      background-color: var(--color-shell-wash);
+      color: var(--color-ink);
+      text-decoration: none;
+    }
+
+    /* 当前所在的顶层 section。与侧栏当前行同一套语义，同一档底色。 */
+    &[aria-current="page"],
+    &[aria-current="true"] {
+      background-color: var(--color-shell-selected);
+      color: var(--color-accent);
+    }
+  }
+
+  .td-navbar-util {
+    display: flex;
+    align-items: center;
+    justify-self: end;
+    gap: 0.375rem;
+  }
+
+  /* 工具簇里的图标按钮。方形、无边框，hover 才出底色 —— 一排常驻边框会
+     把 navbar 变成工具条。 */
+  .td-navbar-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 0;
+    border-radius: 0.4375rem;
+    background: transparent;
+    color: var(--color-ink-muted);
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition:
+      background-color var(--duration-fast) var(--ease-color),
+      color var(--duration-fast) var(--ease-color);
+
+    &:hover {
+      background-color: var(--color-shell-wash);
+      color: var(--color-ink);
+    }
+  }
+
+  /* ---- 深浅色切换图标 ----
+     两个符号用 CSS 画，按当前主题互换显隐：浅色下显示月亮（点它去深色），
+     深色下显示太阳。图标表示的是"点了会变成什么"，不是"现在是什么" ——
+     后者是状态展示，而这是一个动作按钮。 */
+  .td-theme-toggle {
+    position: relative;
+  }
+
+  .td-theme-toggle-sun,
+  .td-theme-toggle-moon {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+  }
+
+  /* 太阳：实心圆加一圈短射线，射线用 box-shadow 而不是八个伪元素。 */
+  .td-theme-toggle-sun {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+    background: currentcolor;
+    box-shadow:
+      0 -0.5rem 0 -0.19rem currentcolor,
+      0 0.5rem 0 -0.19rem currentcolor,
+      -0.5rem 0 0 -0.19rem currentcolor,
+      0.5rem 0 0 -0.19rem currentcolor;
+  }
+
+  /* 月亮：一个圆被另一个圆咬掉一块。用 box-shadow 造实心圆再用背景色的
+     圆盖住一角，比 mask 兼容面更宽。 */
+  .td-theme-toggle-moon {
+    width: 0.875rem;
+    height: 0.875rem;
+    border-radius: 50%;
+    box-shadow: inset -0.28rem -0.1rem 0 0 currentcolor;
+    rotate: -35deg;
+  }
+
+  :root:not([data-td-theme="dark"]) .td-theme-toggle-sun,
+  [data-td-theme="dark"] .td-theme-toggle-moon {
+    display: none;
+  }
+}
+
+/* 打印：navbar 消失，chrome 高度归零 —— 否则粘顶元素的偏移会在打印稿
+   顶部留出 50px 空白。归零写在 :root 上，因为依赖它的侧栏与 TOC 是
+   navbar 的兄弟节点，自定义属性只向后代继承。 */
+@media print {
+  :root {
+    --td-shell-nav-h: 0px;
+  }
+
+  .td-navbar {
+    display: none;
+  }
+}

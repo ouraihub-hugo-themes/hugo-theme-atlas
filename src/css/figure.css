@@ -1,0 +1,60 @@
+/* 图片与图注。由 layouts/_markup/render-image.html 渲染。 */
+
+@layer components {
+  .td-figure {
+    margin-block: 1.5rem;
+
+    /* 图与它的说明被分页切断就失去了关联。 */
+    break-inside: avoid;
+  }
+
+  /* 图注居中而图不居中会读作两个东西。整块居中，说明文字跟着走。 */
+  .td-figure > :is(img, .td-figure-link) {
+    display: block;
+    margin-inline: auto;
+  }
+
+  .td-figure-caption {
+    margin-block-start: 0.6rem;
+    color: var(--color-ink-muted);
+    font-family: var(--font-sans);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    text-align: center;
+  }
+
+  /* 独占一段的图。行内图不进这里 —— 它是句子的一部分，加外边距会把行高撑开。 */
+  .td-image {
+    display: block;
+    margin-block: 1.5rem;
+  }
+
+  /* 行内图：段落里夹在文字中间的那种。
+     Tailwind Preflight 给所有 img 设了 display: block（消掉基线间隙），
+     那让行内图变成一个撑满列宽的块 —— 一句话中间凭空多出 400px 高。
+     这里把它改回行内，并把高度夹到行内：一个句子中间的图是记号（徽章、
+     图标、公式片段），不是插图。真要大图就该独占一段。 */
+  .td-prose p > img:not(.td-image) {
+    display: inline-block;
+    max-block-size: 1.6em;
+    width: auto;
+    vertical-align: -0.25em;
+  }
+
+  /* 链接图的可聚焦轮廓要包住图片本身，不是包住行盒。 */
+  .td-figure-link {
+    border-radius: 0.5rem;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 3px;
+    }
+  }
+}
+
+@media print {
+  /* 纸上图注跟着图走，但颜色要压到能印出来的深度。 */
+  .td-figure-caption {
+    color: #444;
+  }
+}

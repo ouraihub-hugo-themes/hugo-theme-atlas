@@ -1,0 +1,21 @@
+{{- /* 字段的稳定锚点：`field-<slug>`，同名的第二个起加 `-2`、`-3`。
+
+     一页上可以有好几组 fields，两组里都有 `name="timeout"` 是正常的 —— id
+     必须唯一，否则 `href="#field-timeout"` 指向哪一个由浏览器随便挑。
+
+     计数器按 slug 存在 Page Store 里，取一次加一次。这样直接给出下一个可用
+     后缀，不必逐个探测 `field-timeout-2`、`-3`…有没有被占，也就不需要"探到
+     上限还没空位"的兜底分支。
+
+     入参 dict：page、name
+     返回 id 字符串 */ -}}
+{{- $page := .page -}}
+{{- $slug := strings.Trim (replaceRE `[^\p{L}\p{N}_]+` "-" (lower (printf "%v" .name))) "-" -}}
+{{- /* 名字全是标点时 slug 会是空的（`*`、`--`）。 */ -}}
+{{- if not $slug }}{{ $slug = "entry" }}{{ end -}}
+
+{{- $used := $page.Store.Get "tdFieldAnchors" | default dict -}}
+{{- $n := add (int (index $used $slug | default 0)) 1 -}}
+{{- $page.Store.SetInMap "tdFieldAnchors" $slug $n -}}
+
+{{- return cond (eq $n 1) (printf "field-%s" $slug) (printf "field-%s-%d" $slug $n) -}}

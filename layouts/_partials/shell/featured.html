@@ -1,0 +1,75 @@
+{{- /* 解析页面的特征图：用哪种模式、用哪张图。
+
+     三种模式，同一张图的三种用法：
+       banner  正文顶部的一张图，占据文档流
+       wash    标题区背后的淡色底图，10% 不透明度 + 向下渐隐
+       hero    页顶满幅背景，导航栏浮在其上
+
+     只回答"哪张图代表这一页"，尺寸/alt/URL 校验交给 content/image-resolve.html
+     —— 那份逻辑正文图片已经在用，特征图没有理由再来一套。
+
+     选源的顺序：
+       1. 本页自己写的 images（继承来的不算，见下）
+       2. 页面资源里名字像 featured / feature / cover / thumbnail 的
+       3. 继承来的 images
+
+     为什么要区分"自己写的"和"继承来的"：images 会通过 cascade 落到子页上。
+     若不区分，一个 section 配了图，它下面每一篇都会拿同一张当特征图，而作者
+     真正想要的是各自目录里那张 featured.png。
+
+     入参就是 Page 本身（不是 dict）—— Hugo 里 `.page | default .` 行不通：
+     对 Page 取不存在的字段是硬错，default 轮不到执行。
+
+     返回 dict：mode（空串表示不显示）、image（image-resolve 的返回） */ -}}
+{{- $page := . -}}
+{{- $mode := partial "validate-enum.html" (dict
+  "value" ($page.Param "featured_image")
+  "allowed" (slice "none" "banner" "wash" "hero")
+  "fallback" "none"
+  "key" "featured_image"
+  "where" (cond (isset $page.Params "featured_image") $page.Path "site configuration")
+) -}}
+
+{{- $src := "" -}}
+{{- if ne $mode "none" -}}
+  {{- $own := $page.Params.images -}}
+  {{- $inherited := false -}}
+  {{- with $own -}}
+    {{- $mine := delimit . "\x1f" -}}
+    {{- range $page.Ancestors -}}
+      {{- with .Params.images -}}
+        {{- if eq (delimit . "\x1f") $mine }}{{ $inherited = true }}{{ end -}}
+        {{- break -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- if and $own (not $inherited) -}}
+    {{- $src = index $own 0 -}}
+  {{- else -}}
+    {{- $images := $page.Resources.ByType "image" -}}
+    {{- with $images.GetMatch "**featured*" -}}
+      {{- $src = .Name -}}
+    {{- else with $images.GetMatch "*feature*" -}}
+      {{- $src = .Name -}}
+    {{- else with $images.GetMatch "{*cover*,*thumbnail*}" -}}
+      {{- $src = .Name -}}
+    {{- else with $own -}}
+      {{- $src = index . 0 -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* 配了模式却找不到图 → 不显示，也不警告：featured_image 常写在站点配置或
+       cascade 里，"这一页恰好没有图"是正常情况，不是作者的错误。 */ -}}
+{{- $image := false -}}
+{{- if $src -}}
+  {{- $image = partial "content/image-resolve.html" (dict
+    "src" $src "page" $page "name" "featured image" "position" $page.Path
+    "alt" ($page.Params.featured_image_alt | default "")) -}}
+  {{- if not $image.src }}{{ $mode = "none" }}{{ end -}}
+{{- else -}}
+  {{- $mode = "none" -}}
+{{- end -}}
+
+{{- return dict "mode" (cond (eq $mode "none") "" $mode) "image" $image -}}

@@ -1,0 +1,41 @@
+{{- /* 发布卡片：版本号、日期，与四个从 release_url 派生出的链接。
+
+     不吃任何参数。发布事实来自 front matter 的 release_url —— 允许在
+     shortcode 上覆盖，就等于允许同一页上出现两个互相矛盾的版本号。
+
+     四个链接全都能从那一条 URL 算出来：发布页、两个源码归档、仓库首页。
+     校验和文件不在这里，它归 release-assets；版本比较归 GitHub。 */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "form" "none") -}}
+{{- $meta := partial "release/meta.html" (dict "page" .Page "position" .Position) -}}
+
+{{- /* meta 自己已经警告过了。从空事实渲染会产出 https://github.com//releases/tag/
+       这种链接 —— 一个看起来能点的死链比没有卡片更糟。 */ -}}
+{{- if $meta.valid -}}
+{{- $links := slice
+  (dict "label" (i18n "release_view") "url" $meta.releaseURL "icon" "github")
+  (dict "label" (printf "%s · tar.gz" (i18n "release_source")) "url" $meta.sourceTarURL "icon" "file-zipper")
+  (dict "label" (printf "%s · zip" (i18n "release_source")) "url" $meta.sourceZipURL "icon" "file-zipper")
+  (dict "label" $meta.repo "url" $meta.repoURL "icon" "code-branch")
+-}}
+{{- /* aside 而不是 div：这是正文旁边的补充信息，屏幕阅读器会把它报成一个
+       可跳过的区域。里面那组链接是导航，单独一层 nav —— 它们指向站外的四个
+       地方，不是正文的一部分。 */ -}}
+<aside class="td-release-card" aria-labelledby="release-card-{{ .Ordinal }}">
+  <header class="td-release-card-header">
+    {{- /* dir="auto" 让 RTL 语言页面里的版本号（本身是 LTR 的）不被镜像。 */ -}}
+    <span class="td-release-card-tag" id="release-card-{{ .Ordinal }}" dir="auto">{{ $meta.tag }}</span>
+    {{- /* time 的 datetime 是机器可读的那一份，显示文本可以被站点改格式。 */ -}}
+    <span class="td-release-card-date">
+      {{ i18n "release_released" }}
+      <time datetime="{{ $meta.date.Format "2006-01-02" }}">{{ $meta.dateDisplay }}</time>
+    </span>
+  </header>
+  <nav class="td-release-card-links" aria-label="{{ i18n "release_links" }}">
+    {{- range $links }}
+    <a class="td-release-card-link" href="{{ .url }}">
+      {{ partial "content/icon.html" (dict "name" .icon) }}<span>{{ .label }}</span>
+    </a>
+    {{- end }}
+  </nav>
+</aside>
+{{- end -}}

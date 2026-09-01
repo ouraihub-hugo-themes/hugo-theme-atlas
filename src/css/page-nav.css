@@ -1,0 +1,134 @@
+/* 页级导航：面包屑与顺序阅读翻页。
+   两者都是"我在哪 / 接下来去哪"，共用安静的排版 —— 它们是辅助信息，
+   不该和正文抢注意力。 */
+
+@layer components {
+  /* ---- 面包屑 ---- */
+  .td-breadcrumb {
+    margin-block-end: 1rem;
+    font-family: var(--font-meta);
+    font-size: 0.8125rem;
+  }
+
+  .td-breadcrumb-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* 分隔符用伪元素而非文本节点：屏幕阅读器不该逐个念出斜杠。 */
+  .td-breadcrumb-item {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    color: var(--color-ink-faint);
+    min-width: 0;
+
+    & + &::before {
+      content: "/";
+      color: var(--color-ink-faint);
+      /* RTL 下斜杠不翻面 —— 它是分隔符不是箭头，翻了反而怪。 */
+      opacity: 0.6;
+    }
+  }
+
+  .td-breadcrumb-link {
+    color: var(--color-ink-muted);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+
+    &:hover {
+      color: var(--color-link);
+      text-decoration: underline;
+    }
+  }
+
+  /* ---- 顺序阅读翻页 ----
+     两个安静的文字链接：上一篇在起始、下一篇在末端。不做卡片、不带摘要。
+     每侧最多占半行，超出截断 —— 完整标题留在 title 属性里。 */
+  .td-pager {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-block: 1.5rem 0.75rem;
+  }
+
+  .td-pager-link {
+    display: inline-flex;
+    flex: 0 1 auto;
+    align-items: center;
+    gap: 0.45rem;
+    min-width: 0;
+    max-width: calc(50% - 0.5rem);
+    color: var(--color-ink);
+    font-size: 0.9375rem;
+    font-weight: 500;
+    line-height: 1.4;
+    text-decoration: none;
+    transition: color var(--duration-fast) var(--ease-color);
+
+    &:hover {
+      color: var(--color-link);
+      text-decoration: none;
+    }
+  }
+
+  /* 只有一侧时它保持自己那一边的边缘，不居中。 */
+  .td-pager-link--prev {
+    margin-inline-end: auto;
+  }
+
+  .td-pager-link--next {
+    margin-inline-start: auto;
+    text-align: end;
+  }
+
+  .td-pager-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* 箭头。用 CSS 画的角标而非字符实体：→ 在不少字体里缺字形会掉成豆腐块，
+     而且它需要跟着书写方向翻面。 */
+  .td-pager-arrow {
+    flex: 0 0 auto;
+    width: 0.4em;
+    height: 0.4em;
+    border-block-start: 1.5px solid currentcolor;
+    border-inline-end: 1.5px solid currentcolor;
+    color: var(--color-ink-faint);
+    rotate: -135deg;
+  }
+
+  .td-pager-link--next .td-pager-arrow {
+    rotate: 45deg;
+  }
+
+  /* RTL：逻辑边框已经翻面，但旋转角度是物理量，要显式镜像。 */
+  .td-pager:dir(rtl) {
+    & .td-pager-arrow {
+      rotate: 45deg;
+    }
+
+    & .td-pager-link--next .td-pager-arrow {
+      rotate: -135deg;
+    }
+  }
+}
+
+/* 打印：面包屑与翻页都消失 —— 纸上没有"上一页链接"这回事。 */
+@media print {
+  .td-breadcrumb,
+  .td-pager {
+    display: none;
+  }
+}

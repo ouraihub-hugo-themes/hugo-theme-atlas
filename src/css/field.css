@@ -1,0 +1,162 @@
+/* 字段定义表。由 layouts/_shortcodes/fields.html 渲染。
+
+   一条字段是"名字行 + 说明"，条目之间一道细线。元信息（类型、required、
+   默认值）是安静的纯文本而不是徽章：一行里只有名字需要被一眼扫到，把三样
+   都做成药丸就等于都不突出。 */
+
+@layer components {
+  .td-fields {
+    margin-block: 1.5rem;
+  }
+
+  /* 组标题。带一道与条目分隔线同色的下边框，读作"这一块的标题"而不是一个
+     孤零零的粗体段落。 */
+  .td-fields-label {
+    margin-block: 0 0.25rem;
+    padding-block-end: 0.5rem;
+    border-block-end: 1px solid var(--color-border);
+    color: var(--color-ink-strong);
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  .td-fields-list {
+    margin: 0;
+  }
+
+  .td-field {
+    /* 长类型名要能收缩而不是撑破容器。 */
+    min-width: 0;
+    padding-block: 1rem;
+
+    /* 从自链接跳进来时不能被吸顶导航挡住。 */
+    scroll-margin-block-start: calc(var(--td-shell-nav-h) + 1rem);
+
+    &:first-child {
+      padding-block-start: 0.25rem;
+    }
+
+    &:last-child {
+      padding-block-end: 0;
+    }
+  }
+
+  /* 分隔线只在条目之间，不在首尾。 */
+  .td-field + .td-field {
+    border-block-start: 1px solid var(--color-border);
+  }
+
+  /* 跳到某条字段时整条着色，名字与说明一起 —— 只高亮名字的话读者还得自己
+     找说明在哪。内边距用负外边距抵掉，所以着色不会让版面移位。 */
+  .td-field:target {
+    margin-inline: -0.6rem;
+    padding-inline: 0.6rem;
+    border-radius: 0.5rem;
+    background: var(--color-surface);
+  }
+
+  /* 名字行：换行时元信息跟着走，基线对齐。列间距比行间距大 —— 同一行里的
+     三项要分得开，换行后不需要那么松。 */
+  .td-field-term {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.25rem 0.75rem;
+    min-width: 0;
+    font-weight: 400;
+  }
+
+  /* 名字是这一行唯一需要被扫到的东西。不要行内代码的底色 —— 一列底色块会
+     盖过它自己的层级。 */
+  .td-field-name {
+    padding: 0;
+    background: none;
+    color: var(--color-ink-strong);
+    font-family: var(--font-mono);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* 三项元信息一个尺度。`.td-field-type` 本身就是 <code>（模板里如此），所以
+     它在这里拿到 mono 字族，不走下面那条后代 reset —— 加一条 `code.td-field-type`
+     是 (0,1,1)，会盖掉这条 (0,1,0) 的 color 与 font-size，读数变成继承来的
+     16px/ink。 */
+  .td-field-type,
+  .td-field-default,
+  .td-field-required {
+    color: var(--color-ink-muted);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+
+  .td-field-type {
+    font-family: var(--font-mono);
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .td-field-default,
+  .td-field-required {
+    font-family: var(--font-meta);
+  }
+
+  /* 默认值里的 code 继承周围的安静色，不另起一套。 */
+  .td-field-default code {
+    padding: 0;
+    background: none;
+    color: inherit;
+    font-family: var(--font-mono);
+    font-size: 1em;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .td-field-meta-label::after {
+    content: ": ";
+  }
+
+  .td-field-required {
+    color: var(--color-status-danger);
+    font-weight: 500;
+  }
+
+  /* 自链接的间距。可见性、hover、打印隐藏都从 .td-heading-anchor 继承。 */
+  .td-field-anchor {
+    padding-inline-start: 0.25em;
+  }
+
+  .td-field-term:hover > .td-field-anchor {
+    visibility: visible;
+  }
+
+  .td-field-description {
+    min-width: 0;
+    margin: 0.4rem 0 0;
+    overflow-wrap: anywhere;
+
+    > :last-child {
+      margin-block-end: 0;
+    }
+  }
+}
+
+@media print {
+  /* :target 的着色在纸上没有意义 —— 纸上没有"当前锚点"。 */
+  .td-field:target {
+    margin-inline: 0;
+    padding-inline: 0;
+    background: none;
+  }
+}
+
+@media (forced-colors: active) {
+  /* 强制配色下 required 的红色被系统接管，只剩字重能区分。 */
+  .td-field-required {
+    font-weight: 700;
+  }
+}

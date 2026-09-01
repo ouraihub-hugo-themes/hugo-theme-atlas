@@ -1,0 +1,54 @@
+{{- /* 带编号的公式。正文是 LaTeX，过 `content/math.html`。
+
+     参数：num、id、caption、class —— 与 fig / tbl / eg 同一套头部。
+
+     `num` 可以不给：一条不需要被引用的公式也该能用这个围栏排版（居中、可
+     横向滚动、编号列留空）。给了 num 才登记进交叉引用表，`xref` 才找得到。
+     另三个目标要求 num，因为"图 3"这种说法本身就要编号；一条公式常常只是
+     推导中间的一步。
+
+     不给 num 却给了 id/caption/class 是矛盾的：那三个都是编号目标的属性。
+     警告并忽略，不静默 —— 作者写了 caption 却看不到它，会以为主题坏了。 */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "allowed" (slice
+  "num" "id" "caption" "class")) -}}
+{{- $at := .Position -}}
+{{- $expr := strings.TrimSpace (printf "%s" .InnerDeindent) -}}
+{{- if not $expr -}}
+  {{- warnf "shortcode %q requires TeX content at %s; rendering nothing" .Name $at -}}
+{{- else -}}
+  {{- $hasNum := false -}}
+  {{- if .IsNamedParams }}{{ $hasNum = isset .Params "num" }}{{ end -}}
+  {{- $html := partial "content/math.html" (dict
+    "expression" $expr "display" true "position" $at
+  ) -}}
+  {{- $body := $html | safeHTML -}}
+  {{- if not $html -}}
+    {{- /* 渲染失败原样留下 LaTeX。math.html 已经警告过原因。 */ -}}
+    {{- $body = printf `<pre class="td-math-source"><code>%s</code></pre>` (htmlEscape $expr) | safeHTML -}}
+  {{- end -}}
+
+  {{- if not $hasNum -}}
+    {{- if .IsNamedParams -}}
+      {{- range $name := slice "id" "caption" "class" -}}
+        {{- if isset $.Params $name -}}
+          {{- warnf "shortcode %q: parameter %q requires num at %s; ignoring it" $.Name $name $at -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+<div class="td-math td-math--eq">{{ $body }}</div>
+  {{- else -}}
+    {{- $head := partial "book/target-head.html" (dict "shortcode" . "kind" "eq") -}}
+    {{- partial "book/register-target.html" (dict
+      "page" .Page "kind" "eq" "ordinal" .Ordinal "position" $at
+      "num" $head.num "id" $head.id "caption" $head.caption
+    ) -}}
+    {{- $label := partial "book/label.html" (dict "kind" "eq" "num" $head.num) -}}
+    {{- /* `<figure>` 而非 `<div>`：编号的公式是"从正文里抽出来、被正文引用"的
+           内容，那正是 figure 的语义。题注放 figcaption，编号在题注里 ——
+           编号不能只靠 CSS 计数器，朗读时听不到。 */ -}}
+<figure{{ with $head.id }} id="{{ . }}"{{ end }} class="td-book-figure td-book-figure--eq{{ with $head.class }} {{ . }}{{ end }}" data-td-book-kind="eq" data-td-book-num="{{ $head.num }}">
+  <div class="td-book-figure-body td-math">{{ $body }}</div>
+  <figcaption><span class="td-book-figure-label">{{ $label }}</span>{{ with $head.caption }} <span class="td-book-figure-caption">{{ . }}</span>{{ end }}</figcaption>
+</figure>
+  {{- end -}}
+{{- end -}}

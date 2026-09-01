@@ -1,0 +1,32 @@
+{{- /* 交叉引用目标的 id / 锚点。用不了的值 warn 并回空串 —— 调用方渲染一个没有
+     锚点的组件，而不是让构建停下。
+
+     两条规则，只挡真正坏的东西：
+       - 不能含空白、引号、尖括号、`&`、`#`：它们进 `id="..."` 或 `href="#..."`
+         就是坏的 HTML
+       - 不能以数字或 `-` 开头：那样的 id 在 CSS 选择器里要转义才能用
+
+     **不限成 ASCII**。`^[A-Za-z][A-Za-z0-9_.:-]*$` 这类白名单会拒掉 Hugo 从
+     CJK 标题生成的锚点 —— 一篇中文文档的 `## 引用` 的 id 就是 `引用`，
+     `xref anchor="引用"` 是完全正常的用法，不是作者的错误。纯英文站点碰不到
+     这条，所以它很容易被写死成 ASCII 白名单。
+
+     入参 dict：name（消息里的组件名）、value、position */ -}}
+{{- $name := .name | default "book component" -}}
+{{- $position := .position | default "unknown position" -}}
+{{- $id := "" -}}
+{{- if ne (printf "%T" .value) "string" -}}
+  {{- warnf "shortcode %q: id must be a string at %s; dropping it" $name $position -}}
+{{- else -}}
+  {{- $id = strings.TrimSpace .value -}}
+  {{- if not $id -}}
+    {{- warnf "shortcode %q: id must not be empty at %s; dropping it" $name $position -}}
+  {{- else if findRE "[\\s\"'<>&#]" $id -}}
+    {{- warnf "shortcode %q: id %q contains characters that cannot appear in an id or fragment at %s; dropping it" $name $id $position -}}
+    {{- $id = "" -}}
+  {{- else if findRE `^[0-9-]` $id -}}
+    {{- warnf "shortcode %q: id %q must not start with a digit or a hyphen at %s; dropping it" $name $id $position -}}
+    {{- $id = "" -}}
+  {{- end -}}
+{{- end -}}
+{{- return $id -}}

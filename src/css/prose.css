@@ -1,0 +1,278 @@
+/* Markdown 正文。
+   组件样式写成 @utility 语义类，不在模板里堆 utility —— 这样 print、
+   forced-colors、RTL 能像 SCSS 时代一样集中声明，而不是散到每个 partial。
+
+   页标题也在这层里。它是 h1，标尺归排版管，不归模板管：写在模板 class
+   上就等于把类型标尺切成两半，改一次要动两个地方。
+
+   ---- 这个文件的规矩：正文里的组件要显式排除 ----
+
+   `@utility` 编译进 utilities 层，而 Tailwind 的层序把 utilities 排在
+   components 之后。层序优先于特异性 —— 所以这个文件里的每一条都赢过
+   `@layer components` 里的每一条，无论选择器权重多高。
+
+   后果：凡是组件在正文流里重排元素间距（`.td-code` 的 pre、`.steps` 的
+   li 与首行），都必须在下面对应的规则上加 `:not()` 排除，否则组件那边写
+   什么都不生效，而且是静默的 —— 看起来像特异性算错了，其实是层的问题。 */
+
+@utility td-prose {
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  line-height: var(--leading-body);
+
+  /* 长标识符、URL、无空格的 CJK 混排都可能撑破列宽。 */
+  overflow-wrap: anywhere;
+
+  /* ---- 标题标尺 ----
+     文档正文比营销页读得更紧：由字号台阶而非字重承担层级，所以除 h1 外
+     统一 semibold。负字距适配 Inter 和各平台 sans 在这些字号下的观感。
+     标题用正文字族，不用 display —— Chakra Petch 属于 chrome（navbar
+     brand、footer、landing），进正文会把文章读成海报。 */
+  & :is(h1, h2, h3, h4, h5, h6) {
+    color: var(--color-ink-strong);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+    text-wrap: balance;
+  }
+
+  & h1 {
+    font-size: 2.25rem;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+    line-height: 1.15;
+  }
+
+  & h2 {
+    font-size: 1.5rem;
+    letter-spacing: -0.02em;
+  }
+
+  & h3 {
+    font-size: 1.25rem;
+  }
+
+  & h4 {
+    font-size: 1.0625rem;
+  }
+
+  & :is(h5, h6) {
+    font-size: 1rem;
+  }
+
+  /* ---- 层级间距 ----
+     只作用于直接子元素：嵌套在 callout、tab、卡片里的标题由那些组件自己
+     定间距，不该继承文档流的大留白。
+     上边距远大于下边距 —— 标题属于它下面的段落，不是漂在两段之间。 */
+  /* 标题区可能被一层包裹（wash 模式要给底图一个定位容器），所以 h1 既可能是
+     直接子元素，也可能隔着 .td-shell-article-header 一层。两种都算文档标题。 */
+  & > h1,
+  & > .td-shell-article-header > h1 {
+    margin-block-end: 1rem;
+  }
+
+  & > h2 {
+    margin-block: 3rem 1rem;
+  }
+
+  /* 开篇即 h2 时不留悬空的上边距。 */
+  & > h2:first-child {
+    margin-block-start: 0;
+  }
+
+  & > h3 {
+    margin-block: 2.25rem 0.75rem;
+  }
+
+  /* h2 紧跟 h3：两级标题之间不需要一整段的呼吸。排在 > h3 之后，靠更高的
+     特异性收窄它。 */
+  & > h2 + h3 {
+    margin-block-start: 1.25rem;
+  }
+
+  & > :is(h4, h5, h6) {
+    margin-block: 1.75rem 0.5rem;
+  }
+
+  /* ---- 块级流 ----
+     两处排除都归步骤：首行要贴着标记的中线，末项的下边距会在组件底部拖出
+     一段空白。 */
+  & p:not(.steps > li > :first-child, :is(.steps > li, .td-steps) > :last-child) {
+    margin-block: 0.75rem;
+  }
+
+  /* `.steps` 排除在外。它是作者标记类（`{.steps}`），要重排列表的沟槽、
+     标记与间距 —— 而 `.td-prose :is(ul, ol)` 是 (0,2,0)，`.steps` 只有
+     (0,1,0)，不排除的话默认流会静默赢，步骤的沟槽压根不生效。
+
+     `role="list"` 也排除在外。组件里的列表（头像墙的格子这类）是"一组同类
+     条目"这个语义的载体，不是正文列表 —— 它们要自己的栅格与沟槽，而
+     `list-style: none` 会让 Safari 摘掉列表语义，所以那边保留 role 而在这里
+     排除样式。这条比按类名一个个排除稳：新组件只要写 role="list" 就自动对。 */
+  & :is(ul, ol):not(.steps, [role="list"]) {
+    margin-block: 0.75rem;
+    padding-inline-start: 1.5rem;
+  }
+
+  & ul:not(.steps, [role="list"]) {
+    list-style: disc;
+  }
+
+  & ol:not(.steps, [role="list"]) {
+    list-style: decimal;
+  }
+
+  /* 同样排除：`.td-prose li` 与 `.steps > li` 同为 (0,1,1)，靠源序决胜是个
+     随文件顺序变化的坑，步间距会变成 0.25rem。 */
+  & li:not(.steps > li, [role="list"] > li) {
+    margin-block-end: 0.25rem;
+  }
+
+  & strong {
+    font-weight: 700;
+  }
+
+  /* 页描述：比 h1 安静，但保持常规字重 —— 300 在 Inter 和 CJK 下会
+     发虚发花。 */
+  & .lead {
+    margin-block-end: 1.5rem;
+    color: var(--color-ink-muted);
+    font-size: 1.125rem;
+    font-weight: 400;
+    line-height: 1.6;
+  }
+
+  /* Markdown 链接不带 class。正文里仅靠颜色区分太弱，hover/focus 加下划
+     线；组件链接（卡片、翻页、徽章）有自己的处理，用 :not([class]) 排除。 */
+  & :where(p, li, dd, dt, td, th, blockquote, figcaption, .lead)
+    a:not([class]) {
+    text-underline-offset: 0.16em;
+  }
+
+  & :where(p, li, dd, dt, td, th, blockquote, figcaption, .lead)
+    a:not([class]):is(:hover, :focus-visible) {
+    text-decoration: underline;
+  }
+
+  /* ---- 代码 ----
+     行内代码墨色是阅读约定，theme_color 不改。
+
+     字段表的 code 排除在外：它那一列名字要的是"标识符"的观感，不是句子中间
+     嵌了一段代码。一列底色块会盖过名字自己的层级，而元信息里的 code 要跟着
+     周围的安静色走。见本文件开头那条规矩 —— 这一层赢过 components，不排除的话
+     field.css 里的 reset 一条都不生效。 */
+  & :not(pre) > code:not(
+      .td-field-name,
+      .td-field-type,
+      .td-field-default > code,
+      .td-assets-checksum > code
+    ) {
+    padding: 0.15em 0.4em;
+    border-radius: 0.25rem;
+    background-color: var(--color-surface);
+    color: var(--color-code);
+    font-size: 0.9em;
+  }
+
+  /* 不经 render hook 的裸 pre（HTML 里手写的、shortcode 输出的）。
+     :not() 把围栏产出的 pre 排除掉 —— 它们的外框归 .td-code，两条同为
+     (0,1,1) 的规则靠源序决胜是个随文件顺序变化的坑。 */
+  & pre:not(.td-code pre) {
+    margin-block: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-code);
+    background-color: var(--color-pre);
+    overflow-x: auto;
+  }
+
+  /* ---- 引用与表格 ---- */
+
+  /* 逻辑属性，引用条始终在文本起始那侧：本表编译一次，不过 rtlcss。 */
+  & blockquote {
+    margin-block: 1.25rem;
+    padding-inline-start: 1rem;
+    border-inline-start: 6px solid var(--color-accent);
+    color: var(--color-ink-muted);
+  }
+
+  /* 表格样式在 table.css —— 它有三个变体，够独立成一个文件。 */
+
+  & img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* 圆角单独一条并排除自带圆角的组件图（banner 是 10px，头像是整圆）。见本
+     文件开头那条规矩：这一层赢过 components，不排除的话 featured.css 与
+     contributors.css 里写什么都不生效。
+     尺寸约束不必排除 —— 那些图也要。 */
+  & img:not(.td-featured-banner > img, .td-contributors-avatar) {
+    border-radius: 0.5rem;
+  }
+}
+
+@layer components {
+  /* 标题自链接。用 visibility 而非 display —— 前者保留占位，标题不会在
+     hover 时因为多出一个锚点而重排。 */
+  .td-heading-anchor {
+    padding-inline-start: 0.25em;
+    font-size: 90%;
+    text-decoration: none;
+    visibility: hidden;
+
+    &::before {
+      content: "#";
+    }
+
+    /* 键盘用户不 hover：焦点落上就显形，否则 Tab 到一个看不见的链接。 */
+    &:focus-visible {
+      visibility: visible;
+    }
+  }
+
+  :is(h1, h2, h3, h4, h5, h6):hover > .td-heading-anchor {
+    visibility: visible;
+  }
+
+  /* 触屏与窄屏没有 hover 这回事，常驻显示。 */
+  @media (hover: none) and (pointer: coarse), (width < 36rem) {
+    .td-heading-anchor {
+      visibility: visible;
+    }
+  }
+}
+
+/* 打印：静态、展开、无装饰。集中在这里，不散到模板。
+   纸张自成一个字族角色，站点可以只给打印换脸。 */
+@media print {
+  /* 锚点不上纸：纸上没有"点击跳转"。 */
+  .td-heading-anchor {
+    display: none;
+  }
+
+  .td-prose {
+    font-family: var(--td-font-print);
+
+    & pre {
+      white-space: pre-wrap;
+      border: 1px solid #999;
+    }
+
+    /* 折叠内容在纸上没有「展开」这个动作，一律摊开。 */
+    & details > :not(summary) {
+      display: revert !important;
+    }
+  }
+}
+
+@media (forced-colors: active) {
+  .td-prose {
+    /* 强制配色下背景色被系统接管，块的边界只剩描边可用。 */
+    & :not(pre) > code,
+    & pre,
+    & :is(th, td) {
+      border: 1px solid CanvasText;
+    }
+  }
+}

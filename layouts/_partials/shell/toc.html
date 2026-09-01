@@ -1,0 +1,11 @@
+{{- /* 页内目录。Hugo 的 .TableOfContents 产出 <nav id="TableOfContents">，
+       空目录时它是一个空 nav —— 必须显式判掉，否则会渲染一个空侧栏。
+       notoc 前置页参数可逐页关闭。 */ -}}
+{{- $toc := "" -}}
+{{- if not .Params.notoc }}{{ $toc = .TableOfContents }}{{ end -}}
+{{- if and $toc (ne ($toc | strings.TrimSpace) `<nav id="TableOfContents"></nav>`) -}}
+  <aside class="td-shell-toc" aria-label="{{ i18n "toc_nav" }}">
+    <p class="td-shell-toc-title">{{ i18n "toc_nav" }}</p>
+    {{ $toc }}
+  </aside>
+{{- end -}}

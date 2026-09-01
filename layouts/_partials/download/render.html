@@ -1,0 +1,95 @@
+{{- /* 渲染一份已校验的下载记录。
+
+     每个渠道一个 section，顶上一排锚点链接。渠道之间是并列关系而不是流程，
+     所以是链接而不是标签页 —— 读者要能把某一个渠道的地址发给同事。
+
+     未发布时只置灰 pinned 渠道：rolling 不指向具体版本，它照常可用。置灰的
+     链接用 span 而不是带 aria-disabled 的 a —— 一个能聚焦却点不动的链接比
+     一段说明文字更让人困惑。
+
+     步骤的代码块过 content/render-block.html 包成围栏：复用代码块 hook，
+     复制按钮、文件名标题栏、高亮都跟着来，不在这里重写一套。
+
+     入参 dict：page、data */ -}}
+{{- $page := .page -}}
+{{- $data := .data -}}
+
+{{- /* 资产表的基址。pinned 渠道有校验和时 repo 一定存在（channels.html 保证
+       了这一点），所以这里不必再判一次。 */ -}}
+{{- $base := "" -}}
+{{- with $data.repo -}}
+  {{- $base = printf "https://github.com/%s/releases/download/%s" . (urls.PathEscape $data.tag) -}}
+{{- end -}}
+
+<div class="td-download" data-td-download-key="{{ $data.key }}">
+  {{- /* 渠道多于一个才画这排链接：只有一个渠道时它是一个指向自己的链接。 */ -}}
+  {{- if gt (len $data.channels) 1 }}
+  <nav class="td-download-channels" aria-label="{{ i18n "download_channels" }}">
+    {{- range $data.channels }}
+    <a class="td-download-chip" href="#download-{{ $data.key }}-{{ .id }}">{{ .title }}</a>
+    {{- end }}
+  </nav>
+  {{- end }}
+
+  {{- range $index, $channel := $data.channels }}
+  {{- $disabled := and (eq $channel.kind "pinned") (not $data.published) -}}
+  {{- $id := printf "download-%s-%s" $data.key $channel.id -}}
+  <section class="td-download-channel" id="{{ $id }}"
+           aria-labelledby="{{ $id }}-title" data-td-download-kind="{{ $channel.kind }}">
+    <header class="td-download-heading">
+      {{- /* h2：下载区里的渠道是页面的二级结构。图标是装饰，语义在文字上。 */ -}}
+      <h2 id="{{ $id }}-title">
+        {{- with $channel.icon }}{{ partial "content/icon.html" (dict "name" . "class" "td-download-icon") }}{{ end -}}
+        <span>{{ $channel.title }}</span>
+      </h2>
+      {{- if $disabled }}
+      <span class="td-download-state">{{ i18n "download_unpublished" }}</span>
+      {{- end }}
+    </header>
+
+    {{- with $channel.note }}
+    <div class="td-download-note">
+      {{- partial "content/render-block.html" (dict
+        "page" $page "scope" (printf "download%s" $channel.id) "content" .) -}}
+    </div>
+    {{- end }}
+
+    {{- with $channel.url }}
+    {{- if $disabled }}
+    <span class="td-download-action td-is-disabled">{{ $channel.title }}</span>
+    {{- else }}
+    <a class="td-download-action" href="{{ . }}">{{ $channel.title }}</a>
+    {{- end }}
+    {{- end }}
+
+    {{- if not $disabled }}
+    {{- range $stepIndex, $step := $channel.steps }}
+    {{- with $step.title }}
+    <p class="td-download-step-title">{{ . }}</p>
+    {{- end }}
+    {{- /* 围栏长度按内容算：命令里可能有反引号（`$(...)` 的旧写法）。 */ -}}
+    {{- $len := 3 -}}
+    {{- range findRE "`+" $step.code }}{{ if ge (len .) $len }}{{ $len = add (len .) 1 }}{{ end }}{{ end -}}
+    {{- $fence := strings.Repeat $len "`" -}}
+    {{- partial "content/render-block.html" (dict
+      "page" $page
+      "scope" (printf "download%s%d" $channel.id $stepIndex)
+      "content" (printf "%s%s\n%s\n%s" $fence $step.lang $step.code $fence)) -}}
+    {{- end }}
+    {{- end }}
+
+    {{- with $channel.checksums }}
+    {{- $entries := partial "release/assets-parse.html" (dict
+      "content" . "position" (printf "%s channel %q checksums" $page.Path $channel.id)
+      "base" $base) -}}
+    {{- with $entries -}}
+      {{- /* 置灰时不加复制运行时：那张表里的链接都点不动，复制一个还拿不到的
+             文件的校验和没有意义。 */ -}}
+      {{- if not $disabled }}{{ $page.Store.Set "hasAssetList" true }}{{ end -}}
+      {{- partial "release/assets-table.html" (dict
+        "entries" . "grouped" false "disabled" $disabled) -}}
+    {{- end -}}
+    {{- end }}
+  </section>
+  {{- end }}
+</div>

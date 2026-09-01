@@ -1,0 +1,64 @@
+{{- /* 把一个交叉引用目标登记到页面上。
+
+     三张 Page Store 表，各有各的用处，一张换不掉另一张：
+       tdBookTargets      id → 条目。查重、`xref` 解析都用它
+       tdBookTargetNums   "kind:num" → 条目。同一种目标编号撞车的诊断
+       tdBookTargetOrder  排序键 → 条目。`book-figures` 那类列表要按正文里出现
+                          的顺序输出，而 map 的迭代序在 Hugo 里是按键排序的
+
+     排序键取源码位置（行号:列号）而不是 .Ordinal：同一页上 shortcode 与
+     render hook 产出的目标是交错的，两者各有自己的序号空间，只有源码位置能把
+     它们排成作者看到的顺序。位置读不出来时退回 .Ordinal —— 嵌套 shortcode 的
+     .Position 恒为 `文件:1:1`，那种情况下序号至少是单调的。
+
+     第一个赢：同一个 id 出现两次，保留先登记的那个，并 warn。后来者静默覆盖
+     会让 `xref` 指向作者没想到的地方。
+
+     入参 dict：page、kind、num、id、caption、position、ordinal */ -}}
+{{- $page := .page -}}
+{{- $id := .id -}}
+{{- $num := .num -}}
+{{- $kind := .kind -}}
+{{- $position := .position | default $page.Path -}}
+{{- $ordinal := .ordinal | default 0 -}}
+
+{{- /* 同一个 shortcode 被渲染两次（Hugo 会为不同输出格式重跑）时，identity
+       相同就不算撞车。 */ -}}
+{{- $identity := printf "%s:%d" $page.Path $ordinal -}}
+{{- $orderKey := printf "%08d-00000" $ordinal -}}
+{{- with findRESubmatch `:(\d+):(\d+)$` (trim (printf "%v" $position) "\"") -}}
+  {{- $m := index . 0 -}}
+  {{- $orderKey = printf "%08d-%05d" (int (index $m 1)) (int (index $m 2)) -}}
+{{- end -}}
+
+{{- $targets := $page.Store.Get "tdBookTargets" | default dict -}}
+{{- $known := isset $targets $id -}}
+
+{{- if $known -}}
+  {{- $existing := index $targets $id -}}
+  {{- if not (and (eq $existing.identity $identity) (eq $existing.kind $kind) (eq $existing.num $num)) -}}
+    {{- warnf "book component: duplicate id %q at %s (already used by %s %s at %s); keeping the first" $id $position $existing.kind $existing.num $existing.position -}}
+  {{- end -}}
+{{- else -}}
+  {{- $numberKey := printf "%s:%s" $kind $num -}}
+  {{- $numbers := $page.Store.Get "tdBookTargetNums" | default dict -}}
+  {{- if isset $numbers $numberKey -}}
+    {{- $existing := index $numbers $numberKey -}}
+    {{- if ne $existing.id $id -}}
+      {{- warnf "book component: duplicate %s number %q at %s (already uses id %q); keeping the first" $kind $num $position $existing.id -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $entry := dict
+    "id" $id
+    "num" $num
+    "kind" $kind
+    "caption" (.caption | default "")
+    "ordinal" $ordinal
+    "identity" $identity
+    "position" $position
+  -}}
+  {{- $page.Store.SetInMap "tdBookTargets" $id $entry -}}
+  {{- $page.Store.SetInMap "tdBookTargetNums" $numberKey $entry -}}
+  {{- $page.Store.SetInMap "tdBookTargetOrder" (printf "%s-%s" $orderKey $id) $entry -}}
+{{- end -}}
+{{- return "" -}}

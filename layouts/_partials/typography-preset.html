@@ -1,0 +1,10 @@
+{{- /* 排版预设：technical（随主题分发的字体）或 system（平台字体栈）。
+     两者编译进同一张样式表，不加载运行时。无效值 warn 并回退 technical
+     —— 打字错误不该把站点变砖，但也不该静默。 */ -}}
+{{- return partial "validate-enum.html" (dict
+  "value" site.Params.ui.typography
+  "allowed" (slice "technical" "system")
+  "fallback" "technical"
+  "key" "params.ui.typography"
+  "where" "site configuration"
+) -}}

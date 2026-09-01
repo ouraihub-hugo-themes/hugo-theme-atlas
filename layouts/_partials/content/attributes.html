@@ -1,0 +1,51 @@
+{{- /* Markdown 块属性的共享策略。
+
+     作者在 Markdown 里写的属性是不可信输入。这里的规则：
+       - allowed 里列出的键被"消费"，由调用方决定怎么用
+       - class 逐 token 校验字符集后透传
+       - data-* / aria-* 校验名字后透传
+       - on*、style、srcdoc 直接丢弃并 warn —— 事件处理器与内联样式是
+         注入面，不在浏览器里修补，直接不输出
+       - 其余未知键 warn 并丢弃
+
+     丢弃而非修补：一个被"清洗"过的属性会让作者以为它生效了。
+
+     入参 dict：attributes（.Attributes）、allowed（slice）、
+               position（出错位置）、kind（消息里的块类型名）
+     返回 dict：consumed（dict）、class（字符串）、generic（dict） */ -}}
+{{- $attrs := .attributes | default dict -}}
+{{- $allowed := .allowed | default slice -}}
+{{- $position := .position | default "" -}}
+{{- $kind := .kind | default "block" -}}
+{{- $consumed := dict -}}
+{{- $generic := dict -}}
+{{- $classes := slice -}}
+{{- range $name, $value := $attrs -}}
+  {{- $lower := lower $name -}}
+  {{- $text := printf "%v" $value -}}
+  {{- if eq $lower "class" -}}
+    {{- range $token := split (strings.TrimSpace $text) " " -}}
+      {{- $token = strings.TrimSpace $token -}}
+      {{- with $token -}}
+        {{- if findRE `^[A-Za-z0-9_-]+$` . -}}
+          {{- if not (in $classes .) }}{{ $classes = $classes | append . }}{{ end -}}
+        {{- else -}}
+          {{- warnf "%s attributes: class token %q contains unsupported characters at %s; ignoring it" $kind . $position -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+  {{- else if in $allowed $lower -}}
+    {{- $consumed = merge $consumed (dict $lower $text) -}}
+  {{- else if or (strings.HasPrefix $lower "on") (eq $lower "style") (eq $lower "srcdoc") -}}
+    {{- warnf "%s attributes: unsafe attribute %q is not supported at %s; ignoring it" $kind $name $position -}}
+  {{- else if or (strings.HasPrefix $lower "data-") (strings.HasPrefix $lower "aria-") -}}
+    {{- if findRE `^[a-z][a-z0-9_:.-]*$` $lower -}}
+      {{- $generic = merge $generic (dict $lower $text) -}}
+    {{- else -}}
+      {{- warnf "%s attributes: invalid attribute name %q at %s; ignoring it" $kind $name $position -}}
+    {{- end -}}
+  {{- else -}}
+    {{- warnf "%s attributes: unknown attribute %q at %s (allowed: %s, class, data-*, aria-*); ignoring it" $kind $name $position (delimit $allowed ", ") -}}
+  {{- end -}}
+{{- end -}}
+{{- return dict "consumed" $consumed "class" (delimit $classes " ") "generic" $generic -}}

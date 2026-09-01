@@ -1,0 +1,26 @@
+# 头像墙的数据。主题不在构建时打 GitHub API —— 头像 URL 由这份文件自己给。
+#
+# github 是必填项，其余四个可选：name 缺省用 handle，role 缺省不显示，
+# url 缺省是 GitHub 主页，avatar 缺省画首字母占位。
+items:
+  - github: gohugoio
+    name: Hugo
+    role: 静态站点生成器
+    avatar: https://avatars.githubusercontent.com/u/13106260?s=96&v=4
+  - github: tailwindlabs
+    name: Tailwind Labs
+    role: CSS 引擎
+    avatar: https://avatars.githubusercontent.com/u/67109815?s=96&v=4
+  - github: evanw
+    role: esbuild
+    avatar: https://avatars.githubusercontent.com/u/882595?s=96&v=4
+  # 没有 avatar：画首字母占位块，与图片同尺寸，那一格不会塌。
+  - github: vitest-dev
+    name: Vitest
+  # 只有 handle：name 回退成 handle，role 不显示。
+  - github: pnpm
+  # url 指到别处：GitHub 主页不是唯一的去处。
+  - github: fontawesome
+    name: Font Awesome
+    url: https://fontawesome.com/
+    avatar: https://avatars.githubusercontent.com/u/1505683?s=96&v=4

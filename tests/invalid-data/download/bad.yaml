@@ -1,0 +1,9 @@
+# 记录级的错误：这些是每个渠道都要用的事实，缺了它们渲染出的每个链接都是错的，
+# 所以整块丢弃。断言在 tests/invalid/download.md。
+#
+# 这一份错在未知字段上 —— 多出来的键只可能是拼错的键名。
+version: "1.0.0"
+chanels:
+  - id: a
+    kind: rolling
+    title: 拼错了 channels

@@ -1,0 +1,165 @@
+/* 表格。由 layouts/_markup/render-table.html 渲染。
+
+   三层：滚动包裹、表格本体、两个变体（full-width / matrix）。 */
+
+@layer components {
+  /* 滚动区。一张比正文列宽的表在这里横向滚，不撑开版面。
+     overflow-x 单独声明而非 overflow: auto —— 后者会一并创建纵向滚动上下文，
+     让粘连表头在普通表格里也失去参照。 */
+  .td-table-scroll {
+    max-width: 100%;
+    margin-block: 1.25rem;
+    overflow-x: auto;
+
+    /* 键盘用户要能滚动这个区域，所以它必须可聚焦。滚动容器默认不可聚焦，
+       tabindex 由 JS 只在真正溢出时加 —— 给每张表都加会污染 tab 顺序。 */
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 2px;
+    }
+  }
+
+  .td-table-scroll > table {
+    width: 100%;
+    border-collapse: collapse;
+
+    /* 列宽按内容分配而非等分。一张「名称 | 说明」的表，等分会把短名称列
+       撑得和说明列一样宽。 */
+    table-layout: auto;
+  }
+
+  .td-table-scroll :is(th, td) {
+    padding: 0.6rem 0.75rem;
+    border-block-end: 1px solid var(--color-border);
+    text-align: start;
+    vertical-align: top;
+  }
+
+  /* 表头底边比正文行重一档：它是分区线，不是又一条行分隔线。 */
+  .td-table-scroll thead th {
+    border-block-end-width: 2px;
+    border-color: color-mix(in srgb, var(--color-border) 100%, var(--color-ink) 12%);
+    font-weight: 600;
+  }
+
+  /* 最后一行不留边框 —— 那条线下面没有内容，读作表格的"底"会让它看起来
+     比实际多一行。 */
+  .td-table-scroll tbody tr:last-child :is(th, td) {
+    border-block-end: 0;
+  }
+
+  /* 斑马纹。极薄的一层：它的作用是帮眼睛跟住行，不是给表格分色。 */
+  .td-table-scroll tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--color-surface) 55%, transparent);
+  }
+
+  .td-table-caption {
+    padding-block-end: 0.45rem;
+    caption-side: top;
+    color: var(--color-ink-muted);
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: start;
+  }
+
+  /* Markdown 的 `:---:` 对齐。逻辑值：RTL 下 start/end 自动翻转，而
+     Goldmark 给的是 left/right。 */
+  .td-table-scroll [data-td-align="left"] {
+    text-align: start;
+  }
+
+  .td-table-scroll [data-td-align="right"] {
+    text-align: end;
+  }
+
+  .td-table-scroll [data-td-align="center"] {
+    text-align: center;
+  }
+
+  /* ---- full-width：越出正文列宽 ----
+     负外边距把表格推到正文两侧之外。只在正文列真的比可用宽度窄时有意义，
+     所以窄屏不做 —— 那里没有余量可借。 */
+  @media (width >= 64rem) {
+    .td-table-scroll--full {
+      /* max-width 要一并放开 —— 基类的 100% 会把 calc 的结果夹回列宽。 */
+      max-width: none;
+      width: calc(100% + 6rem);
+      margin-inline: -3rem;
+    }
+  }
+
+  /* ---- matrix：粘连表头与首列 ----
+     纵向也滚，所以这里才需要 overflow: auto。 */
+  .td-table-scroll--matrix {
+    max-block-size: min(70vh, 40rem);
+    overflow: auto;
+
+    & > table {
+      /* 粘连单元格需要不折叠的边框：border-collapse: collapse 下边框归表格
+         所有，粘连的单元格滚动时会把边框留在原地。 */
+      border-collapse: separate;
+      border-spacing: 0;
+    }
+
+    /* 粘连元素需要不透明底色，否则滚过去的内容会透上来。 */
+    & thead th {
+      position: sticky;
+      inset-block-start: 0;
+      z-index: 2;
+      background: var(--color-surface-raised);
+      white-space: nowrap;
+    }
+
+    & th[scope="row"] {
+      position: sticky;
+      inset-inline-start: 0;
+      z-index: 1;
+      background: var(--color-canvas);
+      white-space: nowrap;
+    }
+
+    /* 左上角那格同时属于两个方向，要压在两者之上。 */
+    & thead th:first-child {
+      inset-inline-start: 0;
+      z-index: 3;
+    }
+
+    /* separate 下边框归单元格，逐格补回来才不会有断线。 */
+    & :is(th, td) {
+      border-block-end: 1px solid var(--color-border);
+    }
+
+    & td {
+      text-align: center;
+      vertical-align: middle;
+    }
+  }
+}
+
+@media print {
+  /* 纸上没有滚动。让表格完整展开，粘连也失去意义。 */
+  .td-table-scroll,
+  .td-table-scroll--matrix {
+    max-block-size: none;
+    overflow: visible;
+  }
+
+  .td-table-scroll--full {
+    width: 100%;
+    margin-inline: 0;
+  }
+
+  .td-table-scroll :is(thead th, th[scope="row"]) {
+    position: static;
+  }
+
+  /* 跨页时表头在每页重复 —— 第二页起没有表头的表读不出来。 */
+  .td-table-scroll thead {
+    display: table-header-group;
+  }
+
+  .td-table-scroll tr {
+    break-inside: avoid;
+  }
+}

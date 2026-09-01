@@ -1,0 +1,25 @@
+{{ define "main" }}
+{{- $featured := .Store.Get "tdFeatured" -}}
+{{- $mode := "" -}}
+{{- with $featured }}{{ $mode = .mode }}{{ end -}}
+<div class="td-prose">
+  {{ if eq $mode "banner" }}{{ partial "shell/featured-image.html" $featured }}{{ end }}
+
+  <div class="td-shell-article-header{{ if eq $mode "wash" }} td-shell-article-header--wash{{ end }}">
+    {{ if eq $mode "wash" }}{{ partial "shell/featured-image.html" $featured }}{{ end }}
+    <h1>{{ .Title }}</h1>
+    {{ with .Description }}<div class="lead">{{ . | markdownify }}</div>{{ end }}
+  </div>
+
+  {{ .Content }}
+</div>
+
+<ul class="mt-8 space-y-3">
+  {{- range .Pages -}}
+    <li class="rounded-lg border border-border bg-elev p-4 transition-colors hover:border-accent/40">
+      <a href="{{ .RelPermalink }}" class="font-medium">{{ .LinkTitle }}</a>
+      {{ with .Description }}<p class="mt-1 text-sm text-ink-muted">{{ . }}</p>{{ end }}
+    </li>
+  {{- end -}}
+</ul>
+{{ end }}

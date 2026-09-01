@@ -1,0 +1,5 @@
+{{- /* 根元素属性。baseof 的两个分支共用一份，属性写在各自分支里就会漂。 */ -}}
+{{- return (printf ` lang="%s" dir="%s" data-td-typography="%s"`
+    (or site.Language.Locale site.Language.Lang)
+    (or site.Language.Direction "ltr")
+    (partial "typography-preset.html" .) | safeHTMLAttr) -}}

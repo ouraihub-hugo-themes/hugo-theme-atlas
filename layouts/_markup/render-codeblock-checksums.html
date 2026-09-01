@@ -1,0 +1,101 @@
+{{- /* ```checksums {base="https://…/download/v0.1.0/" algo="sha256" group="auto"}
+     —— 一段 sha*sum 输出的围栏形式。解析与渲染都走 release-assets 那一套，
+     这里只做参数校验与 base 的来源判定。
+
+     围栏形式与 shortcode 形式并存的理由：作者手里的东西本来就是一段
+     `sha256sum` 的输出，围栏是它的自然形状（编辑器高亮、复制粘贴不动结构）。
+
+     `base` 与 `release_url` 互斥而不是互补：两者都给，读者看到的下载链接
+     指向哪一个是猜的。整块跳过而不是选一个 —— 选错的那一半指向不存在的
+     文件，而它渲染出来跟对的一模一样。 */ -}}
+{{- $page := .PageInner | default .Page -}}
+{{- $policy := partial "content/attributes.html" (dict
+  "attributes" .Attributes "allowed" (slice "base" "algo" "group")
+  "position" .Position "kind" "checksums"
+) -}}
+{{- $ok := true -}}
+
+{{- $algo := index $policy.consumed "algo" | default "" -}}
+{{- if and $algo (not (in (slice "md5" "sha1" "sha256" "sha512") $algo)) -}}
+  {{- warnf "checksums: algo must be md5, sha1, sha256, or sha512 at %s; skipping the block" .Position -}}
+  {{- $ok = false -}}
+{{- end -}}
+
+{{- /* group 只认 `auto` 一个值：分组顺序是主题定的（装了就能用的包格式在前），
+       让作者写顺序等于把一条排版决定搬到每一页各写一遍。 */ -}}
+{{- $grouped := false -}}
+{{- with index $policy.consumed "group" -}}
+  {{- if ne . "auto" -}}
+    {{- warnf "checksums: group must be auto at %s; ignoring it" $.Position -}}
+  {{- else -}}
+    {{- $grouped = true -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $inner := printf "%s" .Inner -}}
+{{- if and $ok (not (strings.ContainsNonSpace $inner)) -}}
+  {{- warnf "checksums: the fence requires checksum lines at %s; skipping the block" .Position -}}
+  {{- $ok = false -}}
+{{- end -}}
+
+{{- $base := "" -}}
+{{- $hasRelease := isset $page.Params "release_url" -}}
+{{- if $ok -}}
+  {{- /* isset 而非 with：`base=""` 是"写了但是空的"，而 with 把空串当没写，
+         于是作者收到的是"请加上 base"——他刚刚写了一个。两种错要分开报。 */ -}}
+  {{- if isset $policy.consumed "base" -}}
+    {{- $input := strings.TrimSpace (index $policy.consumed "base") -}}
+    {{- if $hasRelease -}}
+      {{- warnf "checksums: base is only valid without release_url front matter at %s; skipping the block" .Position -}}
+      {{- $ok = false -}}
+    {{- else if not $input -}}
+      {{- warnf "checksums: base must not be empty at %s; skipping the block" .Position -}}
+      {{- $ok = false -}}
+    {{- else -}}
+      {{- /* 自己解析而不是过 content/url.html：那一个判的是"能不能当链接
+             输出"，这里的 base 要再拼上文件名，所以多两条限制 —— 带 query
+             或 fragment 的前缀拼出来的 URL 会把文件名塞进查询串里。 */ -}}
+      {{- $parsed := urls.Parse $input -}}
+      {{- if and $parsed.Scheme (not (in (slice "http" "https") $parsed.Scheme)) -}}
+        {{- warnf "checksums: base must use http or https at %s; skipping the block" .Position -}}
+        {{- $ok = false -}}
+      {{- else if and $parsed.Scheme (not $parsed.Host) -}}
+        {{- warnf "checksums: base URL requires a host at %s; skipping the block" .Position -}}
+        {{- $ok = false -}}
+      {{- else if or $parsed.RawQuery $parsed.Fragment -}}
+        {{- warnf "checksums: base URL must not contain a query or fragment at %s; skipping the block" .Position -}}
+        {{- $ok = false -}}
+      {{- else -}}
+        {{- $base = $input -}}
+        {{- if not $parsed.Scheme }}{{ $base = strings.TrimPrefix "/" $input | relURL }}{{ end -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* base 没给就从 release_url 推。两者都没有是硬错：没有前缀的校验和表
+       只是一列文件名，点不动。 */ -}}
+{{- if and $ok (not $base) -}}
+  {{- if $hasRelease -}}
+    {{- $meta := partial "release/meta.html" (dict "page" $page "position" .Position) -}}
+    {{- if not $meta.valid -}}
+      {{- /* meta.html 已经就 front matter 本身警告过，不重复一遍。 */ -}}
+      {{- $ok = false -}}
+    {{- else -}}
+      {{- $base = printf "%s/releases/download/%s" $meta.repoURL (urls.PathEscape $meta.tag) -}}
+    {{- end -}}
+  {{- else -}}
+    {{- warnf "checksums: base is required unless the page has release_url front matter at %s; skipping the block" .Position -}}
+    {{- $ok = false -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if $ok -}}
+  {{- $entries := partial "release/assets-parse.html" (dict
+    "content" $inner "position" .Position "base" $base "algo" $algo
+  ) -}}
+  {{- if $entries -}}
+    {{- $page.Store.Set "hasAssetList" true -}}
+    {{- partial "release/assets-table.html" (dict "entries" $entries "grouped" $grouped) -}}
+  {{- end -}}
+{{- end -}}

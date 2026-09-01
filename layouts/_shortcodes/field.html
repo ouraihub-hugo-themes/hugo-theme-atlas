@@ -1,0 +1,94 @@
+{{- /* 一条字段定义，必须被 fields 包住。正文是字段说明，按 Markdown 渲染。
+
+     参数：name（必需）、type、required（bool）、default（标量）
+
+     登记不进来的字段 warn 并跳过自己，同一个列表里其他字段照常渲染 —— 一处
+     笔误不该把整张表打空。
+
+     `default` 与"没有 default"要分开：`default=""` 和 `default=false` 都是
+     合法的默认值，得显示出来。所以用单独的 hasDefault 标志位。 */ -}}
+{{- $at := .Position -}}
+{{- with .Parent }}{{ $at = printf "%s, field #%d" .Position (add $.Ordinal 1) }}{{ end -}}
+
+{{- partial "validate-shortcode.html" (dict "shortcode" . "at" $at
+  "allowed" (slice "name" "type" "required" "default")) -}}
+
+{{- $ok := true -}}
+{{- with .Parent -}}
+  {{- if ne .Name "fields" -}}
+    {{- warnf "shortcode %q must sit inside fields, not %q, at %s; skipping this field" $.Name .Name $at -}}
+    {{- $ok = false -}}
+  {{- end -}}
+{{- else -}}
+  {{- warnf "shortcode %q must sit inside fields at %s; skipping this field" .Name $at -}}
+  {{- $ok = false -}}
+{{- end -}}
+
+{{- /* 无参数的 `{{< field >}}` 的 .Params 是 nil，对它调 isset 会让 Hugo 报
+       "calling IsSet with unsupported type"。先挡住，后面的 isset 才安全。 */ -}}
+{{- $params := dict -}}
+{{- if .IsNamedParams }}{{ $params = .Params }}{{ end -}}
+
+{{- $name := "" -}}
+{{- if not (isset $params "name") -}}
+  {{- if $ok }}{{ warnf "shortcode %q requires parameter name at %s; skipping this field" .Name $at }}{{ end -}}
+  {{- $ok = false -}}
+{{- else -}}
+  {{- $name = strings.TrimSpace (printf "%v" (.Get "name")) -}}
+  {{- if not $name -}}
+    {{- warnf "shortcode %q: name must not be empty at %s; skipping this field" .Name $at -}}
+    {{- $ok = false -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $type := "" -}}
+{{- if isset $params "type" -}}
+  {{- $type = strings.TrimSpace (printf "%v" (.Get "type")) -}}
+  {{- if not $type -}}
+    {{- warnf "shortcode %q: type must not be empty at %s; dropping the type" .Name $at -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $required := false -}}
+{{- if isset $params "required" -}}
+  {{- $value := .Get "required" -}}
+  {{- if ne (printf "%T" $value) "bool" -}}
+    {{- warnf "shortcode %q: required must be boolean at %s; treating it as optional" .Name $at -}}
+  {{- else -}}
+    {{- $required = $value -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $hasDefault := isset $params "default" -}}
+{{- $default := "" -}}
+{{- if $hasDefault -}}
+  {{- $value := .Get "default" -}}
+  {{- $scalar := slice "string" "bool" "int" "int8" "int16" "int32" "int64" "uint" "uint8" "uint16" "uint32" "uint64" "float32" "float64" -}}
+  {{- if not (in $scalar (printf "%T" $value)) -}}
+    {{- warnf "shortcode %q: default must be a scalar value at %s; dropping the default" .Name $at -}}
+    {{- $hasDefault = false -}}
+  {{- else if eq (printf "%v" $value) "" -}}
+    {{- /* 空字符串默认值显示成 ""，不是一片空白 —— 后者读起来像"忘了写"。 */ -}}
+    {{- $default = `""` -}}
+  {{- else -}}
+    {{- $default = printf "%v" $value -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $description := strings.TrimSpace (printf "%s" .InnerDeindent) -}}
+{{- if and $ok (not $description) -}}
+  {{- warnf "shortcode %q requires a non-empty description at %s; skipping this field" .Name $at -}}
+  {{- $ok = false -}}
+{{- end -}}
+
+{{- if $ok -}}
+  {{- /* 序号补零成定长键：Scratch 的 map 按键排序迭代，`10` 排在 `2` 前面。 */ -}}
+  {{- .Parent.Scratch.SetInMap "tdFields" (printf "%06d" .Ordinal) (dict
+    "name" $name
+    "type" $type
+    "required" $required
+    "hasDefault" $hasDefault
+    "default" $default
+    "description" $description
+  ) -}}
+{{- end -}}

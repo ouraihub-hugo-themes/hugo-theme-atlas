@@ -1,0 +1,128 @@
+/* 站点页脚。
+   左侧品牌 + 标语，右侧链接列。列数由 --td-footer-cols 决定，内容侧配几列
+   就是几列 —— 列数是内容的属性，不是样式的选择。 */
+
+@layer components {
+  .td-footer {
+    border-block-start: 1px solid var(--color-border);
+    color: var(--color-ink-muted);
+    font-size: 0.875rem;
+
+    /* 一层极薄的暖色渐变。页脚是页面的收束，纯画布色会让它看着像内容
+       断在半路；但只要 5% —— 再多就成了一个色块。 */
+    background:
+      linear-gradient(
+        to bottom,
+        transparent,
+        color-mix(in srgb, var(--color-copper) 5%, transparent)
+      );
+  }
+
+  .td-footer-inner {
+    display: grid;
+
+    /* 品牌列有下限（240px）不然标语会挤成一列字；链接区吃掉剩余。 */
+    grid-template-columns: minmax(240px, 2.2fr) minmax(0, 3fr);
+    gap: 2rem 1.5rem;
+    margin-inline: auto;
+    max-width: 100rem;
+    padding: clamp(2.5rem, 5vw, 4rem) 1.75rem 2rem;
+
+    /* 窄屏叠成一列：两列各自都低于可读宽度时，并排没有意义。 */
+    @media (width < 48rem) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  .td-footer-brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin-block-end: 1rem;
+    color: var(--color-ink);
+    font-family: var(--font-display);
+    font-size: 1.05rem;
+    font-weight: 600;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--color-ink);
+      text-decoration: none;
+    }
+  }
+
+  .td-footer-tagline {
+    margin-block: 0 0.55rem;
+    color: var(--color-ink-muted);
+  }
+
+  .td-footer-slogan {
+    margin: 0;
+    color: var(--color-ink-faint);
+  }
+
+  .td-footer-grid {
+    display: grid;
+    grid-template-columns: repeat(var(--td-footer-cols, 4), minmax(120px, 1fr));
+    gap: 2rem 1.5rem;
+
+    /* 窄屏减到两列。120px 的下限在手机上放不下四列，会溢出而不是换行 ——
+       minmax 的下限是硬的。 */
+    @media (width < 48rem) {
+      grid-template-columns: repeat(2, minmax(120px, 1fr));
+    }
+  }
+
+  .td-footer-column {
+    padding-inline-start: 10px;
+  }
+
+  /* 列标题。小号大写字距放开 —— 它是标签不是标题，不该有正文标题的重量。 */
+  .td-footer-heading {
+    margin: 0 0 1rem;
+    color: var(--color-ink-faint);
+    font-family: var(--font-meta);
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+  }
+
+  .td-footer-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    & li + li {
+      margin-block-start: 0.6rem;
+    }
+
+    & a {
+      color: var(--color-ink-muted);
+      text-decoration: none;
+      transition: color var(--duration-fast) var(--ease-color);
+
+      &:hover {
+        color: var(--color-link);
+        text-decoration: underline;
+      }
+    }
+  }
+
+  /* 底栏：版权与次要声明。与上方留一条分隔线。 */
+  .td-footer-bottom {
+    margin-inline: auto;
+    max-width: 100rem;
+    padding: 1rem 1.75rem 1.5rem;
+    border-block-start: 1px solid var(--color-border);
+    color: var(--color-ink-faint);
+    font-size: 0.8125rem;
+  }
+}
+
+/* 打印：页脚整体消失。版权若需上纸，属于打印样式自己的页脚，不是这一块。 */
+@media print {
+  .td-footer {
+    display: none;
+  }
+}

@@ -1,0 +1,88 @@
+{{- /* 规范化一份贡献者数据。
+
+     一条坏记录只赔掉那一个人的头像，不赔整站构建：数据文件通常是脚本生成或
+     手工维护的长列表，一个拼错的 handle 让所有页面失败是不成比例的代价。
+     必填项（github）不合格就跳过整条；可选项不合格回退到默认值 —— 一个没写
+     role 的贡献者仍然值得列出来。
+
+     四个可选字符串（name / role / url / avatar）共用一段取值逻辑：类型不对就
+     warn 并当没写。分开写四遍的话，改一条规则要动四处，漏掉一处是静默的。
+
+     入参 dict：data、key（数据文件名，进消息用）
+     返回：条目 slice，每项 github / name / role / url / avatar */ -}}
+{{- $key := .key -}}
+{{- $rawItems := slice -}}
+{{- if not (reflect.IsMap .data) -}}
+  {{- warnf "contributors data %q must be a map; listing no contributors" $key -}}
+{{- else if not (isset .data "items") -}}
+  {{- warnf "contributors data %q requires items; listing no contributors" $key -}}
+{{- else if not (reflect.IsSlice (index .data "items")) -}}
+  {{- warnf "contributors data %q: items must be a list; listing no contributors" $key -}}
+{{- else -}}
+  {{- $rawItems = index .data "items" -}}
+{{- end -}}
+
+{{- $items := slice -}}
+{{- $seen := dict -}}
+{{- range $index, $item := $rawItems -}}
+  {{- if not (reflect.IsMap $item) -}}
+    {{- warnf "contributors data %q: item %d must be a map; skipping it" $key $index -}}
+    {{- continue -}}
+  {{- end -}}
+
+  {{- /* handle 按 GitHub 自己的规则校验：字母数字与连字符，不以连字符开头或
+         结尾，最长 39。它会拼进 URL，是信任边界。 */ -}}
+  {{- $github := "" -}}
+  {{- with index $item "github" -}}
+    {{- if eq (printf "%T" .) "string" }}{{ $github = strings.TrimSpace . }}{{ end -}}
+  {{- end -}}
+  {{- if not (findRE `^[A-Za-z0-9]([A-Za-z0-9-]{0,37}[A-Za-z0-9])?$` $github) -}}
+    {{- warnf "contributors data %q: item %d requires a valid github handle; got %q; skipping it" $key $index $github -}}
+    {{- continue -}}
+  {{- end -}}
+  {{- /* 同一个人出现两次会让下面的头像墙重复一次，按大小写不敏感去重 ——
+         GitHub 的 handle 本身就是大小写不敏感的。 */ -}}
+  {{- if isset $seen (lower $github) -}}
+    {{- warnf "contributors data %q: duplicate github handle %q; skipping the repeat" $key $github -}}
+    {{- continue -}}
+  {{- end -}}
+  {{- $seen = merge $seen (dict (lower $github) true) -}}
+
+  {{- $fields := dict -}}
+  {{- range $field := slice "name" "role" "url" "avatar" -}}
+    {{- $value := "" -}}
+    {{- with index $item $field -}}
+      {{- if eq (printf "%T" .) "string" -}}
+        {{- $value = strings.TrimSpace . -}}
+      {{- else -}}
+        {{- warnf "contributors data %q: %s for %q must be a string; ignoring it" $key $field $github -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $fields = merge $fields (dict $field $value) -}}
+  {{- end -}}
+
+  {{- /* url 与 avatar 过共享 URL 策略，不在这里另写一套判断 —— scheme 白名单、
+         协议相对、控制字符这些规则该只有一处。 */ -}}
+  {{- $url := printf "https://github.com/%s" $github -}}
+  {{- with index $fields "url" -}}
+    {{- $policy := partial "content/url.html" (dict
+      "value" . "kind" "link" "parameter" (printf "url for %q" $github)
+      "position" (printf "contributors data %q" $key) "name" "contributors") -}}
+    {{- if $policy.valid }}{{ $url = $policy.href }}{{ end -}}
+  {{- end -}}
+  {{- $avatar := "" -}}
+  {{- with index $fields "avatar" -}}
+    {{- $policy := partial "content/url.html" (dict
+      "value" . "kind" "image" "parameter" (printf "avatar for %q" $github)
+      "position" (printf "contributors data %q" $key) "name" "contributors") -}}
+    {{- if $policy.valid }}{{ $avatar = $policy.href }}{{ end -}}
+  {{- end -}}
+
+  {{- $items = $items | append (dict
+    "github" $github
+    "name" (index $fields "name" | default $github)
+    "role" (index $fields "role")
+    "url" $url
+    "avatar" $avatar) -}}
+{{- end -}}
+{{- return $items -}}

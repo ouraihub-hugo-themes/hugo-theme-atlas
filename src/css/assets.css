@@ -1,0 +1,190 @@
+/* 发布资产表。由 layouts/_partials/release/assets-table.html 渲染。
+
+   表格本体的边框、条纹、表头样式归 table.css —— 这个文件只加资产表特有的
+   四件事：可滚动容器、文件名列的最小宽度、校验和的两份显示、复制按钮。
+
+   校验和列在屏幕上截断（前 8 后 4），完整值藏在同一格里；打印与无 JS 时反过来
+   —— 纸上没有复制按钮，截断的校验和就成了废字。哪一份可见由这里决定，不由
+   模板决定：两份都在 HTML 里，切换是纯呈现。 */
+
+@layer components {
+  .td-assets {
+    max-width: 100%;
+    margin-block: 1.5rem;
+  }
+
+  .td-assets-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    margin-block-end: 0.5rem;
+  }
+
+  /* 两个复制按钮同款。最小 2rem 见方是触屏的下限 —— 再小手指点不准。 */
+  .td-assets-copy-all,
+  .td-assets-copy {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: 0.3rem 0.55rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--color-ink-muted);
+    font-family: var(--font-meta);
+    font-size: 0.82rem;
+    cursor: pointer;
+
+    &:is(:hover, :focus-visible) {
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+    }
+  }
+
+  /* 复制成功后短暂变色。状态由运行时写在 data 属性上 —— 文字播报在旁边那个
+     仅供朗读的 span 里，颜色变化屏幕阅读器读不到。 */
+  :is(.td-assets-copy-all, .td-assets-copy)[data-td-assets-copied] {
+    border-color: var(--color-status-success);
+    color: var(--color-status-success);
+  }
+
+  .td-assets-group {
+    margin-block: 1.5rem 0.5rem;
+    font-size: 1rem;
+  }
+
+  /* 可横向滚动。overscroll-behavior 挡住滚到尽头后把整页带着走。
+     tabindex 在模板里 —— 键盘用户要能聚焦才够得到滚动条。
+
+     `position: relative` 不是摆设：表里那些 `position: absolute` 的元素
+     （仅供朗读的完整校验和、sr-only 的表头说明）要找一个定位祖先当包含块，
+     找不到就一路上溯到滚动壳之外，于是它们的盒子不受这里的 overflow 裁剪，
+     整截宽度算进 document 的 scrollWidth —— 窄屏上整页能横向拖走三十几像素，
+     而每一层祖先量出来都是收在容器内的，查不出是谁。 */
+  .td-assets-scroll {
+    position: relative;
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent);
+      outline-offset: 3px;
+    }
+  }
+
+  .td-assets-table {
+    width: 100%;
+    margin: 0;
+  }
+
+  /* 文件名列给一个最小宽度：不给的话长校验和会把它挤成一列竖排的字。
+     窄屏上表比壳宽是有意的 —— 壳会横向滚动，那正是它存在的理由。
+
+     `min-inline-size` 而非 `min-width`：约束要跟着书写方向走。 */
+  .td-assets-file {
+    min-inline-size: 15rem;
+    overflow-wrap: anywhere;
+  }
+
+  .td-assets-icon {
+    inline-size: 1.25em;
+    margin-inline-end: 0.35rem;
+    vertical-align: -0.125em;
+  }
+
+  .td-assets-badges {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-inline-start: 0.5rem;
+  }
+
+  /* 校验和不要行内代码的底色：一列底色块会盖过文件名自己的层级。见
+     prose.css 开头那条规矩 —— 那一层赢过这里，所以排除写在那边。 */
+  .td-assets-checksum code {
+    padding: 0;
+    background: none;
+    color: var(--color-ink-muted);
+    font-family: var(--font-mono);
+    white-space: nowrap;
+  }
+
+  /* 默认：截断的可见，完整的只供朗读。运行时不参与这个切换 —— 没有 JS 时下面
+     那条 :not() 会反过来。
+
+     `margin: -1px` 与 `padding: 0` 是这套「仅供朗读」写法的标准部分：把 1px 的
+     盒子外框也收掉，免得它在紧凑布局里挤出一像素的缝。 */
+  .td-assets-hash-full {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* 没有 JS 时复制按钮带着 hidden 不出现，那就反过来铺开完整值。用
+     `:has()` 判断按钮是否已被运行时启用 —— 比在模板里分叉出一个静态变体好：
+     标记只有一份，切换是纯 CSS。 */
+  .td-assets:not(:has([data-td-asset-copy]:not([hidden]))) {
+    .td-assets-hash-short {
+      display: none;
+    }
+
+    .td-assets-hash-full {
+      position: static;
+      width: auto;
+      height: auto;
+      /* 上面那条藏起来时用了 -1px，这里要还原，否则铺开的校验和会往左偏一像素。 */
+      margin: 0;
+      overflow: visible;
+      clip-path: none;
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  /* 操作列收到最窄：`inline-size: 1%` 让表格把余量都给前两列。 */
+  .td-assets-action {
+    inline-size: 1%;
+    text-align: end;
+    white-space: nowrap;
+  }
+}
+
+@media print {
+  /* 纸上没有复制这个动作，也没有滚动条。整段铺开。 */
+  .td-assets-toolbar,
+  .td-assets-action,
+  .td-assets-hash-short {
+    display: none;
+  }
+
+  .td-assets-scroll {
+    overflow-x: visible;
+  }
+
+  .td-assets-hash-full {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    /* 校验和是唯一需要逐字核对的东西，纸上不能省。字号收小换取不折行太多。 */
+    font-size: 7.5pt;
+  }
+}
+
+@media (forced-colors: active) {
+  /* 强制配色下颜色被系统接管，复制成功只剩描边能区分。 */
+  :is(.td-assets-copy-all, .td-assets-copy)[data-td-assets-copied] {
+    border-width: 2px;
+  }
+}

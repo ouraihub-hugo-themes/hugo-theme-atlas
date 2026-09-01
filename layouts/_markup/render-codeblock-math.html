@@ -1,0 +1,33 @@
+{{- /* ```math —— 块级公式。
+
+     围栏而非 `$$…$$`：围栏里的反斜杠不会被 Markdown 解析器动过，而 `$$` 之间
+     的 `\\` 会先被当成转义的反斜杠吃掉一层，作者得写四个。 */ -}}
+{{- $page := .PageInner | default .Page -}}
+{{- $policy := partial "content/attributes.html" (dict
+  "attributes" .Attributes "allowed" (slice "title")
+  "position" .Position "kind" "math"
+) -}}
+{{- $title := strings.TrimSpace (index $policy.consumed "title" | default "") -}}
+{{- if and (isset $policy.consumed "title") (not $title) -}}
+  {{- warnf "math: title must not be empty at %s; dropping it" .Position -}}
+{{- end -}}
+
+{{- $expr := strings.TrimSpace (printf "%s" .Inner) -}}
+{{- if not $expr -}}
+  {{- warnf "math: the fence requires an expression at %s; rendering nothing" .Position -}}
+{{- else -}}
+  {{- $html := partial "content/math.html" (dict
+    "expression" $expr "display" true "position" .Position
+  ) -}}
+  {{- $classes := slice "td-math" -}}
+  {{- with $policy.class }}{{ $classes = $classes | append . }}{{ end -}}
+<div class="{{ delimit $classes " " }}"{{ partial "content/attrs.html" $policy.generic | safeHTMLAttr }}>
+  {{- with $title }}<p class="td-math-title">{{ . }}</p>{{ end }}
+  {{- if $html -}}
+    {{- $html | safeHTML -}}
+  {{- else -}}
+    {{- /* 渲染失败：原样留下作者写的 LaTeX。math.html 已经警告过原因。 */ -}}
+    <pre class="td-math-source"><code>{{ $expr }}</code></pre>
+  {{- end }}
+</div>
+{{- end -}}

@@ -1,0 +1,15 @@
+{{- /* 标题形式的步骤。
+
+     主路径是给有序列表标 `{.steps}` —— 那是真 <ol>，屏幕阅读器会报"列表，
+     N 项"，编号来自列表本身。这个 shortcode 用于列表形式办不到的两种情况：
+     步骤标题要进目录，或步骤里要放 `%` 容器 shortcode（列表的缩进会把它们
+     吃掉）。
+
+     Inner 两侧的空行是必需的：Goldmark 要看到块的边界才会把内容当块级
+     Markdown 解析，紧贴着写会得到一段行内文本。 */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "form" "none") -}}
+<div class="td-steps">
+
+{{ .Inner }}
+
+</div>

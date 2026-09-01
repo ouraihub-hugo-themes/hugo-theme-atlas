@@ -1,0 +1,26 @@
+{{- /* 解析当前页用哪个阅读外壳，以及外壳的几何参数。
+
+     四个壳（docs / book / blog / swagger）共用一份 baseof。给每个壳各留一份
+     是常见做法，但它们的实际差异只有一个标记类和 reading_width —— 而复制四份
+     baseof 的代价是任何外壳级改动要改四处，且 Hugo 的 baseof 变体是整体替换，
+     漏改一处不会报错。
+
+     站点可用 params.ui.shell_types 扩展这个集合：列进去的 type 就走阅读
+     外壳。不在集合里的 type 走根 baseof（无侧栏无 TOC）。
+
+     返回 dict：
+       type   外壳名，用于 body 标记类
+       width  reading_width：slim | normal | wide */ -}}
+{{- $types := site.Params.ui.shell_types | default (slice "docs" "book" "blog" "swagger") -}}
+{{- $type := .Type | default "" -}}
+{{- if not (in $types $type) -}}
+  {{- $type = "" -}}
+{{- end -}}
+{{- $width := partial "validate-enum.html" (dict
+  "value" (.Param "reading_width")
+  "allowed" (slice "slim" "normal" "wide")
+  "fallback" "normal"
+  "key" "reading_width"
+  "where" (cond (isset .Params "reading_width") .Path "site configuration")
+) -}}
+{{- return dict "type" $type "width" $width -}}

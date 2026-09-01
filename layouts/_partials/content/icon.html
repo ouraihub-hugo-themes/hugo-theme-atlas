@@ -1,0 +1,31 @@
+{{- /* 图标。名字来自 data/icons.json 的 key。
+
+     未知名字 warn 并不输出 —— 一个空白方块比没有图标更难排查。
+     校验靠读 icons.json 本身，不维护第二份名单。
+
+     <use> 的 href 走绝对路径而非同文档引用：sprite 是独立文件，一次请求
+     可长缓存；内联进每个页面会让每张 HTML 都胖 15 KB。
+
+     入参：name（必需）、class（可选，附加类）
+
+     aria-hidden 恒为真。图标是装饰，语义由旁边的文本承担；需要独立语义时
+     调用方自己给容器加 aria-label。 */ -}}
+{{- $name := .name | default "" -}}
+{{- $catalog := hugo.Data.icons -}}
+{{- if not $catalog -}}
+  {{- $catalog = dict -}}
+{{- end -}}
+{{- with $name -}}
+  {{- if isset $catalog . -}}
+    {{- $sprite := "" -}}
+    {{- with resources.Get "dist/icons.svg" -}}{{ $sprite = .RelPermalink }}{{ end -}}
+    {{- if $sprite -}}
+      <svg class="td-icon{{ with $.class }} {{ . }}{{ end }}" aria-hidden="true"
+        ><use href="{{ $sprite }}#{{ . }}"></use></svg>
+    {{- else -}}
+      {{- warnidf "icons-sprite-missing" "icon: assets/dist/icons.svg is missing -- run `pnpm icons:build`" -}}
+    {{- end -}}
+  {{- else -}}
+    {{- warnidf (printf "icon:%s" .) "icon: unknown name %q (see data/icons.json); emitting nothing" . -}}
+  {{- end -}}
+{{- end -}}

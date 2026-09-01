@@ -1,0 +1,7 @@
+# repo 不是 owner/repository 对。
+version: "1.0.0"
+repo: 只有一段
+channels:
+  - id: a
+    kind: rolling
+    title: 坏仓库

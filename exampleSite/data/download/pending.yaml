@@ -1,0 +1,27 @@
+# published: false —— 版本号定了但资产还没上传。这是发布流程里的正常一段，
+# 不是错误：pinned 渠道置灰，rolling 渠道照常可用（它不指向具体版本）。
+version: "0.2.0"
+repo: ouraihub-hugo-themes/hugo-theme-atlas
+published: false
+
+channels:
+  - id: preview
+    kind: pinned
+    title: Tagged release
+    title_zh_cn: 打好的版本
+    icon: tag
+    note: 这个渠道置灰了 —— 链接是 span 而不是禁用的 a，一个能聚焦却点不动的
+      链接比一段说明文字更让人困惑。校验和表也一并置灰，且不画复制按钮。
+    url: https://github.com/ouraihub-hugo-themes/hugo-theme-atlas/releases/tag/${tag}
+    checksums: |
+      d4e5f60718293a4b5c6d7e8f90a1b2c3d4e5f60718293a4b5c6d7e8f90a1b2c3  atlas-0.2.0.tar.gz
+
+  - id: edge
+    kind: rolling
+    title: Latest from main
+    title_zh_cn: main 分支最新
+    icon: code-branch
+    note: 这个渠道照常可用：它不指向具体版本，所以未发布与它无关。
+    steps:
+      - lang: shell
+        code: hugo mod get -u github.com/ouraihub-hugo-themes/hugo-theme-atlas@main

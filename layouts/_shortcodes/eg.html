@@ -1,0 +1,25 @@
+{{- /* 带编号的示例：题注在上，正文通常是一段或几段围栏代码。
+
+     题注在上而非在下 —— 示例是"先说这段要演示什么，再看代码"，图表反过来。
+     所以 caption 在这里是必需的，`fig`/`tbl` 那边是可选的。
+
+     参数：num（必需）、caption（必需）、id、class */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "allowed" (slice "num" "id" "caption" "class")) -}}
+{{- $head := partial "book/target-head.html" (dict "shortcode" . "kind" "eg") -}}
+{{- if not $head.caption -}}
+  {{- warnf "shortcode %q requires a non-empty caption at %s; rendering it uncaptioned" .Name .Position -}}
+{{- end -}}
+
+{{- $inner := strings.TrimSpace (printf "%s" .InnerDeindent) -}}
+{{- if not $inner -}}
+  {{- warnf "shortcode %q requires inner content (the example body) at %s; rendering nothing" .Name .Position -}}
+{{- else -}}
+  {{- partial "book/register-target.html" (dict "page" .Page "kind" "eg"
+    "num" $head.num "id" $head.id "caption" $head.caption
+    "position" .Position "ordinal" .Ordinal) -}}
+  {{- $label := partial "book/label.html" (dict "kind" "eg" "num" $head.num) -}}
+<figure{{ with $head.id }} id="{{ . }}"{{ end }} class="td-book-figure td-book-figure--eg{{ with $head.class }} {{ . }}{{ end }}" data-td-book-kind="eg" data-td-book-num="{{ $head.num }}">
+  <figcaption><span class="td-book-figure-label">{{ $label }}</span>{{ with $head.caption }} <span class="td-book-figure-caption">{{ . }}</span>{{ end }}</figcaption>
+  <div class="td-book-figure-body">{{ partial "content/render-block.html" (dict "page" .Page "scope" (printf "eg%d" .Ordinal) "content" $inner) }}</div>
+</figure>
+{{- end -}}

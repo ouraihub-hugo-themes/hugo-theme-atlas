@@ -1,0 +1,47 @@
+{
+  "name": "hugo-theme-atlas",
+  "version": "0.1.0",
+  "description": "Documentation and Landing theme for Hugo. TypeScript + Tailwind CSS, compiled to plain CSS/JS.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "gen:chroma": "node scripts/gen-chroma.js",
+    "icons:build": "node scripts/build-icons.js",
+    "css:dev": "tailwindcss -i src/css/main.css -o assets/dist/main.css",
+    "css:build": "tailwindcss -i src/css/main.css -o assets/dist/main.css --minify",
+    "css:watch": "tailwindcss -i src/css/main.css -o assets/dist/main.css --watch",
+    "ts:dev": "node scripts/build-ts.js --sourcemap",
+    "ts:build": "node scripts/build-ts.js --minify",
+    "ts:watch": "node scripts/build-ts.js --watch",
+    "dev": "concurrently -n CSS,TS,HUGO -c green,blue,yellow \"pnpm css:watch\" \"pnpm ts:watch\" \"hugo server --source exampleSite --themesDir ../.. --disableFastRender\"",
+    "build": "pnpm css:build && pnpm ts:build && hugo --source exampleSite --themesDir ../.. --gc --minify",
+    "check": "pnpm type-check && pnpm lint && pnpm test:run && pnpm check:warnings",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src/ts && stylelint \"src/css/**/*.css\"",
+    "format": "prettier --write \"src/**/*.{ts,css}\" \"layouts/**/*.html\"",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "check:warnings": "node scripts/check-warnings.js",
+    "fixture:image": "node scripts/make-fixture-image.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "@fortawesome/fontawesome-free": "^7.3.1",
+    "@tailwindcss/cli": "4.3.3",
+    "@types/node": "26.3.0",
+    "concurrently": "10.0.5",
+    "esbuild": "0.28.2",
+    "eslint": "10.9.1",
+    "prettier": "3.9.6",
+    "stylelint": "17.14.1",
+    "stylelint-config-standard": "40.0.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.68.0",
+    "vitest": "4.1.11"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "packageManager": "pnpm@11.21.0"
+}

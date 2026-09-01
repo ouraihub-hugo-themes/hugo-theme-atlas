@@ -1,0 +1,36 @@
+{{- /* 按键序列：`{{< kbd Ctrl Shift P >}}` → Ctrl + Shift + P
+
+     位置参数而非命名：按键是一个有序序列，`key1=` `key2=` 那种写法既啰嗦又
+     限制个数。
+
+     分隔的 `+` 是 aria-hidden 的视觉符号，另配一段仅供屏幕阅读器的文字 ——
+     朗读 "Ctrl with Shift with P" 才是这个序列的意思，读成 "Ctrl 加号 Shift"
+     不是。 */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "form" "positional") -}}
+
+{{- $keys := slice -}}
+{{- /* 名字参数一律不认。校验那关已经警告过，这里照它说的忽略 —— 不加这层
+       判断，`{{< kbd key="Ctrl" >}}` 会照渲染，警告就成了空话。 */ -}}
+{{- if not .IsNamedParams -}}
+  {{- range .Params -}}
+    {{- $key := strings.TrimSpace (printf "%v" .) -}}
+    {{- if $key -}}
+      {{- $keys = $keys | append $key -}}
+    {{- else -}}
+      {{- warnf "shortcode %q: keys must not be empty at %s; skipping it" $.Name $.Position -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if not $keys -}}
+  {{- warnf "shortcode %q needs at least one key at %s; rendering nothing" .Name .Position -}}
+{{- else -}}
+<span class="td-kbd">
+  {{- range $index, $key := $keys -}}
+    {{- if gt $index 0 -}}
+      <span class="td-kbd-plus" aria-hidden="true">+</span><span class="sr-only"> {{ i18n "kbd_with" }} </span>
+    {{- end -}}
+    <kbd>{{ $key }}</kbd>
+  {{- end -}}
+</span>
+{{- end -}}

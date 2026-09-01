@@ -1,0 +1,10 @@
+{{- /* 把 attributes.html 返回的 generic dict 渲染成属性串。
+     Go 模板 range map 按键排序，golden 输出无需再排。
+
+     返回而非直接输出：partial 的输出是普通字符串，html/template 在属性位
+     会判定它不安全并替换成 ZgotmplZ。调用方拿到值再 safeHTMLAttr。 */ -}}
+{{- $out := "" -}}
+{{- range $name, $value := . -}}
+  {{- $out = printf "%s %s=%q" $out $name $value -}}
+{{- end -}}
+{{- return $out -}}

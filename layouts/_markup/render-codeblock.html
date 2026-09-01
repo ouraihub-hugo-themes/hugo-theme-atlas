@@ -1,0 +1,104 @@
+{{- /* 代码块。
+
+     高亮本身交给 Hugo 的 transform.Highlight —— 行号、高亮行、起始行号都是
+     它的 options，不重新实现。这里只加 Hugo 不做的四件事：文件名标题栏、
+     复制按钮、超长折叠、软换行。
+
+     入参属性：filename、copy、collapse、wrap、id、class、data-*、aria-*
+     高亮 options（lineNos、hl_lines、linenostart…）走围栏本身的语法，
+     不经过属性策略。 */ -}}
+{{- $page := .PageInner | default .Page -}}
+{{- $policy := partial "content/attributes.html" (dict
+  "attributes" .Attributes
+  "allowed" (slice "id" "filename" "copy" "collapse" "wrap")
+  "position" .Position "kind" "code block") -}}
+{{- $code := strings.TrimSuffix "\n" .Inner -}}
+{{- $lang := lower (.Type | default "") -}}
+{{- $lineCount := len (split $code "\n") -}}
+{{- $filename := strings.TrimSpace (index $policy.consumed "filename" | default "") -}}
+{{- $id := strings.TrimSpace (index $policy.consumed "id" | default "") -}}
+{{- /* shortcode body 是独立文档，.Ordinal 从 0 重数 —— 页面上的第一个围栏和
+       卡片里的第一个围栏都会算出 code-0。作用域前缀由 content/render-block.html
+       在渲染前写进 Store。 */ -}}
+{{- if not $id }}{{ $id = printf "code-%s%d" ($page.Store.Get "tdBlockScope" | default "") .Ordinal }}{{ end -}}
+
+{{- /* 布尔属性统一走 validate-bool：作者写 copy="yes" 时要有一条明确的警告，
+       而不是静默当成 false。 */ -}}
+{{- $copy := partial "validate-bool.html" (dict
+  "value" (index $policy.consumed "copy") "fallback" true
+  "key" "code block copy" "position" .Position) -}}
+{{- $wrap := partial "validate-bool.html" (dict
+  "value" (index $policy.consumed "wrap") "fallback" false
+  "key" "code block wrap" "position" .Position) -}}
+
+{{- /* collapse 接受布尔或正整数：true 用默认行数阈值，数字给自定义阈值。
+       这是"多设置特性也接受布尔简写"的那一类，不是普通开关。 */ -}}
+{{- $collapseLines := 0 -}}
+{{- with index $policy.consumed "collapse" -}}
+  {{- $raw := strings.TrimSpace . -}}
+  {{- if findRE `^[1-9][0-9]*$` $raw -}}
+    {{- $collapseLines = int $raw -}}
+  {{- else if in (slice "true" "false") (lower $raw) -}}
+    {{- if eq (lower $raw) "true" }}{{ $collapseLines = 20 }}{{ end -}}
+  {{- else -}}
+    {{- warnf "code block: collapse must be true, false, or a positive integer; got %q at %s; not collapsing" $raw .Position -}}
+  {{- end -}}
+{{- end -}}
+{{- $collapsible := and (gt $collapseLines 0) (gt $lineCount $collapseLines) -}}
+
+{{- /* 行号与表格布局互斥于软换行：lntable 把每行放进表格单元格，换行会让
+       行号与代码错位。 */ -}}
+{{- $highlighted := transform.Highlight $code $lang .Options -}}
+{{- if and $wrap (strings.Contains (printf "%s" $highlighted) "lntable") -}}
+  {{- warnf "code block: wrap is incompatible with table line numbers at %s; disabling wrap (use lineNos=inline to keep it)" .Position -}}
+  {{- $wrap = false -}}
+{{- end -}}
+
+{{- /* 页面级能力标记：scripts.html 之后读它决定要不要加载代码运行时。 */ -}}
+{{- if or $copy $collapsible }}{{ $page.Store.Set "hasCodeRuntime" true }}{{ end -}}
+
+{{- $classes := slice "td-code" -}}
+{{- if $wrap }}{{ $classes = $classes | append "td-code--wrap" }}{{ end -}}
+{{- if $collapsible }}{{ $classes = $classes | append "td-code--collapsible" }}{{ end -}}
+{{- with $policy.class }}{{ $classes = $classes | append . }}{{ end -}}
+{{- $viewportID := printf "%s-viewport" $id -}}
+{{- $filenameID := printf "%s-filename" $id -}}
+<div class="{{ delimit $classes " " }}" id="{{ $id }}" data-td-code
+     data-td-language="{{ $lang }}" data-td-line-count="{{ $lineCount }}"
+     {{- if $collapsible }} data-td-collapse-lines="{{ $collapseLines }}"{{ end }}
+     {{- /* 有文件名就用它作组名，否则不加 role —— 一个没有名字的 group 对
+            屏幕阅读器只是多一层要跳过的嵌套。 */ -}}
+     {{- if $filename }} role="group" aria-labelledby="{{ $filenameID }}"{{ end }}
+     {{- partial "content/attrs.html" $policy.generic | safeHTMLAttr }}>
+  {{- if or $filename $copy }}
+  <div class="td-code-header">
+    {{- with $filename }}
+    <span class="td-code-filename" id="{{ $filenameID }}" title="{{ . }}">{{ . }}</span>
+    {{- end }}
+    {{- if $copy }}
+    <button class="td-code-copy" type="button" data-td-code-copy
+            data-td-label-copied="{{ i18n "code_copied" }}"
+            aria-label="{{ i18n "code_copy" }}">
+      {{ partial "content/icon.html" (dict "name" "copy") }}
+    </button>
+    {{- end }}
+  </div>
+  {{- end }}
+  <div class="td-code-viewport" id="{{ $viewportID }}" data-td-code-viewport>
+    {{- $highlighted -}}
+  </div>
+  {{- if $collapsible }}
+  {{- /* hidden 由运行时摘掉：没有 JS 时代码块完整展开，一个点不动的展开
+         按钮比多出几行代码更糟。 */ -}}
+  <button class="td-code-expand" type="button" hidden data-td-code-expand
+          data-td-label-expand="{{ i18n "code_expand" (dict "Count" $lineCount) }}"
+          data-td-label-collapse="{{ i18n "code_collapse" }}"
+          aria-controls="{{ $viewportID }}" aria-expanded="false">
+    <span>{{ i18n "code_expand" (dict "Count" $lineCount) }}</span>
+  </button>
+  {{- end }}
+  {{- if $copy }}
+  {{- /* 复制结果要播报出来 —— 按钮上的图标变化对屏幕阅读器不可见。 */ -}}
+  <span class="sr-only" role="status" aria-live="polite" data-td-code-status></span>
+  {{- end }}
+</div>

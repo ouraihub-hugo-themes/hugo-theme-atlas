@@ -1,0 +1,157 @@
+/* 特征图的三种模式。同一张图，三种用法。
+
+   banner 在文档流里；wash 与 hero 是背景装饰，都靠 z-index: -1 沉到内容之下，
+   并且各自的容器要 isolation: isolate —— 否则负 z-index 会穿透到更外层的
+   层叠上下文，图片跑到页面背景之后彻底看不见。
+
+   两种装饰模式都用向下渐隐的遮罩，让图与页面底色交界处没有硬边。 */
+
+@layer components {
+  /* ---- banner：正文顶部的一张图 ---- */
+  .td-featured-banner {
+    display: block;
+    inline-size: 100%;
+    margin-block: 0 1.5rem;
+    margin-inline: 0;
+
+    > img {
+      display: block;
+      inline-size: 100%;
+      block-size: auto;
+      max-block-size: 26rem;
+      /* 16/9 配 object-fit: cover —— 作者给什么比例的图，版位都是同一个高度，
+         列表页里一排卡片不会因为某张图特别高而错位。 */
+      aspect-ratio: 16 / 9;
+      border: 1px solid var(--color-border);
+      border-radius: 10px;
+      object-fit: cover;
+    }
+  }
+
+  .td-featured-banner-byline {
+    margin-block-start: 0.5rem;
+    color: var(--color-ink-muted);
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+
+  /* ---- wash：标题区背后的淡底 ---- */
+  .td-shell-article-header--wash {
+    position: relative;
+    /* 负 z-index 的作用域边界。缺了它图会沉到页面背景之下。 */
+    isolation: isolate;
+    margin-block-end: 1rem;
+    /* 向两侧各溢出 1rem 再补回 padding：底图要比文字宽一点，不然文字贴边。 */
+    margin-inline: -1rem;
+    padding-block: 1rem 0.5rem;
+    padding-inline: 1rem;
+  }
+
+  .td-featured-wash {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    overflow: hidden;
+    border-radius: 12px;
+    pointer-events: none;
+
+    > img {
+      display: block;
+      inline-size: 100%;
+      block-size: 100%;
+      opacity: 0.1;
+      object-fit: cover;
+      mask-image: linear-gradient(to bottom, #000, transparent);
+    }
+  }
+
+  /* ---- hero：页顶满幅背景 ---- */
+  .td-featured-hero {
+    position: absolute;
+    z-index: -1;
+    inset-block-start: 0;
+    inset-inline: 0;
+    block-size: clamp(240px, 60vh, 620px);
+    overflow: hidden;
+    pointer-events: none;
+
+    > img {
+      display: block;
+      inline-size: 100%;
+      block-size: 100%;
+      opacity: 0.38;
+      object-fit: cover;
+      /* 30% 之前保持不透明，96% 处收干。上段要够实才压得住导航栏的文字。 */
+      mask-image: linear-gradient(to bottom, #000 30%, transparent 96%);
+    }
+  }
+
+  /* hero 页的外层容器：hero 用绝对定位，需要一个定位祖先与层叠边界。 */
+  .td-shell-hero-root {
+    position: relative;
+    isolation: isolate;
+  }
+}
+
+/* hero 存在时正文整体下压，给图让出位置。clamp 的三个值是量出来的：
+   小屏不至于把内容推出首屏，大屏不至于让图占满整页。
+
+   必须是 @utility 而不是 @layer components：栅格容器上带着 Tailwind 的 py-8，
+   utilities 层排在 components 之后，层序优先于特异性 —— 写在 components 里会
+   被 py-8 静默压掉，看起来像 clamp 算错了。其余外壳修饰类同理，都在
+   shell.css 里用 @utility。 */
+@utility td-shell--hero {
+  padding-block-start: clamp(150px, 32vh, 360px);
+
+  @media (width < 48rem) {
+    padding-block-start: clamp(96px, 22vh, 220px);
+  }
+}
+
+/* 深色模式下两种装饰都压暗：同样的不透明度在深底上显得更亮更抢。 */
+[data-td-theme="dark"] {
+  .td-featured-wash > img {
+    opacity: 0.08;
+  }
+
+  .td-featured-hero > img {
+    opacity: 0.26;
+  }
+}
+
+/* 强制色彩模式：装饰图一律撤掉，并收回为它留的空白。这个模式下用户要的是
+   确定的对比度，背景图只会干扰。 */
+@media (forced-colors: active) {
+  .td-featured-wash,
+  .td-featured-hero {
+    display: none;
+  }
+
+  .td-shell--hero {
+    padding-block-start: 0;
+  }
+}
+
+@media print {
+  .td-featured-wash,
+  .td-featured-hero {
+    display: none;
+  }
+
+  .td-shell--hero {
+    padding-block-start: 0;
+  }
+
+  .td-featured-banner {
+    break-inside: avoid;
+
+    > img {
+      max-block-size: 12rem;
+    }
+  }
+
+  .td-shell-article-header--wash {
+    margin-inline: 0;
+    padding-inline: 0;
+  }
+}

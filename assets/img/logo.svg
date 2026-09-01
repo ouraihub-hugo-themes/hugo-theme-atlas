@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+  <!-- 占位标记：一本翻开的书。站点覆盖 assets/img/logo.svg 即可换掉。
+       currentColor 不用 —— 通过 <img> 加载时拿不到宿主文档的颜色，
+       所以配色写死在渐变里。 -->
+  <defs>
+    <linearGradient id="td-logo" x1="2" y1="4" x2="22" y2="20" gradientUnits="userSpaceOnUse">
+      <stop offset="6%" stop-color="#1d588c"/>
+      <stop offset="94%" stop-color="#b4762e"/>
+    </linearGradient>
+  </defs>
+  <path d="M12 5.5C10 4 7 3.5 3.5 4v14C7 17.5 10 18 12 19.5 14 18 17 17.5 20.5 18V4C17 3.5 14 4 12 5.5Z"
+        stroke="url(#td-logo)" stroke-width="1.7" stroke-linejoin="round"/>
+  <path d="M12 5.5v14" stroke="url(#td-logo)" stroke-width="1.7"/>
+</svg>

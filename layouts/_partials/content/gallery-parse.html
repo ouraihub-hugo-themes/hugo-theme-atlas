@@ -1,0 +1,109 @@
+{{- /* 解析一段 Markdown 图片行成图集条目。
+
+     一行一张图，形状是 `![alt](src) {link=…} # 说明`。用 Markdown 的图片语法
+     而不是自造一套：作者已经会写它，而且没被识别时它退化成一张普通图片，
+     不是一段乱码。
+
+     坏行跳过而不是整块丢弃：十张图里粘错一行不该赔掉另外九张。
+
+     入参 dict：source、position、page
+     返回 dict：items、hasDescription */ -}}
+{{- $position := .position | default "unknown position" -}}
+{{- $page := .page -}}
+{{- $source := replace (printf "%s" .source) "\r" "" -}}
+{{- $lines := split (strings.TrimRight "\n" $source) "\n" -}}
+
+{{- /* 与 filetree 同一套：`\#` 表示字面井号。下一行引号里是一个字面的
+       U+0001 字节，编辑器里看不见，别当空白清理掉。 */ -}}
+{{- $hashEscape := "" -}}
+
+{{- $items := slice -}}
+{{- $hasDescription := false -}}
+{{- $lineNo := 0 -}}
+
+{{- range $raw := $lines -}}
+  {{- $lineNo = add $lineNo 1 -}}
+  {{- $line := strings.TrimSpace $raw -}}
+  {{- if not $line }}{{ continue }}{{ end -}}
+
+  {{- /* 图片必须在行首：说明与属性都跟在它后面，先认出它才知道剩下的是什么。 */ -}}
+  {{- $match := findRESubmatch `^!\[([^\]]*)\]\(([^)\s]+)\)\s*(.*)$` $line -}}
+  {{- if not $match -}}
+    {{- warnf "gallery: line %d must start with a Markdown image such as %s; got %q at %s; skipping the line" $lineNo "![alt](src.png)" $line $position -}}
+    {{- continue -}}
+  {{- end -}}
+  {{- $alt := strings.TrimSpace (index (index $match 0) 1) -}}
+  {{- $src := index (index $match 0) 2 -}}
+  {{- $rest := strings.TrimSpace (index (index $match 0) 3) -}}
+
+  {{- /* 先切说明，再取属性。属性段的正则锚在行尾，说明在它后面就匹配不上 ——
+         而 `![alt](src) {link=…} # 说明` 正是文档里教的写法。 */ -}}
+  {{- $description := "" -}}
+  {{- $tail := "" -}}
+  {{- $hasHash := false -}}
+  {{- $escaped := replace $rest "\\#" $hashEscape -}}
+  {{- with findRESubmatch `^(.*?)(?:^|\s+)#\s*(.*)$` $escaped -}}
+    {{- $escaped = index (index . 0) 1 -}}
+    {{- $hasHash = true -}}
+    {{- $tail = strings.TrimSpace (replace (index (index . 0) 2) $hashEscape "#") -}}
+  {{- end -}}
+  {{- $rest = strings.TrimSpace (replace $escaped $hashEscape "#") -}}
+
+  {{- $parsed := partial "content/line-attrs.html" (dict
+    "line" $rest "allowed" (slice "link" "class")
+    "lineNo" $lineNo "kind" "gallery" "position" $position
+  ) -}}
+  {{- $attrs := $parsed.attrs -}}
+
+  {{- /* 属性之外还剩文本，说明作者漏了 # 标记。不静默当图注：一行写歪的属性
+         （少了花括号）会一模一样地变成图注，看不出是错的。 */ -}}
+  {{- with $parsed.rest -}}
+    {{- warnf "gallery: line %d: text after the image must start with # (the description marker); got %q at %s; dropping the text" $lineNo . $position -}}
+  {{- end -}}
+
+  {{- /* `#` 后面空着是作者的错，不是"没写说明"：他打算写一句，句子丢了。 */ -}}
+  {{- if $hasHash -}}
+    {{- if $tail -}}
+      {{- $description = $tail -}}
+      {{- $hasDescription = true -}}
+    {{- else -}}
+      {{- warnf "gallery: line %d: the description after # must not be empty at %s; dropping it" $lineNo $position -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- $class := index $attrs "class" | default "" -}}
+  {{- if and $class (not (findRE `^[A-Za-z0-9_ -]+$` $class)) -}}
+    {{- warnf "gallery: line %d: class contains unsafe characters at %s; dropping the class" $lineNo $position -}}
+    {{- $class = "" -}}
+  {{- end -}}
+
+  {{- $href := "" -}}
+  {{- $external := false -}}
+  {{- with index $attrs "link" -}}
+    {{- $url := partial "content/url.html" (dict
+      "name" "gallery" "parameter" (printf "link on line %d" $lineNo)
+      "position" $position "value" . "kind" "link"
+    ) -}}
+    {{- $href = $url.href -}}
+    {{- $external = $url.external -}}
+  {{- end -}}
+
+  {{- /* 来源优先级与固有尺寸归共享解析器，这里不另写一套查找。 */ -}}
+  {{- $image := partial "content/image-resolve.html" (dict
+    "name" "gallery" "position" $position "page" $page "src" $src "alt" $alt
+  ) -}}
+  {{- if $image.src -}}
+    {{- $items = $items | append (dict
+      "line" $lineNo "src" $image.src "alt" $image.alt
+      "decorative" $image.decorative "width" $image.width "height" $image.height
+      "description" $description "href" $href "external" $external "class" $class
+    ) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if not $items -}}
+  {{- warnf "gallery: the fence requires at least one image at %s; rendering nothing" $position -}}
+{{- end -}}
+
+{{- $result := dict "items" $items "hasDescription" $hasDescription -}}
+{{- return $result -}}

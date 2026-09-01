@@ -1,0 +1,60 @@
+{{- /* 提示框：GFM / Obsidian 的 `> [!TYPE]± 标题` 引用块。
+
+     符号决定折叠：`-` 折叠、`+` 展开、无符号静态。details 恒可折叠 ——
+     它的语义就是"折叠一段内容"。
+
+     未知类型退回普通 blockquote，且 `[!TYPE]` 标记原样留在正文里：
+     作者写错了类型名，内容不能因此丢失，而看得见的标记正是那条线索。
+
+     非 HTML 输出（print / rss）渲染静态版本 —— 纸上没有可点开的东西，
+     而 <details> 在 RSS 阅读器里的行为不可预期。
+
+     icon 属性可覆盖类型自带图标，取值是 data/icons.json 里的图标名。 */ -}}
+{{- $page := .PageInner | default .Page -}}
+{{- $format := lower ($page.Store.Get "tdOutputFormat" | default "html") -}}
+{{- $type := lower (.AlertType | default "") -}}
+{{- $sign := .AlertSign | default "" -}}
+{{- $canonical := slice "note" "tip" "important" "warning" "caution" "success" "danger" "question" "example" "quote" "details" -}}
+{{- $policy := partial "content/attributes.html" (dict "attributes" .Attributes "allowed" (slice "icon") "position" .Position "kind" "callout") -}}
+{{- if not (in $canonical $type) -}}
+  {{- $marker := printf "[!%s]%s" (upper $type) $sign -}}
+<blockquote{{ with $policy.class }} class="{{ . }}"{{ end }}
+  {{- partial "content/attrs.html" $policy.generic | safeHTMLAttr }}>
+<p>{{ $marker }}{{ with .AlertTitle }} {{ . }}{{ end }}</p>
+{{ .Text }}
+</blockquote>
+{{- else -}}
+  {{- /* details 不带图标：它是折叠容器，不是一种状态。 */ -}}
+  {{- $icon := "" -}}
+  {{- if ne $type "details" }}{{ $icon = printf "callout-%s" $type }}{{ end -}}
+  {{- with index $policy.consumed "icon" -}}
+    {{- $icon = strings.TrimSpace . -}}
+  {{- end -}}
+  {{- $title := .AlertTitle -}}
+  {{- if not $title }}{{ $title = i18n (printf "callout_%s" $type) | default (title $type) }}{{ end -}}
+  {{- $collapsible := or (eq $sign "-") (eq $sign "+") (eq $type "details") -}}
+  {{- $open := eq $sign "+" -}}
+  {{- $static := or (ne $format "html") (not $collapsible) -}}
+  {{- $classes := slice "td-callout" (printf "td-callout--%s" $type) -}}
+  {{- if $collapsible }}{{ $classes = $classes | append "td-callout--collapsible" }}{{ end -}}
+  {{- with $policy.class }}{{ $classes = $classes | append . }}{{ end -}}
+  {{- $iconHTML := "" -}}
+  {{- with $icon }}{{ $iconHTML = partial "content/icon.html" (dict "name" . "class" "td-callout-icon") }}{{ end -}}
+  {{- if $static -}}
+<div class="{{ delimit $classes " " }}" role="note"
+  {{- partial "content/attrs.html" $policy.generic | safeHTMLAttr }}>
+  <div class="td-callout-title">{{ $iconHTML }}<span class="td-callout-label">{{ $title }}</span></div>
+  <div class="td-callout-body">
+{{ .Text }}
+  </div>
+</div>
+  {{- else -}}
+<details class="{{ delimit $classes " " }}"{{ if $open }} open{{ end }}
+  {{- partial "content/attrs.html" $policy.generic | safeHTMLAttr }}>
+  <summary class="td-callout-title">{{ $iconHTML }}<span class="td-callout-label">{{ $title }}</span>{{ partial "content/icon.html" (dict "name" "chevron-down" "class" "td-callout-marker") }}</summary>
+  <div class="td-callout-body">
+{{ .Text }}
+  </div>
+</details>
+  {{- end -}}
+{{- end -}}

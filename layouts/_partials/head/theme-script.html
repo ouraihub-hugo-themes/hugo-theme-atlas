@@ -1,0 +1,13 @@
+{{- /* 同步加载，必须在首帧前设定 data-td-theme，否则刷新会闪白。
+       这是唯一允许阻塞渲染的脚本。 */ -}}
+{{- with resources.Get "dist/theme.js" -}}
+  {{- if hugo.IsProduction -}}
+    {{- $js := . | fingerprint -}}
+    <script src="{{ $js.RelPermalink }}"
+            integrity="{{ $js.Data.Integrity }}" crossorigin="anonymous"></script>
+  {{- else -}}
+    <script src="{{ .RelPermalink }}"></script>
+  {{- end -}}
+{{- else -}}
+  {{- warnf "theme script missing: assets/dist/theme.js -- run `pnpm ts:build`" -}}
+{{- end -}}

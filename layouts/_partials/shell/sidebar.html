@@ -1,0 +1,8 @@
+{{- /* 侧栏导航。树由 sidebar-node.html 递归展开。 */ -}}
+<nav aria-label="{{ i18n "sidebar_nav" }}" class="td-shell-nav">
+  <ul class="td-shell-nav-list">
+    {{- range .FirstSection.Pages -}}
+      {{- partial "shell/sidebar-node.html" (dict "page" . "current" $) -}}
+    {{- end -}}
+  </ul>
+</nav>

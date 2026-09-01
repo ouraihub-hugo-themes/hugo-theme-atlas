@@ -1,0 +1,49 @@
+{{- /* 四个交叉引用目标（fig / tbl / eq / eg）共有的头部参数：num、id、caption、
+     class。四份一模一样的校验合成一处 —— 分开写的话，改一条 caption 规则要动
+     四个文件，而漏掉一个是静默的。
+
+     id 缺省是 `<kind>-<num>`：`{{< tbl num="3" >}}` 的锚点就是 `#tbl-3`，作者
+     不必为每个目标起名字。num 校验不过时 id 变成 `tbl-`，登记器照样收 —— 一个
+     没有编号的目标仍然要能被列表看到，只是标签上没有数字。
+
+     class 直接丢弃不安全字符而不是清洗：一个被"清洗"过的类名会让作者以为它
+     生效了。字符集比块属性那条更宽一格（允许空格），因为这里收的是一整串。
+
+     入参 dict：shortcode（传 `.`）、kind
+     返回 dict：num、id、caption、class */ -}}
+{{- $sc := .shortcode -}}
+{{- $kind := .kind -}}
+{{- $at := $sc.Position -}}
+{{- $params := dict -}}
+{{- if $sc.IsNamedParams }}{{ $params = $sc.Params }}{{ end -}}
+
+{{- if not (isset $params "num") -}}
+  {{- warnf "shortcode %q requires parameter num at %s; rendering it unnumbered" $sc.Name $at -}}
+{{- end -}}
+{{- $num := partial "book/validate-num.html" (dict "name" $sc.Name "value" ($sc.Get "num") "position" $at) -}}
+
+{{- $id := printf "%s-%s" $kind $num -}}
+{{- if isset $params "id" -}}
+  {{- $id = partial "book/validate-id.html" (dict "name" $sc.Name "value" ($sc.Get "id") "position" $at) -}}
+{{- end -}}
+
+{{- $caption := "" -}}
+{{- if isset $params "caption" -}}
+  {{- $caption = $sc.Get "caption" -}}
+  {{- if ne (printf "%T" $caption) "string" -}}
+    {{- warnf "shortcode %q: caption must be a string at %s; dropping it" $sc.Name $at -}}
+    {{- $caption = "" -}}
+  {{- end -}}
+  {{- $caption = strings.TrimSpace $caption -}}
+{{- end -}}
+
+{{- $class := "" -}}
+{{- if isset $params "class" -}}
+  {{- $class = strings.TrimSpace (printf "%v" ($sc.Get "class")) -}}
+  {{- if and $class (not (findRE `^[A-Za-z0-9_ -]+$` $class)) -}}
+    {{- warnf "shortcode %q: class contains unsafe characters at %s; dropping the class" $sc.Name $at -}}
+    {{- $class = "" -}}
+  {{- end -}}
+{{- end -}}
+
+{{- return dict "num" $num "id" $id "caption" $caption "class" $class -}}

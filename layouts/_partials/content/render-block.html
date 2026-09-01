@@ -1,0 +1,20 @@
+{{- /* 渲染一段 Markdown 正文（shortcode 的 Inner、卡片描述之类）。
+
+     Hugo 把 shortcode body 当成独立的 Goldmark 文档渲染，里面的 render hook
+     拿到的 .Ordinal 从 0 重数。页面上第一个围栏和卡片里第一个围栏都会算出
+     `code-0`，两个 id 相同 —— aria-controls 指向哪一个由浏览器随便挑，折叠
+     按钮控制错块。所以调用方要给一段作用域名，hook 读它拼进 id。
+
+     Store 传参而不是渲染后正则回改 id：后者要同时改 id、aria-controls、
+     aria-labelledby、行号锚点，每加一个引用就多一条替换。
+
+     入参 dict：page、content、scope（短标识，如 "card0"）
+     返回 HTML */ -}}
+{{- $page := .page -}}
+{{- $scope := .scope | default "" -}}
+{{- with $scope }}{{ $page.Store.Set "tdBlockScope" (printf "%s-" ($scope | anchorize)) }}{{ end -}}
+{{- $html := $page.RenderString (dict "display" "block") .content -}}
+{{- /* 渲染完就清掉。嵌套的 body 渲染完后，外层文档的 hook 不该还戴着内层的
+       前缀。Store 是页面级的，不清会漏出去。 */ -}}
+{{- with $scope }}{{ $page.Store.Set "tdBlockScope" "" }}{{ end -}}
+{{- return $html -}}

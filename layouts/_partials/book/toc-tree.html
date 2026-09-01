@@ -1,0 +1,24 @@
+{{- /* 递归展开一棵 section 树，给 book-toc 用。
+
+     跟侧栏共用同一份数据（section 的子页按 weight 排），但输出的是有序列表：
+     这是一份目录，条目的编号有意义。侧栏是导航，用无序列表。
+
+     depth 是"往下几层 section"，不是"几层标题"。1 = 只列直接子页，2 = 再展开
+     一层子 section。
+
+     入参 dict：page、depth、level */ -}}
+{{- $page := .page -}}
+{{- $depth := .depth -}}
+{{- $level := .level | default 1 -}}
+{{- $children := (union $page.Pages $page.Sections).ByWeight -}}
+
+{{- if and $children (le $level $depth) -}}
+<ol class="td-book-toc-list">
+  {{- range $children }}
+  <li class="td-book-toc-item">
+    <a href="{{ .RelPermalink }}">{{ .LinkTitle }}</a>
+    {{- if and .IsSection (lt $level $depth) }}{{ partial "book/toc-tree.html" (dict "page" . "depth" $depth "level" (add $level 1)) }}{{ end }}
+  </li>
+  {{- end }}
+</ol>
+{{- end -}}

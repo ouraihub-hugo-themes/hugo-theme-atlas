@@ -1,0 +1,91 @@
+{{- /* 网格里的一张卡片。必须被 cards 包住。
+
+     渲染不出来的卡片 warn 并跳过自己，同网格的其他卡片照常渲染 —— 一处笔误
+     不该把整页打空。
+
+     参数：title（必需）、link、icon、badge、image、image_alt
+     正文是卡片描述，按 Markdown 渲染。
+
+     image_alt 缺省即装饰图（输出 alt=""）。卡片的可访问名字由 title 承担，
+     图是它旁边的补充，所以这里不像正文图片那样强制要求 alt。 */ -}}
+{{- /* 嵌套 shortcode 的 .Position 相对的是父级 Inner 那个独立文档，恒为
+       `文件:1:1`。定位只能靠父级的真实行号加卡片在网格里的序号 —— 不然同一
+       页上两张都缺标题的卡会产出两条逐字节相同的消息，被日志去重成一条，
+       作者只看到一个错。 */ -}}
+{{- $at := .Position -}}
+{{- with .Parent }}{{ $at = printf "%s, card #%d" .Position (add $.Ordinal 1) }}{{ end -}}
+
+{{- partial "validate-shortcode.html" (dict "shortcode" . "at" $at
+  "allowed" (slice "title" "link" "icon" "badge" "image" "image_alt")) -}}
+
+{{- $ok := true -}}
+{{- with .Parent -}}
+  {{- if ne .Name "cards" -}}
+    {{- warnf "shortcode %q must sit inside cards, not %q, at %s; skipping this card" $.Name .Name $at -}}
+    {{- $ok = false -}}
+  {{- end -}}
+{{- else -}}
+  {{- warnf "shortcode %q must sit inside cards at %s; skipping this card" .Name $at -}}
+  {{- $ok = false -}}
+{{- end -}}
+
+{{- /* 无参数的 `{{< card >}}` 的 .Params 是 nil，对它调 isset 会让 Hugo 报
+       "calling IsSet with unsupported type"。先挡住，后面的 isset 才安全。 */ -}}
+{{- if and $ok (not .Params) -}}
+  {{- warnf "shortcode %q needs a title at %s; skipping this card" .Name $at -}}
+  {{- $ok = false -}}
+{{- end -}}
+
+{{- $title := strings.TrimSpace (printf "%v" (.Get "title" | default "")) -}}
+{{- if and $ok (not $title) -}}
+  {{- warnf "shortcode %q needs a non-empty title at %s; skipping this card" .Name $at -}}
+  {{- $ok = false -}}
+{{- end -}}
+
+{{- $href := "" -}}
+{{- $external := false -}}
+{{- if and $ok (isset .Params "link") -}}
+  {{- $url := partial "content/url.html" (dict "name" .Name "parameter" "link"
+    "position" $at "value" (.Get "link") "kind" "link") -}}
+  {{- $href = $url.href -}}
+  {{- $external = $url.external -}}
+{{- end -}}
+
+{{- $image := false -}}
+{{- if $ok -}}
+  {{- if isset .Params "image" -}}
+    {{- $image = partial "content/image-resolve.html" (dict "name" .Name
+      "position" $at "page" .Page "src" (.Get "image")
+      "alt" (.Get "image_alt" | default "")) -}}
+  {{- else if isset .Params "image_alt" -}}
+    {{- warnf "shortcode %q: image_alt needs image at %s; ignoring it" .Name $at -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if $ok -}}
+{{- $body := strings.TrimSpace .InnerDeindent -}}
+<article class="td-card">
+  {{- with $image }}{{ with .src }}
+  <img class="td-card-image" src="{{ . }}" alt="{{ $image.alt }}"
+    {{- with $image.width }} width="{{ . }}" height="{{ $image.height }}"{{ end }}
+    loading="lazy" decoding="async">
+  {{- end }}{{ end }}
+  <div class="td-card-body">
+    <div class="td-card-head">
+      {{- with .Get "icon" }}{{ partial "content/icon.html" (dict "name" . "class" "td-card-icon") }}{{ end }}
+      {{- /* 整张卡片的面都是链接：标题的 ::after 铺满卡片。链接文字仍只是标题
+             —— 屏幕阅读器读到的是"某标题，链接"，而不是连描述一起念完。 */ -}}
+      {{- if $href }}
+      <a class="td-card-title" href="{{ $href }}"{{ if $external }} rel="noopener"{{ end }}>{{ $title }}</a>
+      {{- else }}
+      <strong class="td-card-title">{{ $title }}</strong>
+      {{- end }}
+      {{- with .Get "badge" }}<span class="td-card-badge">{{ . }}</span>{{ end }}
+    </div>
+    {{- with $body }}
+    <div class="td-card-text">{{ partial "content/render-block.html" (dict
+      "page" $.Page "scope" (printf "card%d" $.Ordinal) "content" .) }}</div>
+    {{- end }}
+  </div>
+</article>
+{{- end -}}

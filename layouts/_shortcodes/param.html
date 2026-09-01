@@ -1,0 +1,36 @@
+{{- /* 打印一个页面参数，没有则回落站点配置：`{{< param version >}}`
+
+     只打印标量。map 与 slice 打印出来是 Go 的字面量（`map[a:1]`），那不是作者
+     想要的东西，警告并什么都不输出。
+
+     输出过 htmlEscape —— 参数值来自 front matter，作者可以在里面写任何字符，
+     未转义就进 HTML 是注入面。 */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "form" "positional") -}}
+
+{{- $name := "" -}}
+{{- if not .IsNamedParams }}{{ $name = strings.TrimSpace (printf "%v" (.Get 0 | default "")) }}{{ end -}}
+
+{{- /* 单独一个标志位，不用值本身判断：`false`、`0`、`""` 都是合法的参数值，
+       照样要打印出来。 */ -}}
+{{- $printable := false -}}
+{{- $value := "" -}}
+
+{{- if not $name -}}
+  {{- warnf "shortcode %q requires a page or site parameter name at %s; printing nothing" .Name .Position -}}
+{{- else -}}
+  {{- $resolved := .Page.Param $name -}}
+  {{- if eq $resolved nil -}}
+    {{- warnf "shortcode %q: parameter %q was not found in page front matter or site configuration at %s; printing nothing" .Name $name .Position -}}
+  {{- else -}}
+    {{- $type := printf "%T" $resolved -}}
+    {{- $scalar := slice "string" "bool" "int" "int8" "int16" "int32" "int64" "uint" "uint8" "uint16" "uint32" "uint64" "float32" "float64" -}}
+    {{- if not (in $scalar $type) -}}
+      {{- warnf "shortcode %q: parameter %q is a %s at %s; only scalar values (string / number / bool) can be printed; printing nothing" .Name $name $type .Position -}}
+    {{- else -}}
+      {{- $value = $resolved -}}
+      {{- $printable = true -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if $printable }}{{ printf "%v" $value | htmlEscape | safeHTML }}{{ end -}}
