@@ -63,18 +63,51 @@
 
   .td-footer-grid {
     display: grid;
-    grid-template-columns: repeat(var(--td-footer-cols, 4), minmax(120px, 1fr));
-    gap: 2rem 1.5rem;
 
-    /* 窄屏减到两列。120px 的下限在手机上放不下四列，会溢出而不是换行 ——
-       minmax 的下限是硬的。 */
-    @media (width < 48rem) {
-      grid-template-columns: repeat(2, minmax(120px, 1fr));
+    /* 列数是内容的属性：作者配了几组就是几列，不由可用宽度反推。用 `auto-fit`
+     * 反推会让同一个组件在不同站点上宽一倍（配 2 组每列 376px，配 4 组 176px），
+     * 而且它按"能塞几条轨道"补空轨道，配 2 组时会算出 5 条、3 条宽度为 0。
+     *
+     * 溢出的原因不是列数，是下限：`minmax()` 的下限是硬的，轨道不缩到它以下，
+     * 装不下就横滚而不是换行。`repeat(N, minmax(120px, 1fr))` 因此总有一个宽度
+     * 放不下 —— 4 列在 552px、2 列在 264px（加外层 56px padding 就是 320px）。
+     *
+     * 下限里的百分比按 **grid 容器**宽度解析，不是按单条轨道的份额，所以
+     * `min(120px, 100%)` 不管用：容器 700px 时它仍是 120px，只有整个容器窄于
+     * 120px 才塌。份额要自己算，而且得把 gap 让出来 —— gap 不参与 `1fr` 的分配，
+     * N 条轨道之间有 N-1 个：漏掉它的话 6 列在 388px 容器里算出 6×64.7 + 5×24
+     * = 508px，后两列被放到容器外面。 */
+    --td-footer-gap: 1.5rem;
+
+    grid-template-columns: repeat(
+      var(--td-footer-cols, 4),
+      minmax(
+        min(
+          120px,
+          (100% - (var(--td-footer-cols, 4) - 1) * var(--td-footer-gap)) /
+            var(--td-footer-cols, 4)
+        ),
+        1fr
+      )
+    );
+    gap: 2rem var(--td-footer-gap);
+
+    /* 窄屏叠成一列。上面那条只保证不溢出，不保证可读 —— 265px 容器里塞 4 列
+       每列 60px，"Documentation" 会一个字母一行。 */
+    @media (width < 30rem) {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 
   .td-footer-column {
     padding-inline-start: 10px;
+
+    /* 长标签不撑破轨道。grid item 的 min-width 默认是 auto，等于"至少放得下
+       最长的不可断内容" —— 一条 "Documentation" 就能把列顶宽，冲出去顶着整页
+       横滚（列窄到 65px 时那个词仍占 101px）。
+       min-width: 0 解开这个下限，overflow-wrap 让词在必要时断开而不是溢出。 */
+    min-width: 0;
+    overflow-wrap: break-word;
   }
 
   /* 列标题。小号大写字距放开 —— 它是标签不是标题，不该有正文标题的重量。 */
