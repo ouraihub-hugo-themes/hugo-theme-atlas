@@ -22,7 +22,7 @@ const entryDir = "src/ts/entries";
 // 判据是体积：这三个 bundle 起来分别是 184 KB / 530 KB / 733 KB，而平铺的那
 // 几个都在 10 KB 以下。分割的收益是首屏只下入口（1 KB 上下），本体等到内容
 // 进视口。
-const splitEntries = ["mermaid.ts", "asciinema.ts"];
+const splitEntries = ["mermaid.ts", "asciinema.ts", "echarts.ts"];
 const entries = (await readdir(entryDir))
   .filter((f) => f.endsWith(".ts") && !splitEntries.includes(f))
   .map((f) => `${entryDir}/${f}`);

@@ -9,7 +9,7 @@
 {{- if .Store.Get "hasCodeRuntime" }}{{ $runtimes = $runtimes | append "code" }}{{ end -}}
 {{- if .Store.Get "hasTabs" }}{{ $runtimes = $runtimes | append "tabs" }}{{ end -}}
 {{- if .Store.Get "hasAssetList" }}{{ $runtimes = $runtimes | append "assets" }}{{ end -}}
-{{- /* 下面两个走 static/ 而不是 assets/dist/，因为它们开了代码分割：入口旁边
+{{- /* 下面三个走 static/ 而不是 assets/dist/，因为它们开了代码分割：入口旁边
        还有一堆 chunk，浏览器按入口里的相对路径直接取它们，不经过 Hugo 的资源
        管线。放 assets/ 的话那些 chunk 一个都不会进 public/ —— 页面上是 404，
        运行时加载到一半就断。
@@ -22,6 +22,9 @@
 {{- end -}}
 {{- if .Store.Get "hasCast" -}}
   <script src="{{ "js/asciinema/asciinema.js" | relURL }}" type="module"></script>
+{{- end -}}
+{{- if .Store.Get "hasChart" -}}
+  <script src="{{ "js/echarts/echarts.js" | relURL }}" type="module"></script>
 {{- end -}}
 {{- range $runtimes -}}
   {{- with resources.Get (printf "dist/%s.js" .) -}}

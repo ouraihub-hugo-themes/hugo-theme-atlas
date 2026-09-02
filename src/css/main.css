@@ -26,6 +26,7 @@
    （像 mermaid 的 JS 那样按 Store 标记走 static/）不值。 */
 @import "./vendor/asciinema-player.css";
 @import "./cast.css";
+@import "./chart.css";
 @import "./gallery.css";
 @import "./filetree.css";
 @import "./card.css";

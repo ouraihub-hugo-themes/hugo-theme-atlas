@@ -1,0 +1,52 @@
+/* 数据图表。画布由 echarts 自己管，这里管的是它周围的东西：占位、源码回落、
+ * 打印、深浅色。 */
+
+@utility td-chart {
+  display: block;
+  margin-block: 1.5rem;
+}
+
+/* 画布容器的高度写在行内 style 上（每张图不同），这里只给它一个边框和底色 ——
+ * 图没画出来时读者看到的是一个"这里本该有张图"的框，不是一段空白。 */
+.td-chart-out {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-code);
+  background: var(--color-surface);
+}
+
+/* 画好之后边框让位给图自己的留白。 */
+.td-chart[data-td-chart-ready] .td-chart-out {
+  border-color: transparent;
+  background: none;
+}
+
+/* 源码是 JSON 数据，画出来之后收起来 —— 但**只在画出来之后**。JS 没跑、chunk
+ * 没下下来、数据画不出图这三种情况下它是页面上唯一的内容，而图表的源码就是
+ * 数据本身，读者读得懂。 */
+.td-chart[data-td-chart-ready] .td-chart-source {
+  display: none;
+}
+
+/* 画失败时留一条警示边，读者知道下面那段 JSON 本该是一张图。 */
+.td-chart[data-td-chart-failed] .td-chart-source {
+  border-inline-start: 3px solid var(--color-status-danger);
+}
+
+figure.td-chart > figcaption {
+  margin-block-start: 0.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-ink-muted);
+}
+
+/* 打印：canvas 打得出来（浏览器把它当图片），但它是屏幕分辨率的位图，纸上会
+ * 发虚 —— 数据本身比一张模糊的图有用，两个都留。 */
+@media print {
+  .td-chart[data-td-chart-ready] .td-chart-source {
+    display: block;
+  }
+
+  .td-chart {
+    break-inside: avoid;
+  }
+}

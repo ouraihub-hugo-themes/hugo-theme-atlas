@@ -1,0 +1,1 @@
+import{Ta as t,o as n,v as o}from"./chunk-73M6WBNJ.js";function f(i,e,u){var r=i.get("borderRadius");if(r==null)return u?{cornerRadius:0}:null;o(r)||(r=[r,r,r,r]);var a=Math.abs(e.r||0-e.r0||0);return{cornerRadius:n(r,function(c){return t(c,a)})}}export{f as a};
