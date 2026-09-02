@@ -1,0 +1,114 @@
+{{- /* giscus 评论。默认关着，而且是「完整配置才开」。
+
+     giscus 用 GitHub Discussions 存评论，它的 iframe 要四个值才能定位到一个
+     discussion 分类，四个都是 GitHub 的内部 id，只能从 giscus.app 上拿：
+
+       [params.ui.comments]
+       repo = "owner/repo"
+       repo_id = "R_..."
+       category = "Announcements"
+       category_id = "DIC_..."
+
+     **缺一个就整个不渲染并报出缺哪些。** 契约要求联网特性在完整配置前不联网 ——
+     而且少一个值的 giscus 不是「功能弱一点」，是 iframe 里一句读者看不懂的
+     英文报错。四个都齐了才算作者真的做完了那一步。
+
+     `<script>` 从 giscus.app 加载。这是主题唯一一处第三方脚本入口，所以它由
+     一个显式配置的开关控制 —— 没配的站点一个字节都不下。不加 SRI：那个脚本
+     的内容由 giscus 随版本更新，钉住摘要会在他们发版时把评论区变成空白。
+
+     主题不带 giscus 的调色板。它的 `data-theme` 收一个内建主题名或一个 CSS
+     地址；默认给它 `preferred_color_scheme`，于是 iframe 跟随系统深浅色。站点
+     想让它跟主题的切换按钮走，就配一份自己的样式表地址 —— 那要求主题维护两份
+     与 giscus 内部类名耦合的 CSS（14 KB），而它们会随 giscus 改版失效。
+
+     单页关掉：`comments_off: true`。为什么不叫 `comments: false` —— 见下面
+     那段注释。 */ -}}
+{{- $cfg := site.Params.ui.comments | default dict -}}
+
+{{- /* 页面开关叫 `comments_off`，不叫 `comments` —— 不走 ui-param.html 那条
+       「站点在 ui 下、页面去掉 ui.」的常规：站点侧的 `comments` 是一个配置
+       map（四个 giscus id），如果页面侧共用这个名字，那么「页面没写」时读到的
+       就是站点那个 map，而 map 不是布尔值 —— 实测每一页都会报一条
+       "comments must be a boolean; got map[...]"。
+
+       所以这个键只在页面上存在，只有一个用途：关掉这一页。写 `true` 打不开
+       评论区,因为开评论要那四个 id,那些只能在站点配置里。 */ -}}
+{{- $off := false -}}
+{{- if isset .Params "comments_off" -}}
+  {{- $raw := index .Params "comments_off" -}}
+  {{- if eq (printf "%T" $raw) "bool" -}}
+    {{- $off = $raw -}}
+  {{- else -}}
+    {{- warnidf "comments-off-type" "%s: comments_off must be a boolean; got %v; keeping comments on" .Path $raw -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* 四个必需键。有任何一个才报缺失 —— 一个键都没配是「没开评论」，不是配错。 */ -}}
+{{- $keys := slice "repo" "repo_id" "category" "category_id" -}}
+{{- $missing := slice -}}
+{{- $any := false -}}
+{{- range $keys -}}
+  {{- $v := index $cfg . | default "" -}}
+  {{- if $v -}}{{ $any = true }}{{ else }}{{ $missing = $missing | append . }}{{ end -}}
+{{- end -}}
+
+{{- if and $any $missing -}}
+  {{- warnidf "comments-incomplete" "comments: params.ui.comments is missing %s; giscus stays off (all four are required and come from giscus.app)" (delimit $missing ", ") -}}
+{{- end -}}
+
+{{- if and $any (not $missing) (not $off) -}}
+  {{- /* `repo` 必须是 `owner/name`。写全 URL 是最常见的一种写法，而 giscus 收
+         的是那个短形式 —— 它拿去拼 API 请求，一个 URL 进去只会在 iframe 里报错。 */ -}}
+  {{- $repo := printf "%v" (index $cfg "repo") -}}
+  {{- $shape := findRE `^[\w.-]+/[\w.-]+$` $repo 1 -}}
+  {{- if not $shape -}}
+    {{- warnidf "comments-repo-shape" "comments: params.ui.comments.repo must be %q, got %q; giscus stays off" "owner/name" $repo -}}
+  {{- else -}}
+    {{- $mapping := index $cfg "mapping" | default "pathname" -}}
+    {{- $allowed := slice "pathname" "url" "title" "og:title" "specific" "number" -}}
+    {{- if not (in $allowed $mapping) -}}
+      {{- warnidf "comments-mapping" "comments: unsupported params.ui.comments.mapping %q (allowed: %s); using pathname" $mapping (delimit $allowed ", ") -}}
+      {{- $mapping = "pathname" -}}
+    {{- end -}}
+
+    {{- /* 反应按钮与输入框位置。两个都是布尔/枚举的小选项，错值回退而不是关掉
+           整个评论区 —— 那个惩罚与错误不相称。 */ -}}
+    {{- $reactions := "1" -}}
+    {{- if eq (index $cfg "reactions") false -}}{{ $reactions = "0" }}{{ end -}}
+    {{- $position := index $cfg "input_position" | default "top" -}}
+    {{- if not (in (slice "top" "bottom") $position) -}}
+      {{- warnidf "comments-position" "comments: unsupported params.ui.comments.input_position %q (allowed: top, bottom); using top" $position -}}
+      {{- $position = "top" -}}
+    {{- end -}}
+
+    <section class="td-comments" id="td-comments" data-pagefind-ignore
+             aria-label="{{ i18n "comments_label" }}">
+      <h2 class="td-comments-title">{{ i18n "comments_label" }}</h2>
+      {{- /* giscus 自己往这个 script 标签所在的位置插 iframe。`async` 而不是
+             `defer`：它不参与 DOM 就绪的顺序，插入点由脚本自己记住。 */ -}}
+      <script src="https://giscus.app/client.js"
+              data-repo="{{ $repo }}"
+              data-repo-id="{{ index $cfg "repo_id" }}"
+              data-category="{{ index $cfg "category" }}"
+              data-category-id="{{ index $cfg "category_id" }}"
+              data-mapping="{{ $mapping }}"
+              {{ with index $cfg "term" }}data-term="{{ . }}"{{ end }}
+              data-reactions-enabled="{{ $reactions }}"
+              data-emit-metadata="0"
+              data-input-position="{{ $position }}"
+              data-theme="{{ index $cfg "theme" | default "preferred_color_scheme" }}"
+              data-lang="{{ index $cfg "lang" | default site.Language.Lang }}"
+              data-loading="lazy"
+              crossorigin="anonymous"
+              async></script>
+      {{- /* 无 JS 时 iframe 不会出现。直接给 discussions 的地址 —— 评论确实
+             在那儿，读者去那边看得到也写得了。 */ -}}
+      <noscript>
+        <p class="td-comments-noscript">
+          <a href="https://github.com/{{ $repo }}/discussions">{{ i18n "comments_noscript" }}</a>
+        </p>
+      </noscript>
+    </section>
+  {{- end -}}
+{{- end -}}

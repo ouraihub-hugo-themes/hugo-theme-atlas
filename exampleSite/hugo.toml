@@ -27,6 +27,13 @@ product_version = "0.1.0"
 [params.ui]
 share = ["x", "bluesky", "linkedin", "hackernews", "email", "copy"]
 
+# 页面反馈。开着的含义是「统计那一半我接好了」—— 一次点击派发 `td:feedback`
+# 事件，站点自己的统计脚本接。主题不装统计，所以它不替站点决定数据去哪儿。
+#
+# 这个示例站没有统计脚本，开着是为了让这一对按钮有验证覆盖：没人接事件时它
+# 仍然完整可用（按下、记住、改答案、去开 issue），只是没有数据出站。
+feedback = true
+
 [params.ui.plantuml]
 server = "https://www.plantuml.com/plantuml"
 format = "svg"

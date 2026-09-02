@@ -138,3 +138,19 @@ share_ai_prompt: "Read {{ .URL }}"
 
 # 编辑本页。开在 params.ui.repo.url 上。
 edit_page: Edit this page
+
+# 页面反馈。问句同时是按钮组的 aria-label，所以要是完整一句话。
+feedback_question: Was this page helpful?
+feedback_yes: "Yes"
+feedback_no: "No"
+feedback_thanks: Thanks for the feedback.
+feedback_change: Change my answer
+# 答「没帮助」之后露出的 issue 入口。标题与正文都预填好 —— 读者只需要写
+# 「哪里不对」，不必再复述自己在哪一页。
+feedback_issue: Tell us what was missing
+feedback_issue_title: "Docs feedback: {{ .Title }}"
+feedback_issue_body: "Page: {{ .URL }}\n\nWhat was missing or wrong?\n"
+
+# giscus 评论。开在 params.ui.comments 的四个必需键上。
+comments_label: Comments
+comments_noscript: View this page's discussion on GitHub

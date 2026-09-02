@@ -1,0 +1,113 @@
+/* 页面反馈。由 layouts/_partials/shell/feedback.html 渲染。
+
+   两个按钮 + 一块答完之后出现的结果区。按下的那个用 `aria-pressed` 标记，
+   样式挂在那个属性上而不是一个 `.is-active` 类 —— 状态只有一处，读屏与视觉
+   读的是同一个值。 */
+
+@layer components {
+  .td-feedback {
+    margin-block-start: 2.5rem;
+  }
+
+  .td-feedback-question {
+    margin: 0 0 0.75rem;
+    color: var(--color-ink-muted);
+    font-family: var(--font-meta);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .td-feedback-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  /* 与分享条、资产表同一款小按钮。 */
+  .td-feedback-choice {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: 0.3rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--color-ink-muted);
+    font-family: var(--font-meta);
+    font-size: 0.82rem;
+    cursor: pointer;
+
+    &:is(:hover, :focus-visible) {
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+    }
+
+    /* 答过之后两个都禁掉。禁用的那个不该看起来还能点，但也不能糊到看不出
+       自己选了哪个 —— 所以降的是不透明度，选中态由下面那条盖回来。 */
+    &:disabled {
+      cursor: default;
+      opacity: 0.55;
+
+      &:is(:hover, :focus-visible) {
+        border-color: var(--color-border);
+        color: var(--color-ink-muted);
+      }
+    }
+
+    &[aria-pressed="true"] {
+      border-color: var(--color-accent);
+      background: color-mix(in srgb, var(--color-accent) 10%, transparent);
+      color: var(--color-accent);
+      opacity: 1;
+    }
+  }
+
+  .td-feedback-result {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: baseline;
+    margin-block-start: 0.75rem;
+  }
+
+  .td-feedback-thanks {
+    margin: 0;
+    color: var(--color-ink-muted);
+    font-size: 0.875rem;
+  }
+
+  .td-feedback-issue,
+  .td-feedback-change {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--color-ink-muted);
+    font-family: var(--font-meta);
+    font-size: 0.82rem;
+    text-decoration: underline;
+    cursor: pointer;
+
+    &:is(:hover, :focus-visible) {
+      color: var(--color-accent);
+    }
+  }
+
+  /* 纸上没有反馈。 */
+  @media print {
+    .td-feedback {
+      display: none;
+    }
+  }
+
+  @media (forced-colors: active) {
+    /* 选中态靠背景色区分，而强制色彩模式会丢掉它。用实心边框顶上。 */
+    .td-feedback-choice[aria-pressed="true"] {
+      border-width: 2px;
+    }
+  }
+}

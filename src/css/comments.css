@@ -1,0 +1,47 @@
+/* giscus 评论区。由 layouts/_partials/shell/comments.html 渲染。
+
+   iframe 里的样式归 giscus 自己（见那个 partial 里关于 data-theme 的注释），
+   这里只管它外面那个容器：分隔线、标题、以及 iframe 的宽度约束。
+
+   **不给 iframe 定高。** giscus 会随内容 postMessage 一个高度上来并自己调整；
+   在这里写 min-height 只会在评论少的时候留一片空白，而写 max-height 会把
+   输入框裁掉。 */
+
+@layer components {
+  .td-comments {
+    margin-block-start: 3rem;
+    padding-block-start: 1.5rem;
+    border-block-start: 1px solid var(--color-border);
+  }
+
+  .td-comments-title {
+    margin: 0 0 1rem;
+    color: var(--color-ink-muted);
+    font-family: var(--font-meta);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  /* giscus 插进来的 iframe 没有类名可挂，按标签选。`max-width: 100%` 是必需的
+     —— 它自带 `width: 100%` 但在窄容器里仍会被内容顶宽。 */
+  .td-comments iframe {
+    max-width: 100%;
+    border: 0;
+    color-scheme: normal;
+  }
+
+  .td-comments-noscript {
+    margin: 0;
+    color: var(--color-ink-muted);
+    font-size: 0.875rem;
+  }
+
+  /* 纸上没有评论。iframe 在打印时通常是一片空白或只有第一屏 —— 那比没有更糟。 */
+  @media print {
+    .td-comments {
+      display: none;
+    }
+  }
+}

@@ -1,0 +1,95 @@
+{{- /* 「这一页有帮助吗」。默认关着。
+
+     **主题不带统计，所以它也不替站点决定数据去哪儿。** 一次点击派发一个
+     `td:feedback` DOM 事件，`detail` 是 `{result, page, language}`；站点自己
+     那套统计接住它：
+
+       document.addEventListener('td:feedback', (e) => {
+         gtag('event', 'docs_feedback', e.detail);   // 或 plausible / umami
+       });
+
+     写成事件而不是直接调 `gtag`，因为那样等于主题选定了一家统计服务 —— 而它
+     本来一个统计脚本都不装。事件对三家都一样。
+
+     所以 `feedback = true` 的含义是「另一半我接好了」。检测不到有没有监听者，
+     只能靠这个显式开关；默认开着的话，一个没接统计的站点会得到一对把点击存进
+     localStorage 然后什么也不做的按钮 —— 那比没有按钮更糟，因为读者以为说出去了。
+
+     答「没帮助」时露出一条去开 issue 的链接（要配了 `params.ui.repo.url`）。
+     这条是唯一一个不需要统计也成立的出口：不装统计的站点开了这个开关，读者的
+     「没帮助」仍然到得了人手上。
+
+     不做那四个原因按钮。它们把「没帮助」细分成四种，而四种都只能进同一个
+     没人接的事件；真正有具体意见的读者点那条 issue 链接自己写，比在四个预设
+     里挑一个准。
+
+     配置：
+       [params.ui]
+       feedback = true
+
+     页面上 `feedback: false` 关掉这一页。 */ -}}
+{{- $want := partial "ui-param.html" (dict "page" . "key" "feedback") -}}
+{{- $type := printf "%T" $want -}}
+{{- $on := eq $want true -}}
+{{- if and (ne $type "<nil>") (ne $type "bool") -}}
+  {{- warnidf "feedback-type" "%s: feedback must be a boolean; got %v; leaving it off" .Path $want -}}
+  {{- $on = false -}}
+{{- end -}}
+
+{{- if $on -}}
+  {{- /* issue 链接。仓库地址与 edit-page 同一处配置，但这里不复用那个 partial
+         —— 它输出的是一个「编辑本页」的链接，而这里要的是一个 issue 地址。
+         共用的只有 `params.ui.repo.url` 这个键。 */ -}}
+  {{- $issues := "" -}}
+  {{- with (site.Params.ui.repo | default dict).url -}}
+    {{- $policy := partial "content/url.html" (dict
+      "value" . "kind" "link" "parameter" "params.ui.repo.url"
+      "position" "params.ui.repo" "name" "feedback"
+    ) -}}
+    {{- if and $policy.valid $policy.external -}}
+      {{- /* 标题里带页面标题，正文带地址：读者点过来时这两样已经填好，他只需要
+             写「哪里不对」。`urlquery` 的 `+` 换成 `%20` —— GitHub 的 title
+             参数里 `+` 会原样显示成加号。 */ -}}
+      {{- $title := replace (urlquery (i18n "feedback_issue_title" (dict "Title" $.Title))) "+" "%20" -}}
+      {{- $body := replace (urlquery (i18n "feedback_issue_body" (dict "URL" $.Permalink))) "+" "%20" -}}
+      {{- $issues = printf "%s/issues/new?title=%s&body=%s"
+        (strings.TrimSuffix "/" $policy.raw) $title $body -}}
+    {{- end -}}
+  {{- end -}}
+
+  <section class="td-feedback" data-td-feedback
+           data-td-feedback-key="{{ .RelPermalink }}"
+           data-td-feedback-lang="{{ site.Language.Lang }}" data-pagefind-ignore>
+    <h2 class="td-feedback-question">{{ i18n "feedback_question" }}</h2>
+
+    {{- /* `role="group"` 而不是两个裸按钮：读屏软件会把问题当成这一组的名字念
+           出来，否则听到的是两个孤立的"有帮助"/"没帮助"。 */ -}}
+    <div class="td-feedback-choices" role="group" aria-label="{{ i18n "feedback_question" }}">
+      {{- range slice
+        (dict "value" "helpful" "icon" "thumbs-up" "label" "feedback_yes")
+        (dict "value" "not_helpful" "icon" "thumbs-down" "label" "feedback_no")
+      }}
+      <button type="button" class="td-feedback-choice"
+              data-td-feedback-choice="{{ .value }}" aria-pressed="false">
+        {{ partial "content/icon.html" (dict "name" .icon "page" $) }}
+        <span>{{ i18n .label }}</span>
+      </button>
+      {{- end }}
+    </div>
+
+    {{- /* 答完之后这一块出现。`hidden` 在 HTML 里 —— 没有 JS 时按钮点不动，
+           这块也就不该占位置。 */ -}}
+    <div class="td-feedback-result" data-td-feedback-result hidden>
+      <p class="td-feedback-thanks" role="status" aria-live="polite">{{ i18n "feedback_thanks" }}</p>
+      {{- with $issues }}
+      {{- /* 只在答「没帮助」之后露出来。答「有帮助」的读者不需要一个报 bug 的
+             入口，那会读成"你确定吗"。 */ -}}
+      <a class="td-feedback-issue" href="{{ . }}" target="_blank" rel="noopener noreferrer"
+         data-td-feedback-issue hidden>{{ i18n "feedback_issue" }}</a>
+      {{- end }}
+      <button type="button" class="td-feedback-change" data-td-feedback-change>
+        {{ i18n "feedback_change" }}
+      </button>
+    </div>
+  </section>
+{{- end -}}

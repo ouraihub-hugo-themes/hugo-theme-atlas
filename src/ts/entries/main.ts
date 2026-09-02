@@ -2,6 +2,7 @@
 // 那部分在 entries/theme.ts。
 
 import { init as initDrawer } from "../drawer.js";
+import { init as initFeedback } from "../feedback.js";
 import { init as initNavbar } from "../navbar.js";
 import { init as initScrollRegion } from "../scroll-region.js";
 import { init as initScrollSpy } from "../scroll-spy.js";
@@ -21,3 +22,4 @@ initSearch();
 // 分享条只有「复制链接」要 JS，十几行 —— 与搜索同理，自己一个入口换来的是
 // 多一次请求。
 initShare();
+initFeedback();

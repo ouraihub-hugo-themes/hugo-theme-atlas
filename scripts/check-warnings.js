@@ -65,6 +65,15 @@ try {
       "[params.ui.plantuml]",
       'server = "/not-a-server"',
       'format = "gif"',
+      // giscus 也只能在这里配坏。这份配置缺两个键、repo 写成了完整 URL、
+      // mapping 是个不存在的值 —— 三条各自 warn，评论区整个不渲染。
+      //
+      // "配了一半"是这里唯一值得测的形状：四个键一个都不配是"没开评论",
+      // 而少一个的 giscus 会在 iframe 里给读者一句英文报错。
+      "[params.ui.comments]",
+      'repo = "https://github.com/owner/repo"',
+      'repo_id = "R_placeholder"',
+      'mapping = "slug"',
       "",
     ].join("\n"),
   );
