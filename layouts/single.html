@@ -13,7 +13,13 @@
   <div class="td-shell-article-header{{ if eq $mode "wash" }} td-shell-article-header--wash{{ end }}">
     {{ if eq $mode "wash" }}{{ partial "shell/featured-image.html" $featured }}{{ end }}
     <h1>{{ .Title }}</h1>
-    {{ with .Description }}<div class="lead">{{ . | markdownify }}</div>{{ end }}
+    {{- /* `data-pagefind-weight="1.414"` 是 description 那一档的权重。pagefind
+           的元素权重是二次标度，1.414 约等于两倍影响 —— 契约里 description 记
+           的是 2，这里开一次平方。
+
+           不走 `metaWeights`：那要先把 description 捕获成 meta 字段，而它已经
+           在正文里（就是这个 `.lead`），捕获一次等于同一段文字进索引两次。 */ -}}
+    {{ with .Description }}<div class="lead" data-pagefind-weight="1.414">{{ . | markdownify }}</div>{{ end }}
   </div>
 
   {{ .Content }}

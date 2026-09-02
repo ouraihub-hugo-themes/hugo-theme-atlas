@@ -8,13 +8,19 @@
   <div class="td-shell-article-header{{ if eq $mode "wash" }} td-shell-article-header--wash{{ end }}">
     {{ if eq $mode "wash" }}{{ partial "shell/featured-image.html" $featured }}{{ end }}
     <h1>{{ .Title }}</h1>
-    {{ with .Description }}<div class="lead">{{ . | markdownify }}</div>{{ end }}
+    {{- /* 权重同 single.html：description 那一档记 2，二次标度下开平方是 1.414。 */ -}}
+    {{ with .Description }}<div class="lead" data-pagefind-weight="1.414">{{ . | markdownify }}</div>{{ end }}
   </div>
 
   {{ .Content }}
 </div>
 
-<ul class="mt-8 space-y-3">
+{{- /* `data-pagefind-ignore`：这个列表里是**子页面**的标题与描述，而每个子页面
+       自己已经进了索引。不排除的话搜一个词会同时命中那一页和它的父列表页，
+       而列表页除了链接没有别的内容 —— 读者点进去还要再点一次。
+
+       与面包屑、翻页同一条判断：正文里引用别的页面的文字不属于本页。 */ -}}
+<ul class="mt-8 space-y-3" data-pagefind-ignore>
   {{- range .Pages -}}
     <li class="rounded-lg border border-border bg-elev p-4 transition-colors hover:border-accent/40">
       <a href="{{ .RelPermalink }}" class="font-medium">{{ .LinkTitle }}</a>

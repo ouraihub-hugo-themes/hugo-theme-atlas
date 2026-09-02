@@ -17,6 +17,9 @@
        外壳布局是一个 grid + 修饰类：侧栏与 TOC 的有无都是同一个 grid 的
        变体，不是几套布局。修饰类的取值在这里算，几何在 shell.css 里。 */ -}}
 {{- $shell := partial "shell/resolve.html" . -}}
+{{- /* 搜索标记算一次给两支用：`search_exclude` 与 `search_boost` 的解析与
+       校验在那里，这里只把属性串贴上去。 */ -}}
+{{- $search := partial "search/resolve.html" . -}}
 <!DOCTYPE html>
 <html{{ partial "document-attrs.html" . }}>
 <head>
@@ -63,15 +66,15 @@
       <div class="td-shell-backdrop" data-td-shell-drawer-close></div>
     {{- end }}
 
-    {{- /* `data-pagefind-body` 标在 main 上而不是各页面模板的正文容器上：
-           模板没有统一的包裹层（single 是 article.td-prose，list 多一个页面
-           列表，home 是裸标题，landing 是一串 section），逐个标就是四处，
-           而以后每加一个页面模板都要记得标 —— 漏一处的表现是那一类页面整体
-           搜不到，构建全绿。标在这里则新模板自动进索引。
+    {{- /* 索引标记标在 main 上而不是各页面模板的正文容器上：模板没有统一的
+           包裹层（single 是 article.td-prose，list 多一个页面列表，home 是裸
+           标题，landing 是一串 section），逐个标就是四处，而以后每加一个页面
+           模板都要记得标 —— 漏一处的表现是那一类页面整体搜不到，构建全绿。
+           标在这里则新模板自动进索引。
 
            代价是 main 里的面包屑与翻页也会进索引，所以那两个 nav 各自带
            `data-pagefind-ignore` —— 排除规则跟着导航走，不在这里列清单。 */ -}}
-    <main id="td-main" class="td-shell-main" tabindex="-1" data-pagefind-body
+    <main id="td-main" class="td-shell-main" tabindex="-1"{{ $search.attrs }}
           {{ if $hasSidebar }}data-td-shell-drawer-inert{{ end }}>
       {{ partial "shell/breadcrumb.html" . }}
       {{ block "main" . }}{{ end }}
@@ -99,7 +102,7 @@
 
   {{- /* 这一支同样要标。landing 与独立单页漏了的话表现是首页搜不到 ——
          而首页往往是站点里最该被搜到的那一页。 */ -}}
-  <main id="td-main" tabindex="-1" data-pagefind-body
+  <main id="td-main" tabindex="-1"{{ $search.attrs }}
         class="{{ if $landing }}td-landing{{ else }}mx-auto max-w-4xl px-4 py-16{{ end }}">
     {{ block "main" . }}{{ end }}
   </main>
