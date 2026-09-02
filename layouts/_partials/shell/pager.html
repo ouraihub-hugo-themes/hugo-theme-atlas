@@ -7,7 +7,9 @@
 {{- $prev := .NextInSection -}}
 {{- $next := .PrevInSection -}}
 {{- if or $prev $next -}}
-  <nav class="td-pager" aria-label="{{ i18n "pager_nav" }}">
+  {{- /* 同面包屑：翻页链接带的是**邻页**的标题，进了本页索引就是搜到 A 却
+         因为 B 的标题命中。 */ -}}
+  <nav class="td-pager" aria-label="{{ i18n "pager_nav" }}" data-pagefind-ignore>
     {{- with $prev }}
       {{- /* title 属性留完整标题：可见文本会被截断，但无障碍名与悬停提示不该被截。 */}}
       <a class="td-pager-link td-pager-link--prev" href="{{ .RelPermalink }}"

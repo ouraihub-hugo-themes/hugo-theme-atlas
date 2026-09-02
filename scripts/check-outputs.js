@@ -16,6 +16,14 @@ import { tmpdir } from "node:os";
 
 const THEME = process.cwd();
 
+// 六类页面各一份，用来证明 `data-pagefind-body` 覆盖到每一类。
+//
+// 漏标一类的表现是**那一类页面整体搜不到**，而构建全绿、页面看起来正常 ——
+// 只有去建索引才发现少了一批。四个壳共用一份 baseof，所以正常情况下它们一起
+// 中标或一起漏标；但 `shell_types` 之外的 type 走另一支，landing 与首页也在
+// 那一支，那才是真正会漏的地方。
+const SHELLS = ["docs", "book", "blog", "swagger"];
+
 // 一页两张表：第一张带被策略丢弃的属性与 caption，第二张是 matrix。
 const PAGE = `---
 title: outputs
@@ -39,6 +47,31 @@ const failures = [];
 try {
   mkdirSync(join(site, "content", "feed"), { recursive: true });
   writeFileSync(join(site, "content", "feed", "tables.md"), PAGE);
+
+  // 四个壳各一页 + 一个 landing + 一个普通单页。首页由 hugo.toml 的站点标题生成，
+  // 不用写内容文件。
+  for (const shell of SHELLS) {
+    mkdirSync(join(site, "content", shell), { recursive: true });
+    // 每个壳给两页：翻页要有上下篇才渲染，只写一页的话 `td-pager` 根本不在输出里，
+    // 下面那条排除断言就永远绿 —— 摘掉 `data-pagefind-ignore` 也不报。
+    for (const n of [1, 2]) {
+      // 第一页带一个提示框与一个代码块：两者各自要图标（callout 的类型图标、
+      // 代码块的复制按钮），下面那条 sprite 断言才不是空跑。
+      const body =
+        n === 1
+          ? "> [!NOTE]\n> a callout brings its own icon.\n\n```sh\necho hi\n```\n"
+          : `body ${n} of the ${shell} shell.\n`;
+      writeFileSync(
+        join(site, "content", shell, `page${n}.md`),
+        `---\ntitle: ${shell} page ${n}\nweight: ${n}\n---\n\n${body}`,
+      );
+    }
+  }
+  writeFileSync(
+    join(site, "content", "start.md"),
+    "---\ntitle: landing\nlayout: landing\nsections:\n  - type: cta\n    title: go\n---\n",
+  );
+  writeFileSync(join(site, "content", "plain.md"), "---\ntitle: plain\n---\n\nno shell here.\n");
   writeFileSync(
     join(site, "hugo.toml"),
     [
@@ -87,6 +120,66 @@ try {
   const html = readFileSync(join(site, "public", "feed", "tables", "index.html"), "utf8");
   if (!html.includes("td-table-scroll")) failures.push("HTML lost the table scroll wrapper");
   if (html.includes("onclick") || html.includes('style="color:red"')) failures.push("HTML carries a dropped attribute");
+
+  // 每一类页面都必须带 `data-pagefind-body`。
+  const classes = [
+    ...SHELLS.map((s) => [`${s} shell`, join(s, "page1", "index.html")]),
+    ["landing", join("start", "index.html")],
+    ["plain single page", join("plain", "index.html")],
+    ["home", "index.html"],
+  ];
+  for (const [label, path] of classes) {
+    const page = readFileSync(join(site, "public", path), "utf8");
+    if (!page.includes("data-pagefind-body")) {
+      failures.push(`${label} lacks data-pagefind-body; that whole page class drops out of the index`);
+    }
+  }
+
+  // 图标：每个 `<use href="#td-i-X">` 在同一份 HTML 里都要有对应的 symbol。
+  //
+  // 这条门禁的由来是一次跨文档 `<use href="/dist/icons.svg#id">`：那种写法只有
+  // Firefox 实现过，Chrome 与 Safari 都不解析，SVG 2 已把它从规范里删掉。全站
+  // 42 个图标一个都没画出来，而**所有可断言的指标都是绿的** —— sprite 请求 200、
+  // symbol 与 viewBox 都在、外层 svg 有 16×16 的盒子、fill 计算值正确、无失败
+  // 请求。唯一露馅的是浏览器里 `<use>` 自己的 `getBBox()` 为 0，而那要开浏览器
+  // 才看得到。这里用静态的等价判据：引用与定义必须在同一份文档里配平。
+  for (const path of [join("docs", "page1", "index.html")]) {
+    const page = readFileSync(join(site, "public", path), "utf8");
+    const refs = new Set([...page.matchAll(/href="#(td-i-[a-z0-9-]+)"/g)].map((m) => m[1]));
+    const defs = new Set([...page.matchAll(/<symbol id="(td-i-[a-z0-9-]+)"/g)].map((m) => m[1]));
+    // 一个都没有说明 fixture 不再覆盖图标，下面两个循环就是空跑。
+    if (refs.size === 0) {
+      failures.push(`${path}: no icons rendered; the sprite assertions below are vacuous`);
+    }
+    for (const ref of refs) {
+      if (!defs.has(ref)) failures.push(`${path}: <use href="#${ref}"> has no matching symbol in the same document`);
+    }
+    for (const def of defs) {
+      if (!refs.has(def)) failures.push(`${path}: symbol #${def} is inlined but never referenced`);
+    }
+    // 跨文档引用是那次回归的形状，直接禁掉。
+    if (/href="[^"]*icons\.svg#/.test(page)) {
+      failures.push(`${path}: cross-document <use href="...icons.svg#id">; Chrome and Safari do not resolve it`);
+    }
+  }
+
+  // 面包屑与翻页要被排除。它们带的是**别的页面**的标题，进了索引就是搜到 A 却
+  // 因为 B 的标题命中。docs 那页有上下篇也有祖先链，两个 nav 都在。
+  const nested = readFileSync(join(site, "public", "docs", "page1", "index.html"), "utf8");
+  for (const [label, cls] of [
+    ["breadcrumb", "td-breadcrumb"],
+    ["pager", "td-pager"],
+  ]) {
+    const tag = new RegExp(`<nav[^>]*class="${cls}"[^>]*>`).exec(nested);
+    // 找不到就报，不是静默通过：这两个 nav 在这份 fixture 上**必须**渲染
+    // （祖先链有 docs、同 section 有第二页）。缺了说明 fixture 不再覆盖这条
+    // 排除规则，而那时摘掉 `data-pagefind-ignore` 也不会有人发现。
+    if (!tag) {
+      failures.push(`${label} nav did not render in the fixture; the exclusion assertion below is vacuous`);
+    } else if (!tag[0].includes("data-pagefind-ignore")) {
+      failures.push(`${label} nav is inside the indexed body without data-pagefind-ignore`);
+    }
+  }
 } finally {
   rmSync(site, { recursive: true, force: true });
 }
@@ -104,3 +197,5 @@ if (failures.length > 0) {
 }
 
 console.log("ok  RSS table output keeps semantics and drops theme-only markup");
+console.log("ok  every page class carries data-pagefind-body; navigation is excluded");
+console.log("ok  icon <use> references resolve in-document and inline exactly what the page uses");

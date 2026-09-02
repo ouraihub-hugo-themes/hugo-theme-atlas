@@ -63,7 +63,15 @@
       <div class="td-shell-backdrop" data-td-shell-drawer-close></div>
     {{- end }}
 
-    <main id="td-main" class="td-shell-main" tabindex="-1"
+    {{- /* `data-pagefind-body` 标在 main 上而不是各页面模板的正文容器上：
+           模板没有统一的包裹层（single 是 article.td-prose，list 多一个页面
+           列表，home 是裸标题，landing 是一串 section），逐个标就是四处，
+           而以后每加一个页面模板都要记得标 —— 漏一处的表现是那一类页面整体
+           搜不到，构建全绿。标在这里则新模板自动进索引。
+
+           代价是 main 里的面包屑与翻页也会进索引，所以那两个 nav 各自带
+           `data-pagefind-ignore` —— 排除规则跟着导航走，不在这里列清单。 */ -}}
+    <main id="td-main" class="td-shell-main" tabindex="-1" data-pagefind-body
           {{ if $hasSidebar }}data-td-shell-drawer-inert{{ end }}>
       {{ partial "shell/breadcrumb.html" . }}
       {{ block "main" . }}{{ end }}
@@ -89,7 +97,9 @@
   {{ partial "skip-link.html" . }}
   {{ partial "shell/navbar.html" . }}
 
-  <main id="td-main" tabindex="-1"
+  {{- /* 这一支同样要标。landing 与独立单页漏了的话表现是首页搜不到 ——
+         而首页往往是站点里最该被搜到的那一页。 */ -}}
+  <main id="td-main" tabindex="-1" data-pagefind-body
         class="{{ if $landing }}td-landing{{ else }}mx-auto max-w-4xl px-4 py-16{{ end }}">
     {{ block "main" . }}{{ end }}
   </main>

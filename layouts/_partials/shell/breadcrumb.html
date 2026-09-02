@@ -6,7 +6,10 @@
   {{- $trail = $trail | append . -}}
 {{- end -}}
 {{- if gt (len $trail) 1 -}}
-  <nav class="td-breadcrumb" aria-label="{{ i18n "breadcrumb_nav" }}">
+  {{- /* `data-pagefind-ignore`：面包屑在 `data-pagefind-body` 的 main 里面，
+         不排除的话每一页的索引都带上它祖先链的标题 —— 搜「安装」会命中
+         `/docs/安装/` 下面的每一页，因为它们的面包屑里都有这个词。 */ -}}
+  <nav class="td-breadcrumb" aria-label="{{ i18n "breadcrumb_nav" }}" data-pagefind-ignore>
     <ol class="td-breadcrumb-list">
       {{- range $trail }}
         <li class="td-breadcrumb-item">
