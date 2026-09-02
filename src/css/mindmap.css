@@ -1,0 +1,84 @@
+/* 思维导图。
+ *
+ * **markmap 自带的那份样式要注入（embedGlobalCSS 默认为真）。** 它不只是配色：
+ * 节点宽度是量出来的 —— `.markmap-foreign{display:inline-block}` 配上
+ * `.markmap-foreign>div{width:var(--markmap-max-width)}`（9999px）让节点里的
+ * `<div>` 先撑到极宽、文字自然不折行，再由内层的 inline-block 收回到文字的实际
+ * 宽度。少了这几条，foreignObject 里的 block 元素塌到最窄，每个节点被量成一个字
+ * 宽（十几像素）、几百像素高 —— 文字竖排，fit() 据此算出 scale(0.16)，图是画出来
+ * 了，但缩到看不清。
+ *
+ * 因此这里不重抄它的样式，只在它上面盖主题的东西：配色与字体走它自己的 CSS 变量
+ * 契约（--markmap-*），那是它为此开的口子。 */
+
+@utility td-mindmap {
+  display: block;
+  margin-block: 1.5rem;
+}
+
+/* SVG 的高度由行内 style 给（每张图不同），宽度撑满。 */
+.td-mindmap-out {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-code);
+  background: var(--color-surface);
+}
+
+/* 画好之前不占位：列表就在下面，读者读的是它。空的 SVG 框在列表上方是一块
+   莫名的空白。 */
+.td-mindmap:not([data-td-mindmap-rendered]) .td-mindmap-out {
+  display: none;
+}
+
+/* 配色与字体：改 markmap 自己的变量，不覆盖它的规则。这些变量定在 `.markmap`
+   上，跟着深浅色主题走 —— 主题一切，图上的字与代码底色跟着变，不用重画。 */
+.td-mindmap-out.markmap {
+  --markmap-font: 400 0.875rem/1.5 var(--font-sans);
+  --markmap-text-color: var(--color-ink);
+  --markmap-a-color: var(--color-accent);
+  --markmap-a-hover-color: var(--color-accent-hover);
+  --markmap-code-bg: var(--color-surface-raised);
+  --markmap-code-color: var(--color-code);
+  --markmap-circle-open-bg: var(--color-surface);
+  --markmap-table-border: 1px solid var(--color-border);
+}
+
+/* 行内代码的字体它没开变量，只好按选择器来。 */
+.td-mindmap-out .markmap-foreign code {
+  font-family: var(--font-mono);
+}
+
+/* 列表是无 JS 时的内容，也是画不出来时的内容。画好之后收起来。 */
+.td-mindmap[data-td-mindmap-rendered] .td-mindmap-source {
+  display: none;
+}
+
+/* 画失败时留一条警示边，读者知道这个列表本该是一张图。 */
+.td-mindmap[data-td-mindmap-failed] .td-mindmap-source {
+  border-inline-start: 3px solid var(--color-status-danger);
+  padding-inline-start: 1rem;
+}
+
+figure.td-mindmap > figcaption {
+  margin-block-start: 0.5rem;
+  text-align: center;
+  font-size: 0.875rem;
+  color: var(--color-ink-muted);
+}
+
+/* 打印：导图是可缩放可折叠的，纸上这两件事都做不到 —— 一张缩到看不清字的图不如
+   一个完整展开的列表。图隐藏，列表出来。 */
+@media print {
+  .td-mindmap-out {
+    display: none;
+  }
+
+  .td-mindmap[data-td-mindmap-rendered] .td-mindmap-source {
+    display: block;
+  }
+
+  .td-mindmap {
+    break-inside: avoid;
+  }
+}

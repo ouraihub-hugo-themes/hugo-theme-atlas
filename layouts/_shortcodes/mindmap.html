@@ -1,0 +1,70 @@
+{{- /* 思维导图。body 是一个 Markdown 嵌套列表，浏览器把它画成导图。
+
+     参数：caption、num、id、height、expand
+
+     **body 是列表而不是导图专用语法。** 思维导图的信息全在层级里，而嵌套列表把
+     层级表达得一样清楚 —— 作者不用学第二套语法，JS 没跑时页面上留下的也是一份
+     读得通的内容，而不是一段等着被渲染的源码。
+
+     列表由 Hugo 渲染成 `<ul><li>`，运行时从 DOM 走一遍得到导图的节点树。因此
+     浏览器端只要 markmap 的绘图部分（77 KB），不要它那个 Markdown 解析器
+     （656 KB）—— 解析这件事 Hugo 和浏览器各自都已经做过了。 */ -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "allowed" (slice
+  "caption" "num" "id" "height" "expand")) -}}
+{{- $head := partial "book/target-head.html" (dict "shortcode" . "kind" "fig" "optional" true) -}}
+{{- $at := .Position -}}
+{{- $params := dict -}}
+{{- if .IsNamedParams }}{{ $params = .Params }}{{ end -}}
+{{- $inner := strings.TrimSpace (printf "%s" .InnerDeindent) -}}
+
+{{- $height := 400 -}}
+{{- with index $params "height" -}}
+  {{- $value := strings.TrimSpace (printf "%v" .) -}}
+  {{- /* 高度必须在这里定：SVG 没有固有尺寸，容器高度为 0 时整张图不可见。 */ -}}
+  {{- if findRE `^[1-9][0-9]{1,3}$` $value -}}
+    {{- $height = int $value -}}
+  {{- else -}}
+    {{- warnf "shortcode %q: height must be an integer between 10 and 9999 at %s; using %d" $.Name $at $height -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $expand := "" -}}
+{{- with index $params "expand" -}}
+  {{- $value := strings.TrimSpace (printf "%v" .) -}}
+  {{- if findRE `^[1-9][0-9]?$` $value -}}
+    {{- $expand = $value -}}
+  {{- else -}}
+    {{- warnf "shortcode %q: expand must be a positive integer at %s; expanding every level" $.Name $at -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if not $inner -}}
+  {{- warnf "shortcode %q requires a nested list as its body at %s; rendering nothing" .Name $at -}}
+{{- else -}}
+  {{- $rendered := partial "content/render-block.html" (dict
+    "page" .Page "scope" (printf "mindmap%d" .Ordinal) "content" $inner) -}}
+  {{- /* body 必须是列表。写成段落的话运行时找不到 `<ul>`，页面上是一个空框 ——
+         构建时说出来，作者才知道自己该缩进。 */ -}}
+  {{- if not (findRE `<[uo]l>` (printf "%s" $rendered)) -}}
+    {{- warnf "shortcode %q: the body must be a nested list at %s; rendering it as ordinary content" .Name $at -}}
+    {{- $rendered | safeHTML -}}
+  {{- else -}}
+    {{- .Page.Store.Set "hasMindmap" true -}}
+    {{- with $head.num -}}
+      {{- partial "book/register-target.html" (dict "page" $.Page "kind" "fig"
+        "num" . "id" $head.id "caption" $head.caption
+        "position" $at "ordinal" $.Ordinal) -}}
+    {{- end -}}
+<figure{{ with $head.id }} id="{{ . }}"{{ end }} class="td-mindmap{{ with $head.num }} td-book-figure td-book-figure--mindmap{{ end }}{{ with $head.class }} {{ . }}{{ end }}" data-td-mindmap{{ with $expand }} data-td-mindmap-expand="{{ . }}"{{ end }}{{ with $head.num }} data-td-book-kind="fig" data-td-book-num="{{ . }}"{{ end }}>
+  {{- /* SVG 先在这里，尺寸由 style 给：markmap 往一个已经有尺寸的 <svg> 里画，
+         拿到 0 高的容器它算出来的布局是空的。 */ -}}
+  <svg class="td-mindmap-out" data-td-mindmap-out style="height: {{ $height }}px"{{ with $head.caption }} role="img" aria-label="{{ . }}"{{ end }}></svg>
+  {{- /* 列表不是装饰：JS 没跑、chunk 没下下来、图画不出来时它是页面上的内容。
+         渲染成功后 CSS 按 data-td-mindmap-rendered 收起它。 */ -}}
+  <div class="td-mindmap-source">{{ $rendered | safeHTML }}</div>
+  {{- with $head.caption }}
+  <figcaption>{{ with $head.num }}<span class="td-book-figure-label">{{ partial "book/label.html" (dict "kind" "fig" "num" .) }}</span> {{ end }}<span class="td-book-figure-caption">{{ . }}</span></figcaption>
+  {{- end }}
+</figure>
+  {{- end -}}
+{{- end -}}

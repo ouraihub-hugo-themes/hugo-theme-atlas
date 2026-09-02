@@ -9,22 +9,36 @@
      class 直接丢弃不安全字符而不是清洗：一个被"清洗"过的类名会让作者以为它
      生效了。字符集比块属性那条更宽一格（允许空格），因为这里收的是一整串。
 
-     入参 dict：shortcode（传 `.`）、kind
+     optional 为真时 num 可以不给：那类组件（导图、图表围栏）不带编号也是完整的
+     内容，只是不进交叉引用表。这时返回的 num 与 id 都是空串，调用方据此决定要不
+     要登记。给了 id 却没给 num 是作者的误会 —— id 是编号目标的属性。
+
+     入参 dict：shortcode（传 `.`）、kind、optional
      返回 dict：num、id、caption、class */ -}}
 {{- $sc := .shortcode -}}
 {{- $kind := .kind -}}
+{{- $optional := .optional | default false -}}
 {{- $at := $sc.Position -}}
 {{- $params := dict -}}
 {{- if $sc.IsNamedParams }}{{ $params = $sc.Params }}{{ end -}}
 
-{{- if not (isset $params "num") -}}
+{{- $hasNum := isset $params "num" -}}
+{{- if and (not $hasNum) (not $optional) -}}
   {{- warnf "shortcode %q requires parameter num at %s; rendering it unnumbered" $sc.Name $at -}}
+{{- else if and (not $hasNum) (isset $params "id") -}}
+  {{- warnf "shortcode %q: id requires num at %s; ignoring it" $sc.Name $at -}}
 {{- end -}}
-{{- $num := partial "book/validate-num.html" (dict "name" $sc.Name "value" ($sc.Get "num") "position" $at) -}}
 
-{{- $id := printf "%s-%s" $kind $num -}}
-{{- if isset $params "id" -}}
-  {{- $id = partial "book/validate-id.html" (dict "name" $sc.Name "value" ($sc.Get "id") "position" $at) -}}
+{{- $num := "" -}}
+{{- $id := "" -}}
+{{- /* num 缺失且必需时也走一遍校验：那条路上 validate-num 返回空串，登记器照样
+       收 —— 一个没有编号的目标仍然要能被列表看到，只是标签上没有数字。 */ -}}
+{{- if or $hasNum (not $optional) -}}
+  {{- $num = partial "book/validate-num.html" (dict "name" $sc.Name "value" ($sc.Get "num") "position" $at) -}}
+  {{- $id = printf "%s-%s" $kind $num -}}
+  {{- if isset $params "id" -}}
+    {{- $id = partial "book/validate-id.html" (dict "name" $sc.Name "value" ($sc.Get "id") "position" $at) -}}
+  {{- end -}}
 {{- end -}}
 
 {{- $caption := "" -}}

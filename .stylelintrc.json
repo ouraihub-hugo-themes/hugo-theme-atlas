@@ -29,6 +29,13 @@
         "import-notation": null,
         "no-invalid-position-at-import-rule": null
       }
+    },
+    {
+      "comment": "--markmap-* 是 markmap 自己的主题变量契约，名字由它定。命名规则管的是主题自己定义的变量（--td-*），这里是在给别人的变量赋值",
+      "files": ["src/css/mindmap.css"],
+      "rules": {
+        "custom-property-pattern": null
+      }
     }
   ],
   "ignoreFiles": [

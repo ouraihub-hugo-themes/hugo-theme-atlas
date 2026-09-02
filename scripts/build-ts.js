@@ -19,10 +19,10 @@ const entryDir = "src/ts/entries";
 // 重的运行时各自一次分割构建（见下面的 splitBuild），从平铺这批里排掉 ——
 // 两次都收的话 assets/dist/ 里会多一份全量副本，而且没人加载它。
 //
-// 判据是体积：这三个 bundle 起来分别是 184 KB / 530 KB / 733 KB，而平铺的那
-// 几个都在 10 KB 以下。分割的收益是首屏只下入口（1 KB 上下），本体等到内容
+// 判据是体积：这四个 bundle 起来是 3.3 MB / 184 KB / 706 KB / 77 KB，而平铺的
+// 那几个都在 10 KB 以下。分割的收益是首屏只下入口（1 KB 上下），本体等到内容
 // 进视口。
-const splitEntries = ["mermaid.ts", "asciinema.ts", "echarts.ts"];
+const splitEntries = ["mermaid.ts", "asciinema.ts", "echarts.ts", "markmap.ts"];
 const entries = (await readdir(entryDir))
   .filter((f) => f.endsWith(".ts") && !splitEntries.includes(f))
   .map((f) => `${entryDir}/${f}`);
