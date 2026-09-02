@@ -362,18 +362,42 @@ print 静态展开。
 **验收**：每个 section 一个 Playwright 视觉用例 + 响应式断点确认。
 narrative 字段渲染 Markdown、label 字段纯文本，这个区分要保住。
 
-### 期 5 · 交互与外围
+### 期 5 · 交互与外围 ✅
 
-- `command-palette.ts` 610 + `palette-model.ts` 184 + `action-registry.ts`
-  249 + `page-actions.ts` 155（C 级搬运）
-- `keyboard-nav.ts` 735（C 级搬运）
-- 搜索：pagefind（见 §搜索选型）。四个外壳全部标 `data-pagefind-body`，
-  排序权重重新标定，搜索 UI 用 pagefind JS API 而非它的默认组件
-  （默认组件带自己的样式，与主题 token 冲突）。
-- `feedback` `giscus` `share` `dark-mode` `clipboard`
-- `surface-coordinator.ts` `asset-list.ts` `authored-a11y.ts`
+原计划搬 1198 行面板 + 735 行键盘导航，实际写了 `palette.ts` 200 +
+`palette-match.ts` 50 + `reading-keys.ts` 130 + `reading-keys-model.ts` 80。
+差额不是省略，是这些行在这个主题里没有对应的问题：
 
-**验收**：命令面板全模式可用；键盘导航全覆盖；搜索排序字段齐全。
+- **面板不列页面**，只列动作（8 条）。参照实现一半是页面搜索：自建 lunr 索引、
+  自算分。这里的搜索是 pagefind，已经有分节锚点、CJK 分词与增量索引 ——
+  面板再实现一遍是一个更差的结果列表加一份多下载的索引。于是 `action-registry`
+  与 `page-actions` 整个不需要：动作全是主题内建的，站点配不进来，那两层是为
+  「站点能注册自定义命令」准备的。
+- **键盘只留 `j`/`k`**。参照绑了十一个裸键（wasd/qe/h/ly/t/r/fc）。裸键抢的是
+  整个字母表，而侧栏本来可 Tab 可方向键、翻页是链接、主题与面板各有按钮 ——
+  它们不缺一个裸键。`j`/`k` 留下是因为没有替代：滚轮不认识「节」。
+- **滚动引擎删光**。实测 `scrollIntoView({block:"start"})` 已经把 scroll-padding
+  与目标的 scroll-margin 都算进去（标题落在 66px；给它加 40px scroll-margin
+  之后落在 106px），所以 `cssPixels`/`anchorOffset`/`scrollPaddingOffset` 三个
+  函数算的是浏览器白送的东西。存取 `scroll-behavior` 那套也不需要 ——
+  那是为了躲 Bootstrap 的全局 `smooth`，这里没有。
+- 留下来的两处都带实测数字：连按游标（站点加一行 `scroll-behavior: smooth`
+  就会让滚动变异步，那时 rect 是旧值，按住 `j` 会跳一节卡住）与越线余量
+  （落点实测 66.0625 对阅读线 66，严格比较会让 `j` 跳到同一节两次）。
+- `surface-coordinator.ts` / `asset-list.ts` / `authored-a11y.ts` 判定不做，
+  理由见期 4 末尾同一段：它们协调的是这里不存在的多入口竞争。
+
+搜索：pagefind，四个外壳全部标 `data-pagefind-body`，权重五档（实测 0–10
+整个区间只换来 2.4× 的分差，不是线性乘子），UI 用 JS API 而非默认组件。
+外围：`share`（15 平台）`feedback` `giscus` `dark-mode` `clipboard` 已完成。
+
+**验收结果**：面板全键盘可用（`Ctrl+K` 开、输入筛选、方向键移动且
+`aria-activedescendant` 跟随、两端不环绕、Escape 关闭并还原焦点到打开前那个
+链接）；键盘覆盖实测六个面 —— 106 个控件全部可聚焦且有可访问名（唯一例外是
+`main[tabindex="-1"]`，跳转链接的落点，本就不该进 Tab 序列）、跳转链接聚焦
+时可见、搜索一次 Escape 关闭且查询文本不被吞、抽屉开时 `inert` 上身关时还原、
+tablist 漫游 tabindex 与 Home/End 正确、RTL 下方向键镜像正确；缺索引时搜索
+退化成一条播报而不是坏掉的对话框。
 
 ### 期 6 · 输出格式与收尾
 
