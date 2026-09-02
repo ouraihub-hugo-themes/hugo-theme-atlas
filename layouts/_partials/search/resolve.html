@@ -4,16 +4,31 @@
      写一次，整棵子树跟着走）：
 
        search_exclude  布尔。真则整页不进索引。
-       search_boost    正数。作者的意图是线性的"重要程度的倍数"。
+       search_boost    1 到 5 的档位。**不是倍数。**
 
-     **boost 要开平方再交给 pagefind。** 它的 `data-pagefind-weight` 是二次标度：
-     文档写明 2.0 约等于 4 倍影响、10.0 约等于 100 倍，取值范围 0.0–10.0。作者
-     写 `search_boost: 2` 想要的是"两倍重要"，直接透传会变成四倍。开平方之后
-     2 → 1.414，实际影响正好两倍。**不透传作者写的数字**，这是那条契约的要点。
+     **boost 是档位而不是倍数，因为倍数在 pagefind 上给不出来。** 实测标定过
+     （同一段正文，只改 boost，查同一个词，读 `result.score`）：
 
-     于是 boost 的可用区间是 (0, 100]：100 开平方是 10，正好是 pagefind 的上限。
-     超出的钳到 100 并 warn —— 不静默钳，否则作者写 1000 与写 100 得到同样的
-     结果而页面上看不出来。
+       weight  1.0    1.414  2.0    3.0    4.0    5.0    7.0    10.0
+       得分倍  1.000  1.215  1.480  1.762  1.948  2.079  2.253  2.404
+
+     文档说 `data-pagefind-weight` 是二次标度、10.0 约等于 100 倍影响，那讲的是
+     加权词频；而最终得分过 BM25 饱和，**整个 0–10 区间只换来 2.4 倍得分**。于是
+     "作者写 2 就是两倍重要"这个契约在 pagefind 上无法兑现 —— 开平方交给它得到
+     1.215 倍，而写 100 也只有 2.4 倍。承诺一个兑现不了的语义，作者调完看不出
+     变化，只会以为没生效。
+
+     所以键的含义改成五个档，每档对应实测得分区间里一个能分辨的位置：
+
+       1（默认）  weight 不输出      1.00×
+       2          weight 2.0         1.48×
+       3          weight 3.0         1.76×
+       4          weight 5.0         2.08×
+       5          weight 10.0        2.40×
+
+     只收整数 1–5：允许 2.5 一类的中间值等于承诺一个分辨不出来的差别（1.48 与
+     1.76 之间那点距离，在真实站点的词频差异下听不见）。超出区间钳到边界并 warn，
+     不静默钳 —— 否则作者写 9 与写 5 得到一样的结果而页面上看不出来。
 
      权重挂在正文包裹元素上（`<main>`），因为 pagefind 的元素权重是按元素算的，
      而"这一页更重要"要作用于整页的正文。
@@ -33,31 +48,42 @@
   {{- end -}}
 {{- end -}}
 
+{{- /* 档位到 weight 的表。键是字符串因为 Go 的 map 键在这里来自 printf。
+       1 不在表里：它是默认档，不输出属性。 */ -}}
+{{- $tiers := dict "2" "2.0" "3" "3.0" "4" "5.0" "5" "10.0" -}}
 {{- $weight := "" -}}
-{{- with .Param "search_boost" -}}
+{{- /* 不用 `with`：它把 0 当假值，于是 `search_boost: 0` 会静默跳过整块校验 ——
+       作者写 0 想表达"别索引这一页"，得到的是默认档且没有任何提示。用 `ne nil`
+       判存在，0 才走得到下面的下界检查。 */ -}}
+{{- $raw := .Param "search_boost" -}}
+{{- if ne $raw nil -}}
   {{- /* 判数字靠试算，不看类型名：`reflect` 没有 IsFloat/IsInt，而 `printf "%T"`
          的结果取决于解析器（实测 YAML 里 42 是 uint64、-5 是 int64、3.8 是
          float64）。照类型名单判，明天换个数就漏。 */ -}}
-  {{- $probe := try (mul . 1.0) -}}
+  {{- $probe := try (mul $raw 1.0) -}}
   {{- if $probe.Err -}}
-    {{- warnidf (printf "search_boost:%v" .)
-      "%s: search_boost must be a number; got %v; using 1.0" $.Path . -}}
-  {{- else if le $probe.Value 0.0 -}}
-    {{- /* 0 与负数不是"不重要"而是无意义：0 让整页的正文匹配不计分，那是
-           search_exclude 的活；负数在二次标度里没有定义。 */ -}}
-    {{- warnidf (printf "search_boost:%v" .)
-      "%s: search_boost must be greater than 0; got %v; using 1.0 (use search_exclude to drop a page)" $.Path . -}}
+    {{- warnidf (printf "search_boost:%v" $raw)
+      "%s: search_boost must be a number; got %v; using 1" $.Path $raw -}}
   {{- else -}}
-    {{- $boost := $probe.Value -}}
-    {{- if gt $boost 100.0 -}}
-      {{- warnidf (printf "search_boost:%v" $boost)
-        "%s: search_boost %v exceeds the maximum 100; clamping to 100" $.Path $boost -}}
-      {{- $boost = 100.0 -}}
+    {{- $n := $probe.Value -}}
+    {{- if ne $n (math.Floor $n) -}}
+      {{- /* 小数在这里不是精度问题而是承诺问题：档之间的差别是 1.48 对 1.76，
+             中间值分辨不出来。收下它等于让作者以为调了一个听得见的差别。 */ -}}
+      {{- warnidf (printf "search_boost:%v" $n)
+        "%s: search_boost must be a whole number from 1 to 5; got %v; using 1" $.Path $n -}}
+      {{- $n = 1.0 -}}
+    {{- else if lt $n 1.0 -}}
+      {{- /* 0 与负数不是"不重要"而是无意义：0 让整页的正文匹配不计分，那是
+             search_exclude 的活。 */ -}}
+      {{- warnidf (printf "search_boost:%v" $n)
+        "%s: search_boost must be at least 1; got %v; using 1 (use search_exclude to drop a page)" $.Path $n -}}
+      {{- $n = 1.0 -}}
+    {{- else if gt $n 5.0 -}}
+      {{- warnidf (printf "search_boost:%v" $n)
+        "%s: search_boost %v exceeds the top tier 5; clamping to 5" $.Path $n -}}
+      {{- $n = 5.0 -}}
     {{- end -}}
-    {{- /* 1.0 不输出属性：它就是默认值，写出来是噪声。 */ -}}
-    {{- if ne $boost 1.0 -}}
-      {{- $weight = printf "%.3f" (math.Sqrt $boost) -}}
-    {{- end -}}
+    {{- $weight = index $tiers (printf "%.0f" $n) | default "" -}}
   {{- end -}}
 {{- end -}}
 
