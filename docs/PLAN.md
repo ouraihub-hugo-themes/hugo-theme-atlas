@@ -247,9 +247,23 @@ Hugo 有没有内建。已交付。
    只发 MathML 不发 `htmlAndMathml`，因此不需要 katex.min.css 与 1.5 MB 字体
    （60 个文件）—— 三大引擎都原生渲染 MathML Core，同一条公式 260 字节对
    1184 字节。
-7. ⬜ 输出变体：剩 `render-table.print`、`render-table.rss.xml`（这两个归期 6
-   一起验更省事）。`render-passthrough` 随数学一起交付了 —— 它是
-   行内公式的唯一入口，拆开验没有意义。
+7. ✅ 输出变体：`render-table.rss.xml` 已交付。`render-passthrough` 随数学
+   一起交付了 —— 它是行内公式的唯一入口，拆开验没有意义。
+
+   **`render-table.print` 不做，它没有可挂的输出格式。** print 目前是纯
+   `@media print` CSS（滚动展开、粘连解除、`thead` 跨页重复都在
+   `table.css` 里），实测建一个 `render-table.print.html` 产出为零。期 6
+   引入 `baseof.print.html` 之后再判断它是否有事可做。
+
+   **RSS 变体不是可选的优化：Hugo 的表格 hook 按输出格式查找，`.html` 那份
+   不回落。** 缺这个文件时 Goldmark 用自己的默认渲染，把作者属性原样吐到
+   `<table>` 上 —— `{style=...}` 在 HTML 里被策略丢弃并 warn，同一次构建的
+   RSS 里活着输出；`{caption=...}` 变成一个无效属性而不是 `<caption>` 元素。
+   实测 `render-table.xml`（不带 `rss.`）两个格式都不匹配。
+   `render-heading.html` 对 RSS **生效**，所以这不是"hook 一律不进 RSS"，
+   而是逐 hook 类型不同 —— 其余 hook 要各自实测，不能外推。
+   回归是静默的（构建绿、warn 照出），因此 `scripts/check-outputs.js`
+   建真站点读真 `index.xml`；摘掉变体它报 5 条失败。
 
 **验收**：每批建整页快照；Markdown/LLMS 输出不含组件标记；
 print 静态展开。

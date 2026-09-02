@@ -1,0 +1,48 @@
+{{- /* 表格，RSS 版。
+
+     **这个变体不是可选的优化，缺了它属性策略在 RSS 里整个不生效。** Hugo 的表格
+     hook 按输出格式查找，`.html` 那份不回落到 RSS —— 没有这个文件时 Goldmark 用
+     它自己的默认渲染，把作者写的属性原样吐到 `<table>` 上。于是 `{style=...}` 在
+     HTML 里被丢弃并 warn，同一次构建的 RSS 里却活着输出；`{caption=...}` 变成
+     `<table>` 上一个无效属性而不是 `<caption>` 元素。
+
+     这里发的是静态表格：feed 阅读器没有 CSS 也没有 JS，因此不发滚动包裹（一个
+     只有类名的 div）、不发 `data-td-align`（对齐靠 CSS 属性选择器）、不发
+     `data-td-scroll-label`（给运行时的）。留下的是纯语义结构，阅读器自己排版。
+
+     `<caption>` 与 `scope` 留着：它们是 HTML 语义而不是主题样式，阅读器与朗读器
+     都认。matrix 的首列同样是 `th[scope=row]` —— 那一列在标识行，这跟输出格式
+     无关。
+
+     属性策略在这里不重跑：HTML 那次已经 warn 过同一个位置，跑两遍就是同一条消息
+     出现两次。这里只取需要的两个键，其余一律不输出 —— 丢弃是策略的默认结果，
+     直接不发等价于策略的结论。 */ -}}
+{{- $caption := strings.TrimSpace (index .Attributes "caption" | default "") -}}
+{{- $isMatrix := in (split (index .Attributes "class" | default "" | printf "%v") " ") "matrix" -}}
+<table>
+  {{- with $caption }}
+  <caption>{{ . }}</caption>
+  {{- end }}
+  <thead>
+    {{- range .THead }}
+    <tr>
+      {{- range . }}
+      <th scope="col">{{ .Text }}</th>
+      {{- end }}
+    </tr>
+    {{- end }}
+  </thead>
+  <tbody>
+    {{- range .TBody }}
+    <tr>
+      {{- range $i, $cell := . }}
+      {{- if and $isMatrix (eq $i 0) }}
+      <th scope="row">{{ $cell.Text }}</th>
+      {{- else }}
+      <td>{{ $cell.Text }}</td>
+      {{- end }}
+      {{- end }}
+    </tr>
+    {{- end }}
+  </tbody>
+</table>

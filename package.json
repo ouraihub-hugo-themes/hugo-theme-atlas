@@ -15,7 +15,7 @@
     "ts:watch": "node scripts/build-ts.js --watch",
     "dev": "concurrently -n CSS,TS,HUGO -c green,blue,yellow \"pnpm css:watch\" \"pnpm ts:watch\" \"hugo server --source exampleSite --themesDir ../.. --disableFastRender\"",
     "build": "pnpm css:build && pnpm ts:build && hugo --source exampleSite --themesDir ../.. --gc --minify",
-    "check": "pnpm format:check && pnpm type-check && pnpm lint && pnpm test:run && pnpm check:warnings",
+    "check": "pnpm format:check && pnpm type-check && pnpm lint && pnpm test:run && pnpm check:warnings && pnpm check:outputs",
     "type-check": "tsc --noEmit",
     "lint": "eslint src/ts && stylelint \"src/css/**/*.css\"",
     "format": "prettier --write \"src/**/*.{ts,css}\"",
@@ -23,6 +23,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "check:warnings": "node scripts/check-warnings.js",
+    "check:outputs": "node scripts/check-outputs.js",
     "fixture:image": "node scripts/make-fixture-image.js"
   },
   "devDependencies": {
