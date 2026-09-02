@@ -82,9 +82,10 @@ export function init(root: ParentNode = document): void {
 
   const paint = () => {
     const doc = document.documentElement;
-    // 阅读线与 base.css 的 scroll-padding-top 用同一个式子：锚点跳转的落点
-    // 必须正好算作已越线，否则点目录会看到高亮停在上一节。
-    const line = cssPx("--td-shell-nav-h", 0) + 16;
+    // 阅读线就是 base.css 那条 scroll-padding-top —— 直接读它算出来的值，不
+    // 重算一遍那个式子。锚点跳转的落点必须正好算作已越线，否则点目录会看到
+    // 高亮停在上一节，而两处各写一遍式子的话，改了一处就是这个症状。
+    const line = scrollPadding();
     const next = pickActive(
       map,
       (h) => h.getBoundingClientRect().top - line,
@@ -111,9 +112,21 @@ export function init(root: ParentNode = document): void {
   }
 }
 
-/** 读一个长度型 CSS 变量的像素值。变量缺失或非法时用兜底值，不抛。 */
-function cssPx(name: string, fallback: number): number {
-  const raw = getComputedStyle(document.documentElement).getPropertyValue(name);
+/**
+ * 锚点跳转后标题停在的高度，像素。reading-keys.ts 判「当前读到哪一节」用同
+ * 一个值 —— 两处必须一致，否则 `j` 跳到的那一节与目录亮的那一条会差一节。
+ *
+ * 读 `scroll-padding-top` 而不是读 `--td-shell-nav-h` 再加 16：自定义属性是
+ * **不解析**存着的。`getPropertyValue("--td-shell-nav-h")` 在站点把它改成
+ * `3.5rem` 之后返回的就是字符串 `"3.5rem"`，`parseFloat` 拿到 3.5 —— 当像素
+ * 用的话阅读线会差 52.5px，表现是滚过整整一节高亮还停在上一条。实测过；
+ * 同一时刻 `scrollPaddingTop` 是 `"72px"`，calc 与单位都算完了。
+ *
+ * 没有 scroll-padding 的文档（或者旧浏览器返回 `auto`）落到 0：那时锚点落在
+ * 视口顶端，阅读线也该在顶端。
+ */
+export function scrollPadding(): number {
+  const raw = getComputedStyle(document.documentElement).scrollPaddingTop;
   const n = Number.parseFloat(raw);
-  return Number.isFinite(n) ? n : fallback;
+  return Number.isFinite(n) ? n : 0;
 }
