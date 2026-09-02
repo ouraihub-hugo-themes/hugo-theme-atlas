@@ -3,8 +3,22 @@
      未知名字 warn 并不输出 —— 一个空白方块比没有图标更难排查。
      校验靠读 icons.json 本身，不维护第二份名单。
 
-     <use> 的 href 走绝对路径而非同文档引用：sprite 是独立文件，一次请求
-     可长缓存；内联进每个页面会让每张 HTML 都胖 15 KB。
+     **`<use>` 必须是同文档引用。** 跨文件的 `href="/dist/icons.svg#id"` 在
+     Chrome 与 Safari 里不解析 —— 那种写法只有 Firefox 实现过，SVG 2 已经把它
+     从规范里去掉。实测：同一个 `<use>` 换成 `#book` 后 `getBBox().width` 从
+     0 变成 13.125，换成带绝对 URL 的跨文档形式又回到 0，与路径、缓存、
+     `display:none` 都无关。
+
+     这个回归静默得罕见：sprite 请求 200、symbol 与 viewBox 都在、外层 `<svg>`
+     有 16×16 的盒子、`fill` 计算值正确、无失败请求 —— 唯一露馅的指标是
+     `<use>` 自己的 `getBBox()` 为 0。整站 42 个图标一个都没画出来，而所有
+     可断言的指标都是绿的。
+
+     于是名字在这里登记进 Page Store，由 `icon-sprite.html` 在正文渲染之后把
+     用到的 symbol 内联到文档末尾。**只内联用到的那几个**：landing 是全站最重
+     的一页，42 次调用落在 12 个不同图标上，6.1 KB / 整份 25.6 KB。前向引用
+     成立（实测：symbol 追加到 body 末尾，前面的引用照样解析），所以 sprite
+     跟在正文后面不影响任何一个图标。
 
      入参：name（必需）、class（可选，附加类）
 
@@ -17,11 +31,15 @@
 {{- end -}}
 {{- with $name -}}
   {{- if isset $catalog . -}}
-    {{- $sprite := "" -}}
-    {{- with resources.Get "dist/icons.svg" -}}{{ $sprite = .RelPermalink }}{{ end -}}
-    {{- if $sprite -}}
+    {{- if resources.Get "dist/icons.svg" -}}
+      {{- /* 登记用到的名字。`SetInMap` 当集合用：同一个图标出现 9 次只内联
+             一份。页面级 Store 而不是 site 级 —— 每页内联它自己用到的那些。
+
+             不用 `merge`：那个返回新 map 而不改原地，写回 Store 还要一步，
+             而 `SetInMap` 就是为累积而设的。 */ -}}
+      {{- (page).Store.SetInMap "tdIcons" . true -}}
       <svg class="td-icon{{ with $.class }} {{ . }}{{ end }}" aria-hidden="true"
-        ><use href="{{ $sprite }}#{{ . }}"></use></svg>
+        ><use href="#td-i-{{ . }}"></use></svg>
     {{- else -}}
       {{- warnidf "icons-sprite-missing" "icon: assets/dist/icons.svg is missing -- run `pnpm icons:build`" -}}
     {{- end -}}

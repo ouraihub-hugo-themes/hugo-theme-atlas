@@ -75,6 +75,9 @@
   </div>
 
   {{ partial "shell/footer.html" . }}
+  {{- /* sprite 在最后：`content/icon.html` 渲染时才登记名字，而 footer 与
+         navbar 里也有图标。放在这里之前的任何位置都会漏掉后面登记的那些。 */ -}}
+  {{ partial "content/icon-sprite.html" . }}
   {{ partial "foot/js.html" . }}
 </body>
 {{- else -}}
@@ -92,6 +95,7 @@
   </main>
 
   {{ partial "shell/footer.html" . }}
+  {{ partial "content/icon-sprite.html" . }}
   {{ partial "foot/js.html" . }}
 </body>
 {{- end -}}

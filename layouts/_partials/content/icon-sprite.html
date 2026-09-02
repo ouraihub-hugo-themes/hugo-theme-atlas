@@ -1,0 +1,41 @@
+{{- /* 把本页用到的 symbol 内联到文档末尾。
+
+     必须在正文渲染之后调用：`content/icon.html` 在渲染时往 Page Store 的
+     tdIcons 里登记名字，顺序反了这里读到的是空集，整页图标一个都不出 ——
+     和脚本选择读能力标记是同一条约束。
+
+     **id 带 `td-i-` 前缀。** symbol 进了正文所在的文档，而 `id` 在一个文档里
+     必须唯一 —— 作者写一个叫「check」的标题，Hugo 生成的锚点就是 `#check`，
+     和裸名字的 symbol 撞上。撞了之后 `<use href="#check">` 指向哪个由文档顺序
+     决定，表现是图标随机变成空白，而 HTML 校验器只报一句重复 id。
+
+     sprite 里的 id 是裸名字（那份文件里没有别的东西，不需要前缀），所以这里
+     改写一次。用 replaceRE 限定在 `<symbol id="...">` 上，不做全局替换 ——
+     path 数据里出现同样的字符串是可能的。
+
+     `aria-hidden` 与 `display:none`：这块不是内容，只是符号库。 */ -}}
+{{- $used := .Store.Get "tdIcons" -}}
+{{- with $used -}}
+  {{- $sprite := resources.Get "dist/icons.svg" -}}
+  {{- if $sprite -}}
+    {{- $text := $sprite.Content -}}
+    {{- $symbols := slice -}}
+    {{- range $name, $_ := . -}}
+      {{- $re := printf `<symbol id="%s"[\s\S]*?</symbol>` $name -}}
+      {{- with findRE $re $text 1 -}}
+        {{- $symbols = $symbols | append (replaceRE
+          `^<symbol id="` (printf `<symbol id="td-i-`) (index . 0)) -}}
+      {{- else -}}
+        {{- /* 名字过了 icons.json 的校验却不在 sprite 里 —— 清单与产物不同步，
+               `pnpm icons:build` 没跑。报出来，否则表现是那个图标静默空白。 */ -}}
+        {{- warnidf (printf "icon-symbol:%s" $name)
+          "icon: %q is in data/icons.json but not in the built sprite -- run `pnpm icons:build`" $name -}}
+      {{- end -}}
+    {{- end -}}
+    {{- with $symbols -}}
+      <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true">
+        {{- delimit . "" | safeHTML -}}
+      </svg>
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
