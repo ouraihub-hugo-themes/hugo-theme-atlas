@@ -300,8 +300,27 @@ print 静态展开。
 
 22 个 section。单独成期，因为 `_landing.scss` 是最大单块（2,401 行）。
 
-- 先做 `hero` `cards` `cta` `metrics`（覆盖最常见组合）
-- 再做 `pricing`/`pricing-compare` `faq` `timeline` `steps` `principles`
+- ✅ 先做 `hero` `cards` `cta` `metrics`（覆盖最常见组合）
+- ✅ 再做 `pricing`/`pricing-compare` `faq` `timeline` `steps` `principles`
+
+  逐项 section 的入口校验（形状、非空、未知键）抽成 `landing/items.html`。
+  抄到第五份时抽的：代价不是行数而是措辞会漂 —— 同一类错误在几个 section 里
+  说法不同，读的人以为是几个不同的问题。抽完六个 section 净减 108 行，
+  exampleSite 整站输出逐字节不变。
+
+  `steps` 复用 `<ol class="steps">`（作者标 `{.steps}` 得到的同一份），
+  `pricing-compare` 复用 `.td-table-scroll--matrix` —— 溢出自滚、表头与首列
+  粘连、`scope`、打印展开都已经在 table.css 里。两处都是零新样式。
+
+  **`.td-prose` 的打印规则管不到 landing。** prose.css 里那条把 `details`
+  摊开的规则限定在 `.td-prose` 内，而 landing 的 section 在它之外 —— 少了
+  landing 自己那条，打印出来的 FAQ 只有一串问题，答案全部随 details 收起，
+  而屏幕上完全看不出来。新增的 section 若带折叠或底色，打印那一份要自己写。
+
+  时间线的 `datetime`：`time.AsTime` 解析不了 `2026-01` 与 `2026`（实测），
+  而这两个是合法的 HTML `datetime` 值，也是时间线里最常见的写法 —— 所以先按
+  形状认，再回落到 `try (time.AsTime ...)`，都不成就不给属性。
+
 - 最后 `bar-chart` `logo-wall` `testimonials` `case-study` `code-plate`
   `command-box` `gallery` `contributors` `download` `preview` `markdown`
   `capabilities`

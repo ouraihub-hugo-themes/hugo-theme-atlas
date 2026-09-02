@@ -1,0 +1,92 @@
+{{- /* Pricing：几个套餐卡片。
+
+     不复用 content/card-markup.html：套餐卡的内容是"名字 + 价格 + 周期 + 特性
+     列表 + 按钮"，与通用卡片的"标题 + 描述 + 整卡链接"结构不同。硬塞进一个
+     标记里要给 card-markup 加四个只有这里用的参数，而通用卡片最关键的"整卡
+     可点"在套餐卡里是错的 —— 套餐卡上有按钮，整卡再套一层链接就是链接套链接。
+
+     价格与周期分成两个键。合成一个 "$29/月" 字符串在多语言站点上没法处理
+     （货币位置、斜杠、周期词序各语言不同），而分开之后模板里的排版能各自
+     调字号 —— 价格要大，周期不要。
+
+     `featured` 是布尔而不是 `style: featured`：它只有开关两态，而枚举会让人
+     以为还有第三档。突出的那一张同时接受 `badge` 给一句话（"最受欢迎"）——
+     badge 不自动生成，因为那句话是营销文案而不是主题该替作者决定的东西。
+
+     每项的键：name（必需）、price（必需）、period、description、features、
+     actions、featured、badge。
+     features 是纯文本数组：它们是清单项，`<em>` 在这里没有意义。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "items")) -}}
+
+{{- $plans := slice -}}
+{{- range partial "landing/items.html" (dict
+  "section" $raw "noun" "pricing" "at" $c.at
+  "allowed" (slice "name" "price" "period" "description" "features" "actions" "featured" "badge")) -}}
+  {{- $item := .item -}}
+  {{- $where := .at -}}
+  {{- $name := strings.TrimSpace (printf "%v" (index $item "name" | default "")) -}}
+  {{- $price := strings.TrimSpace (printf "%v" (index $item "price" | default "")) -}}
+  {{- if not $name -}}
+    {{- warnf "%s: plan requires name; skipping it" $where -}}
+  {{- else if not $price -}}
+    {{- /* 没有价格的套餐卡是个空壳。作者想表达"联系我们"的话把那句话写进
+           price —— 它是纯文本，不必是数字。 */ -}}
+    {{- warnf "%s: plan requires price; skipping it" $where -}}
+  {{- else -}}
+    {{- $features := index $item "features" -}}
+    {{- if and $features (not (reflect.IsSlice $features)) -}}
+      {{- warnf "%s: plan features must be an array; ignoring them" $where -}}
+      {{- $features = slice -}}
+    {{- end -}}
+    {{- $clean := slice -}}
+    {{- range $features -}}
+      {{- with strings.TrimSpace (printf "%v" .) -}}
+        {{- $clean = $clean | append . -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $plans = $plans | append (dict
+      "name" $name
+      "price" $price
+      "period" (strings.TrimSpace (printf "%v" (index $item "period" | default "")))
+      "description" (strings.TrimSpace (printf "%v" (index $item "description" | default "")))
+      "features" $clean
+      "featured" (eq (index $item "featured" | default false) true)
+      "badge" (strings.TrimSpace (printf "%v" (index $item "badge" | default "")))
+      "actions" (partial "landing/actions.html" (dict
+        "page" $page "items" (index $item "actions") "at" $where))) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if $plans -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    <div class="td-landing-plans">
+      {{- range $plans }}
+      <article class="td-landing-plan{{ if .featured }} td-landing-plan--featured{{ end }}">
+        {{- with .badge }}<p class="td-landing-plan-badge">{{ . }}</p>{{ end }}
+        <h3 class="td-landing-plan-name">{{ .name }}</h3>
+        {{- /* 价格与周期在一个 <p> 里：读屏软件连着读出"29 美元 每月"，
+               拆成两段的话中间会有停顿，听起来像两条无关的信息。 */}}
+        <p class="td-landing-plan-price">
+          <span class="td-landing-plan-amount">{{ .price }}</span>
+          {{- with .period }}<span class="td-landing-plan-period">{{ . }}</span>{{ end }}
+        </p>
+        {{- with .description }}<p class="td-landing-plan-desc">{{ . }}</p>{{ end }}
+        {{- with .features }}
+        <ul class="td-landing-plan-features">
+          {{- range . }}
+          <li>{{ partial "content/icon.html" (dict "name" "check" "class" "td-landing-plan-check") }}{{ . }}</li>
+          {{- end }}
+        </ul>
+        {{- end }}
+        {{- with .actions }}{{ . }}{{ end }}
+      </article>
+      {{- end }}
+    </div>
+  </div>
+</section>
+{{- end -}}

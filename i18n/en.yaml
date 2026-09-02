@@ -95,6 +95,12 @@ download_unpublished: Not published yet
 # 纯文本，在终端里 `asciinema play` 就能看。
 cast_download: Download the terminal recording
 
+# 价格对比表的布尔格。勾与叉是图标（装饰，读屏软件跳过），所以每个格里配一份
+# sr-only 文本 —— 少了它整张表在读屏软件那里是一片空格，读者听到的是"行标题、
+# 空、空、空"。用形容词而不是 "Yes"/"No"：读出来是"实时备份，包含"。
+pricing_included: Included
+pricing_excluded: Not included
+
 # OpenAPI 渲染器。runtime 未配置、脚本没下下来、渲染失败三种情况下这条都可见 ——
 # 因此说的是"打开这份 spec"而不是"渲染器不可用"：OpenAPI 文档是 JSON 或 YAML，
 # 能 curl、能导进 Postman、能喂给代码生成器，渲染器只是让它好看。

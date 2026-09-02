@@ -36,6 +36,44 @@ sections:
         href: /ok/
         style: huge
   - type: cta
+  - type: steps
+    items:
+      - body: 没有 title
+      - 不是 map
+  - type: faq
+    items:
+      - answer: 没有 question
+      - question: 没有 answer
+  - type: timeline
+    items:
+      - title: 没有 date
+      - date: 2026-01-01
+      - date: 2026-01-01
+        title: 坏 status
+        status: someday
+  - type: principles
+    items:
+      - body: 没有 title
+      - title: 没有 body
+  - type: pricing
+    items:
+      - price: 没有 name
+      - name: 没有 price
+      - name: features 不是数组
+        price: "1"
+        features: 一条
+  - type: pricing-compare
+    items:
+      - feature: 没有 plans
+        values: [true]
+  - type: pricing-compare
+    plans: [A, B]
+    items:
+      - values: [true, true]
+      - feature: values 不是数组
+        values: 一个
+      - feature: values 少一格
+        values: [true]
 expect:
   - 'unknown landing section type "nope"'
   - 'landing section type must match ^[a-z][a-z0-9-]*$; got "Hero"'
@@ -53,6 +91,22 @@ expect:
   - 'unknown key "target"'
   - 'invalid action style "huge"'
   - 'cta has nothing to render'
+  - 'step requires title'
+  - 'each steps item must be a map'
+  - 'faq entry requires question'
+  - 'faq entry requires answer'
+  - 'timeline entry requires date'
+  - 'timeline entry requires title'
+  - 'invalid timeline status "someday"'
+  - 'principle requires title'
+  - 'principle requires body'
+  - 'plan requires name'
+  - 'plan requires price'
+  - 'plan features must be an array'
+  - 'pricing-compare requires a non-empty plans array'
+  - 'row requires feature'
+  - 'row values must be an array'
+  - 'row has 1 values but there are 2 plans'
 ---
 
 `type` 未知、拼错的键、空的 items、少必需字段、坏 URL —— 每一条都只丢它自己那

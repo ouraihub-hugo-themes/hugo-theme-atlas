@@ -1,0 +1,49 @@
+{{- /* FAQ：问答折叠。
+
+     用 `<details>`/`<summary>` —— 浏览器原生的展开收起。不写 JS：键盘操作、
+     焦点管理、`aria-expanded` 等价语义、页内搜索能找到收起的内容（现代浏览器
+     会自动展开命中的 details），这些原生都有，而自己用按钮加 hidden 实现要把
+     它们逐条补回来，还得补对。
+
+     **不给 details 加 name 属性做手风琴。** 那会让同组里只能展开一个 —— 读者
+     想对比两个答案时被强制收起前一个。FAQ 是查阅而不是导航。
+
+     每项的键：question（必需）、answer（必需）。question 是纯文本：它进
+     `<summary>`，而那里是控件的可访问名，标记会打断读屏软件的连读。
+     answer 渲染 Markdown —— 答案里有代码、链接、列表是常事。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "items")) -}}
+
+{{- $entries := slice -}}
+{{- range partial "landing/items.html" (dict
+  "section" $raw "noun" "faq" "at" $c.at "allowed" (slice "question" "answer")) -}}
+  {{- $q := strings.TrimSpace (printf "%v" (index .item "question" | default "")) -}}
+  {{- $a := strings.TrimSpace (printf "%v" (index .item "answer" | default "")) -}}
+  {{- if not $q -}}
+    {{- warnf "%s: faq entry requires question; skipping it" .at -}}
+  {{- else if not $a -}}
+    {{- /* 只有问题没有答案的话展开是空的 —— 那比不显示更让人以为是坏了。 */ -}}
+    {{- warnf "%s: faq entry requires answer; skipping it" .at -}}
+  {{- else -}}
+    {{- $entries = $entries | append (dict
+      "question" $q "answer" ($page.RenderString (dict "display" "block") $a)) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if $entries -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    <div class="td-landing-faq">
+      {{- range $entries }}
+      <details class="td-landing-faq-item">
+        <summary class="td-landing-faq-question">{{ .question }}</summary>
+        <div class="td-landing-faq-answer">{{ .answer }}</div>
+      </details>
+      {{- end }}
+    </div>
+  </div>
+</section>
+{{- end -}}

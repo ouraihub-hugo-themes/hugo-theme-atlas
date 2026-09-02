@@ -1,0 +1,40 @@
+{{- /* 逐项 section 的入口校验：形状、非空、未知键。
+
+     steps、faq、timeline、principles、pricing 都是"一个 items 数组，每项是一
+     个 map"。这段校验在它们之间字字相同，抄五份的代价不是行数而是措辞会漂 ——
+     同一类错误在五个 section 里说法不一样，读的人以为是五个不同的问题。
+
+     只管到"这一项是个 map 且没有拼错的键"。哪些字段必需、谁渲染 Markdown、
+     缺了是丢这项还是给默认值，都是各 section 自己的事，因为答案各不相同。
+
+     返回的每项带着自己的 at —— 调用方接着要用它报字段级的错，而那个
+     `printf "%s items[%d]"` 同样是抄五份的东西。
+
+     入参 dict：section（原始 map）、noun（报错里的名字）、at、allowed（每项允许的键）
+     返回 slice：[{item, at}]，只含形状合法的项；一项都没有时是空 slice */ -}}
+{{- $noun := .noun -}}
+{{- $at := .at -}}
+{{- $allowed := .allowed -}}
+{{- $items := index .section "items" -}}
+{{- if and $items (not (reflect.IsSlice $items)) -}}
+  {{- warnf "%s: %s items must be an array; rendering none" $at $noun -}}
+  {{- $items = slice -}}
+{{- end -}}
+{{- if not $items -}}
+  {{- warnf "%s: %s requires a non-empty items array; rendering nothing" $at $noun -}}
+{{- end -}}
+{{- $clean := slice -}}
+{{- range $i, $item := $items -}}
+  {{- $where := printf "%s items[%d]" $at $i -}}
+  {{- if not (reflect.IsMap $item) -}}
+    {{- warnf "%s: each %s item must be a map; skipping it" $where $noun -}}
+  {{- else -}}
+    {{- range $name, $_ := $item -}}
+      {{- if not (in $allowed $name) -}}
+        {{- warnf "%s: unknown key %q (allowed: %s); ignoring it" $where $name (delimit $allowed ", ") -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $clean = $clean | append (dict "item" $item "at" $where) -}}
+  {{- end -}}
+{{- end -}}
+{{- return $clean -}}

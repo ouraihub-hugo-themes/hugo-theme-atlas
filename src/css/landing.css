@@ -252,6 +252,295 @@
     color: color-mix(in oklab, var(--color-canvas) 82%, transparent);
   }
 
+  /* --- steps ---
+     列表本体的样式来自 steps.css（作者写 `{.steps}` 得到的同一份），这里只有
+     步骤标题需要一行 —— 它在 <li> 里与正文同级，得自己占一行。 */
+
+  .td-landing-step-title {
+    display: block;
+    color: var(--color-ink-strong);
+  }
+
+  /* --- faq --- */
+
+  .td-landing-faq {
+    max-inline-size: 48rem;
+    border-block-start: 1px solid var(--color-border);
+  }
+
+  .td-landing-faq-item {
+    border-block-end: 1px solid var(--color-border);
+  }
+
+  .td-landing-faq-question {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    /* 触摸目标：padding 加行高过 44px。 */
+    padding-block: 0.875rem;
+    font-weight: 600;
+    color: var(--color-ink-strong);
+    cursor: pointer;
+    /* 默认的三角换成自己画的箭头，为了能跟着展开状态转。list-style 那条给
+       Firefox，::-webkit-details-marker 给旧 WebKit。 */
+    list-style: none;
+  }
+
+  .td-landing-faq-question::-webkit-details-marker {
+    display: none;
+  }
+
+  .td-landing-faq-question::before {
+    content: "";
+    flex: none;
+    inline-size: 0.5rem;
+    block-size: 0.5rem;
+    border-inline-end: 2px solid currentcolor;
+    border-block-end: 2px solid currentcolor;
+    /* 逻辑属性管不到 transform：RTL 下箭头要指向另一边，所以旋转角由
+       方向决定。收起态指向行内结束方向。 */
+    rotate: -45deg;
+    transition: rotate 150ms var(--ease-color);
+  }
+
+  [dir="rtl"] .td-landing-faq-question::before {
+    rotate: 135deg;
+  }
+
+  .td-landing-faq-item[open] .td-landing-faq-question::before {
+    rotate: 45deg;
+  }
+
+  .td-landing-faq-answer {
+    padding-block-end: 1.25rem;
+    color: var(--color-ink);
+  }
+
+  /* --- timeline ---
+     竖线用首项到末项的伪元素而不是给每项加 border：后者在最后一项下面留出
+     一段悬空的线。 */
+
+  .td-landing-timeline {
+    position: relative;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-inline-size: 48rem;
+  }
+
+  .td-landing-timeline-item {
+    position: relative;
+    /* 圆点在这段内边距里，标记盒之外 —— list-style: none 之后没有标记盒。 */
+    padding-inline-start: 2rem;
+    padding-block-end: 2rem;
+  }
+
+  /* 竖线：每项自己画一段，最后一项不画，于是线正好收在末尾的圆点上。 */
+  .td-landing-timeline-item:not(:last-child)::before {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0.3125rem;
+    inset-block: 1.25rem 0;
+    inline-size: 2px;
+    background-color: var(--color-border);
+  }
+
+  .td-landing-timeline-item::after {
+    content: "";
+    position: absolute;
+    inset-inline-start: 0;
+    inset-block-start: 0.4375rem;
+    inline-size: 0.75rem;
+    block-size: 0.75rem;
+    border-radius: 50%;
+    background-color: var(--color-border);
+  }
+
+  /* 三档状态只改圆点，不改文字颜色 —— planned 的说明文字调淡会让它比
+     周围难读，而"这是计划中的"这个信息由 status 旁边的日期承担。 */
+  .td-landing-timeline-item[data-td-status="done"]::after {
+    background-color: var(--color-accent);
+  }
+
+  .td-landing-timeline-item[data-td-status="current"]::after {
+    background-color: var(--color-canvas);
+    /* 空心圈：inset 阴影画环，比 border 少一层盒模型换算。 */
+    box-shadow: inset 0 0 0 2px var(--color-accent);
+  }
+
+  .td-landing-timeline-date {
+    display: block;
+    font-family: var(--font-meta);
+    font-size: 0.8125rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-ink-muted);
+  }
+
+  .td-landing-timeline-title {
+    display: block;
+    margin-block-start: 0.125rem;
+    color: var(--color-ink-strong);
+  }
+
+  .td-landing-timeline-body {
+    margin-block-start: 0.375rem;
+    color: var(--color-ink);
+  }
+
+  /* --- principles --- */
+
+  .td-landing-principles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: 2rem 2.5rem;
+    margin: 0;
+  }
+
+  .td-landing-principle-title {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-ink-strong);
+  }
+
+  .td-landing-principle-icon {
+    flex: none;
+    inline-size: 1em;
+    block-size: 1em;
+    color: var(--color-accent);
+  }
+
+  .td-landing-principle-body {
+    /* dd 的默认缩进要清掉 —— 这里 dt 与 dd 是上下关系而不是缩进关系。 */
+    margin-inline-start: 0;
+    margin-block-start: 0.5rem;
+    color: var(--color-ink-muted);
+  }
+
+  /* --- pricing --- */
+
+  .td-landing-plans {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    gap: 1.5rem;
+    /* 各卡等高，按钮各自贴底 —— 见 .td-landing-plan 的 auto 那一行。 */
+    align-items: stretch;
+  }
+
+  .td-landing-plan {
+    display: flex;
+    flex-direction: column;
+    padding: 1.75rem 1.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    background-color: var(--color-canvas);
+  }
+
+  /* 突出那张：加粗边框而不是放大整卡。scale 会让它压住邻居的边框，而且在
+     窄屏单列时看起来只是排版错了。 */
+  .td-landing-plan--featured {
+    border-color: var(--color-accent);
+    border-width: 2px;
+    /* 边框粗了 1px，内边距减掉同样的量，卡内文字才与邻卡对齐。 */
+    padding: calc(1.75rem - 1px) calc(1.5rem - 1px);
+  }
+
+  .td-landing-plan-badge {
+    align-self: start;
+    margin-block-end: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 0.25rem;
+    background-color: var(--color-accent);
+    color: var(--color-canvas);
+    font-family: var(--font-meta);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .td-landing-plan-name {
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-ink-strong);
+  }
+
+  .td-landing-plan-price {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-block-start: 0.5rem;
+  }
+
+  .td-landing-plan-amount {
+    font-family: var(--font-display);
+    font-size: 2.25rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--color-ink-strong);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .td-landing-plan-period {
+    font-size: 0.9375rem;
+    color: var(--color-ink-muted);
+  }
+
+  .td-landing-plan-desc {
+    margin-block-start: 0.75rem;
+    color: var(--color-ink-muted);
+  }
+
+  .td-landing-plan-features {
+    list-style: none;
+    padding: 0;
+    margin-block: 1.25rem 0;
+    display: grid;
+    gap: 0.5rem;
+    font-size: 0.9375rem;
+  }
+
+  .td-landing-plan-features li {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+  }
+
+  .td-landing-plan-check {
+    flex: none;
+    inline-size: 0.875em;
+    block-size: 0.875em;
+    color: var(--color-accent);
+  }
+
+  /* 按钮贴卡底：margin-block-start: auto 吃掉剩余高度，于是等高的几张卡里
+     按钮横向对齐，哪怕特性条数不同。 */
+  .td-landing-plan .td-landing-actions {
+    margin-block-start: auto;
+    padding-block-start: 1.5rem;
+  }
+
+  /* --- pricing-compare ---
+     表格本体的样式全部来自 table.css 的 .td-table-scroll--matrix。这里只有
+     两个图标的颜色，以及让表格不被 landing 的 72rem 上限之外的东西影响。 */
+
+  .td-landing-compare-yes {
+    inline-size: 1em;
+    block-size: 1em;
+    color: var(--color-accent);
+  }
+
+  .td-landing-compare-no {
+    inline-size: 1em;
+    block-size: 1em;
+    color: var(--color-ink-muted);
+  }
+
   /* --- 正文（landing 页最下面那段说明） --- */
 
   .td-landing-content {
@@ -294,6 +583,25 @@
     color: inherit;
     text-decoration: underline;
   }
+
+  /* **FAQ 在纸上一律摊开。** prose.css 里那条同样的规则只作用于 `.td-prose`，
+     而 landing 的 section 在它之外 —— 少了这条，打印出来的 FAQ 只有一串问题，
+     答案全部随 details 收起，而屏幕上看不出来。 */
+  .td-landing-faq-item > :not(summary) {
+    display: revert !important;
+  }
+
+  .td-landing-faq-question::before {
+    /* 纸上没有展开收起，箭头是个没有含义的记号。 */
+    display: none;
+  }
+
+  /* 突出的套餐卡在纸上靠粗边框区分，badge 的实心底色换成描边。 */
+  .td-landing-plan-badge {
+    background-color: transparent;
+    color: inherit;
+    border: 1px solid #999;
+  }
 }
 
 /* 强制颜色模式下 color-mix 出来的半透明前景会被系统色替换，但底色不会 ——
@@ -322,5 +630,38 @@
     border: 1px solid ButtonBorder;
     color: ButtonText;
     background-color: ButtonFace;
+  }
+
+  /* 时间线的圆点是用 background-color 画的，而强制配色下背景一律被系统接管
+     —— 三档状态会变成同一个颜色。改用 border 让它们仍然分得开：done 实心、
+     current 空心、planned 淡。 */
+  .td-landing-timeline-item::after {
+    background-color: CanvasText;
+  }
+
+  .td-landing-timeline-item[data-td-status="current"]::after {
+    background-color: Canvas;
+    box-shadow: none;
+    border: 2px solid CanvasText;
+  }
+
+  .td-landing-timeline-item[data-td-status="planned"]::after {
+    background-color: Canvas;
+    box-shadow: none;
+    border: 1px solid CanvasText;
+  }
+
+  /* badge 的实心底色同理 —— 底色被接管之后白字压在系统背景上会看不见。 */
+  .td-landing-plan-badge {
+    background-color: ButtonFace;
+    color: ButtonText;
+    border: 1px solid ButtonBorder;
+  }
+
+  /* 勾与叉在强制配色下都被替换成同一个前景色，图标的形状是唯一的区别 ——
+     而它们本来就有 sr-only 文本，视觉上的区分靠形状够用。 */
+  .td-landing-compare-yes,
+  .td-landing-compare-no {
+    color: CanvasText;
   }
 }

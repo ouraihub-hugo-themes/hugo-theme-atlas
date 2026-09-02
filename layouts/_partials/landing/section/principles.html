@@ -1,0 +1,57 @@
+{{- /* Principles：几条主张，各带一段解释。
+
+     和 `cards` 的区别不是样式而是语义：cards 是一组入口（多数带链接，整卡可
+     点），principles 是一组陈述（不可点，读者从上往下读完）。做成两个 section
+     而不是给 cards 加一个 `variant` 开关：它们的字段不同（principles 没有
+     href、badge、image），一个开关会让另一半字段在某个取值下静默失效。
+
+     输出 `<dl>`：每条是"主张 + 它的解释"的配对，与 metrics 同一个道理 ——
+     读屏软件会把 dt 与 dd 关联播报。这里 dt 在前（主张在上），是 dl 的常规
+     顺序，所以不必像 metrics 那样每项包 div；但为了让每条能各自布局，还是
+     包一层。
+
+     每项的键：title（必需）、body（必需）、icon。
+     body 必需 —— 只有一句主张没有解释的话，这一节等于把标题重复了一遍。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "items")) -}}
+
+{{- $entries := slice -}}
+{{- range partial "landing/items.html" (dict
+  "section" $raw "noun" "principles" "at" $c.at
+  "allowed" (slice "title" "body" "icon")) -}}
+  {{- $title := strings.TrimSpace (printf "%v" (index .item "title" | default "")) -}}
+  {{- $body := strings.TrimSpace (printf "%v" (index .item "body" | default "")) -}}
+  {{- if not $title -}}
+    {{- warnf "%s: principle requires title; skipping it" .at -}}
+  {{- else if not $body -}}
+    {{- warnf "%s: principle requires body; skipping it" .at -}}
+  {{- else -}}
+    {{- $icon := "" -}}
+    {{- with index .item "icon" -}}
+      {{- $icon = partial "content/icon.html" (dict
+        "name" (strings.TrimSpace (printf "%v" .)) "class" "td-landing-principle-icon") -}}
+    {{- end -}}
+    {{- $entries = $entries | append (dict
+      "title" ($page.RenderString $title)
+      "body" ($page.RenderString (dict "display" "block") $body)
+      "icon" $icon) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if $entries -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    <dl class="td-landing-principles">
+      {{- range $entries }}
+      <div class="td-landing-principle">
+        <dt class="td-landing-principle-title">{{ .icon }}{{ .title }}</dt>
+        <dd class="td-landing-principle-body">{{ .body }}</dd>
+      </div>
+      {{- end }}
+    </dl>
+  </div>
+</section>
+{{- end -}}

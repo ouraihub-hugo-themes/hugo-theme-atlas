@@ -14,40 +14,21 @@
 {{- $c := .common -}}
 {{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "items")) -}}
 
-{{- $items := index $raw "items" -}}
-{{- if and $items (not (reflect.IsSlice $items)) -}}
-  {{- warnf "%s: metrics items must be an array; rendering none" $c.at -}}
-  {{- $items = slice -}}
-{{- end -}}
-{{- if not $items -}}
-  {{- warnf "%s: metrics requires a non-empty items array; rendering nothing" $c.at -}}
-{{- end -}}
-
 {{- $metrics := slice -}}
-{{- range $i, $item := $items -}}
-  {{- $where := printf "%s items[%d]" $c.at $i -}}
-  {{- if not (reflect.IsMap $item) -}}
-    {{- warnf "%s: each metric must be a map; skipping it" $where -}}
+{{- range partial "landing/items.html" (dict
+  "section" $raw "noun" "metrics" "at" $c.at "allowed" (slice "value" "label" "note")) -}}
+  {{- $value := strings.TrimSpace (printf "%v" (index .item "value" | default "")) -}}
+  {{- $label := strings.TrimSpace (printf "%v" (index .item "label" | default "")) -}}
+  {{- if not $value -}}
+    {{- warnf "%s: metric requires value; skipping it" .at -}}
+  {{- else if not $label -}}
+    {{- /* 只有数字没有标签的话读者不知道它在量什么。丢掉比显示一个孤零零的
+           "99.9%" 好 —— 后者看起来像渲染成功了。 */ -}}
+    {{- warnf "%s: metric requires label; skipping it" .at -}}
   {{- else -}}
-    {{- $allowed := slice "value" "label" "note" -}}
-    {{- range $name, $_ := $item -}}
-      {{- if not (in $allowed $name) -}}
-        {{- warnf "%s: unknown key %q (allowed: %s); ignoring it" $where $name (delimit $allowed ", ") -}}
-      {{- end -}}
-    {{- end -}}
-    {{- $value := strings.TrimSpace (printf "%v" (index $item "value" | default "")) -}}
-    {{- $label := strings.TrimSpace (printf "%v" (index $item "label" | default "")) -}}
-    {{- if not $value -}}
-      {{- warnf "%s: metric requires value; skipping it" $where -}}
-    {{- else if not $label -}}
-      {{- /* 只有数字没有标签的话读者不知道它在量什么。丢掉比显示一个孤零零的
-             "99.9%" 好 —— 后者看起来像渲染成功了。 */ -}}
-      {{- warnf "%s: metric requires label; skipping it" $where -}}
-    {{- else -}}
-      {{- $metrics = $metrics | append (dict
-        "value" $value "label" $label
-        "note" (strings.TrimSpace (printf "%v" (index $item "note" | default "")))) -}}
-    {{- end -}}
+    {{- $metrics = $metrics | append (dict
+      "value" $value "label" $label
+      "note" (strings.TrimSpace (printf "%v" (index .item "note" | default "")))) -}}
   {{- end -}}
 {{- end -}}
 

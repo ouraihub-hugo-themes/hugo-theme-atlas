@@ -1,0 +1,114 @@
+{{- /* Pricing-compare：套餐 × 特性的对比表。
+
+     **输出 `.td-table-scroll--matrix` 那套标记，不是新的表格样式。** 对比表要
+     的东西 —— 溢出时自己滚、表头与首列粘连、`scope` 正确、打印时展开 —— 在
+     table.css 里已经全有了，而它们是作者在 Markdown 里写 `{.matrix}` 得到的
+     同一份。另起一套的代价是这两张表在窄屏、打印、强制颜色下的行为会各自漂。
+
+     布尔值出图标 + sr-only 文本。图标是装饰（icon.html 恒 aria-hidden），少了
+     那份文本整张表在读屏软件里是一片空白 —— 听到的是"实时备份，空，空，空"。
+
+     行的 values 数量必须等于套餐数。少一个就丢这一行并 warn，不补空格：补
+     上的话作者看到的是"这个特性某几档没有"，而真相是他漏写了一格，两者在
+     页面上长得一样。
+
+     section 的键：plans（必需，纯文本数组）、items（必需）。
+     每项的键：feature（必需）、values（必需，与 plans 等长）。
+     values 里 true/false 出图标，其余按纯文本出。 */ -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "plans" "items")) -}}
+
+{{- $plans := index $raw "plans" -}}
+{{- if and $plans (not (reflect.IsSlice $plans)) -}}
+  {{- warnf "%s: pricing-compare plans must be an array; rendering nothing" $c.at -}}
+  {{- $plans = slice -}}
+{{- end -}}
+{{- $heads := slice -}}
+{{- range $plans -}}
+  {{- with strings.TrimSpace (printf "%v" .) -}}
+    {{- $heads = $heads | append . -}}
+  {{- end -}}
+{{- end -}}
+{{- if not $heads -}}
+  {{- warnf "%s: pricing-compare requires a non-empty plans array; rendering nothing" $c.at -}}
+{{- end -}}
+
+{{- $rows := slice -}}
+{{- if $heads -}}
+  {{- range partial "landing/items.html" (dict
+    "section" $raw "noun" "pricing-compare" "at" $c.at
+    "allowed" (slice "feature" "values")) -}}
+    {{- $item := .item -}}
+    {{- $where := .at -}}
+    {{- $feature := strings.TrimSpace (printf "%v" (index $item "feature" | default "")) -}}
+    {{- $values := index $item "values" -}}
+    {{- if not $feature -}}
+      {{- warnf "%s: row requires feature; skipping it" $where -}}
+    {{- else if not (reflect.IsSlice $values) -}}
+      {{- warnf "%s: row values must be an array; skipping it" $where -}}
+    {{- else if ne (len $values) (len $heads) -}}
+      {{- warnf "%s: row has %d values but there are %d plans; skipping it" $where (len $values) (len $heads) -}}
+    {{- else -}}
+      {{- $cells := slice -}}
+      {{- range $values -}}
+        {{- if eq . true -}}
+          {{- $cells = $cells | append (dict "bool" true "on" true) -}}
+        {{- else if eq . false -}}
+          {{- $cells = $cells | append (dict "bool" true "on" false) -}}
+        {{- else -}}
+          {{- $cells = $cells | append (dict
+            "bool" false "text" (strings.TrimSpace (printf "%v" .))) -}}
+        {{- end -}}
+      {{- end -}}
+      {{- $rows = $rows | append (dict "feature" $feature "cells" $cells) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if $rows -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    {{- /* scroll-region.ts 只在表格真的溢出时把这层变成可聚焦区域，那时才需要
+           名字 —— 但名字得由模板给，因为只有模板知道 i18n。 */}}
+    <div class="td-table-scroll td-table-scroll--matrix td-landing-compare"
+      data-td-scroll-label="{{ i18n "scroll_region" }}">
+      <table>
+        {{- /* 表头左上角那格是空的：它上面是特性列，而"特性"这个词对读者是
+               多余的。留空的 <td> 而不是 <th> —— 它不标识任何行或列。 */}}
+        <thead>
+          <tr>
+            <td></td>
+            {{- range $heads }}
+            <th scope="col" data-td-align="center">{{ . }}</th>
+            {{- end }}
+          </tr>
+        </thead>
+        <tbody>
+          {{- range $rows }}
+          <tr>
+            <th scope="row">{{ .feature }}</th>
+            {{- range .cells }}
+            <td data-td-align="center">
+              {{- if .bool -}}
+                {{- if .on -}}
+                  {{ partial "content/icon.html" (dict "name" "check" "class" "td-landing-compare-yes") }}
+                  <span class="sr-only">{{ i18n "pricing_included" }}</span>
+                {{- else -}}
+                  {{ partial "content/icon.html" (dict "name" "close" "class" "td-landing-compare-no") }}
+                  <span class="sr-only">{{ i18n "pricing_excluded" }}</span>
+                {{- end -}}
+              {{- else -}}
+                {{- .text -}}
+              {{- end -}}
+            </td>
+            {{- end }}
+          </tr>
+          {{- end }}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{{- end -}}

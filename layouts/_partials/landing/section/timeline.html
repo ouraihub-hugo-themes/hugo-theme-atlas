@@ -1,0 +1,79 @@
+{{- /* Timeline：按时间排的条目。
+
+     输出 `<ol>` —— 时间线是有序的，而这个顺序就是它要表达的东西。用 `<ul>`
+     或一串 `<div>` 的话读屏软件不会报出"第几项，共几项"，而那是读者在纸面上
+     一眼能看到的信息。
+
+     `date` 用 `<time>` 包住，但**只在能解析成日期时给 datetime 属性**。作者写
+     "2026 年初"、"第二季度"这类模糊时间是常事，给它塞一个瞎猜的 datetime 比
+     不给更糟 —— 机器会当真。
+
+     每项的键：date（必需）、title（必需）、body、status。
+     status 三档给一个视觉标记：done、current、planned。默认 done —— 时间线
+     多数在讲已经发生的事。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "items")) -}}
+
+{{- $entries := slice -}}
+{{- range partial "landing/items.html" (dict
+  "section" $raw "noun" "timeline" "at" $c.at
+  "allowed" (slice "date" "title" "body" "status")) -}}
+  {{- $item := .item -}}
+  {{- $where := .at -}}
+  {{- $date := strings.TrimSpace (printf "%v" (index $item "date" | default "")) -}}
+  {{- $title := strings.TrimSpace (printf "%v" (index $item "title" | default "")) -}}
+  {{- if not $date -}}
+    {{- warnf "%s: timeline entry requires date; skipping it" $where -}}
+  {{- else if not $title -}}
+    {{- warnf "%s: timeline entry requires title; skipping it" $where -}}
+  {{- else -}}
+      {{- /* 能确定是机器可读的日期才给 datetime。走 try 是因为 time.AsTime
+             解析失败会让构建失败，而模糊时间（"2026 年初"、"第二季度"）是合法
+             输入 —— 那时不给属性，而不是塞一个瞎猜的值让机器当真。
+
+             `2026-01`（月）与 `2026`（年）是合法的 HTML datetime 值，但
+             time.AsTime 解析不了它们（实测），所以先按形状认这两种 —— 时间线
+             里"某年某月发布"是最常见的写法。 */ -}}
+      {{- $machine := "" -}}
+      {{- if findRE `^[0-9]{4}(-[0-9]{2})?$` $date -}}
+        {{- $machine = $date -}}
+      {{- else -}}
+        {{- $parsed := try (time.AsTime $date) -}}
+        {{- if not $parsed.Err -}}
+          {{- $machine = $parsed.Value.Format "2006-01-02" -}}
+        {{- end -}}
+      {{- end -}}
+      {{- $status := partial "validate-enum.html" (dict
+        "value" (index $item "status") "allowed" (slice "done" "current" "planned")
+        "fallback" "done" "key" "timeline status" "where" $where) -}}
+      {{- $body := "" -}}
+      {{- with index $item "body" -}}
+        {{- with strings.TrimSpace (printf "%v" .) -}}
+          {{- $body = $page.RenderString (dict "display" "block") . -}}
+        {{- end -}}
+      {{- end -}}
+      {{- $entries = $entries | append (dict
+        "date" $date "machine" $machine "status" $status
+        "title" ($page.RenderString $title) "body" $body) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if $entries -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    <ol class="td-landing-timeline">
+      {{- range $entries }}
+      <li class="td-landing-timeline-item" data-td-status="{{ .status }}">
+        <time class="td-landing-timeline-date"
+          {{- with .machine }} datetime="{{ . }}"{{ end }}>{{ .date }}</time>
+        <strong class="td-landing-timeline-title">{{ .title }}</strong>
+        {{- with .body }}<div class="td-landing-timeline-body">{{ . }}</div>{{ end }}
+      </li>
+      {{- end }}
+    </ol>
+  </div>
+</section>
+{{- end -}}

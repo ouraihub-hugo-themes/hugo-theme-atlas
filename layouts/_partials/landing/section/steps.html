@@ -1,0 +1,49 @@
+{{- /* Steps：编号步骤。
+
+     输出 `<ol class="steps">` —— 与作者在 Markdown 里给有序列表标 `{.steps}`
+     得到的是同一份标记，所以这一节零新 CSS。编号来自列表本身
+     （`counter(list-item)`），读屏软件报的是"列表，N 项"。
+
+     不自己画序号：`<div>` 加一个 CSS 计数器看起来一样，但读屏软件听不出这是
+     几步里的第几步，而"这是流程"正是这一节要传达的东西。
+
+     每项的键：title（必需）、body。title 渲染 Markdown 但外面不包 `<p>` ——
+     它是步骤的名字，而 body 是说明。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "items")) -}}
+
+{{- $steps := slice -}}
+{{- range partial "landing/items.html" (dict
+  "section" $raw "noun" "steps" "at" $c.at "allowed" (slice "title" "body")) -}}
+  {{- $title := strings.TrimSpace (printf "%v" (index .item "title" | default "")) -}}
+  {{- if not $title -}}
+    {{- warnf "%s: step requires title; skipping it" .at -}}
+  {{- else -}}
+    {{- $body := "" -}}
+    {{- with index .item "body" -}}
+      {{- with strings.TrimSpace (printf "%v" .) -}}
+        {{- $body = $page.RenderString (dict "display" "block") . -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $steps = $steps | append (dict
+      "title" ($page.RenderString $title) "body" $body) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if $steps -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    <ol class="steps">
+      {{- range $steps }}
+      <li>
+        <strong class="td-landing-step-title">{{ .title }}</strong>
+        {{- with .body }}{{ . }}{{ end }}
+      </li>
+      {{- end }}
+    </ol>
+  </div>
+</section>
+{{- end -}}
