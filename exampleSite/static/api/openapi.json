@@ -1,0 +1,12 @@
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Atlas demo API", "version": "1.0.0" },
+  "paths": {
+    "/ping": {
+      "get": {
+        "summary": "Liveness probe",
+        "responses": { "200": { "description": "pong" } }
+      }
+    }
+  }
+}

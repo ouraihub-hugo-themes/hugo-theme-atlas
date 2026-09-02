@@ -1,0 +1,8 @@
+{{- /* Swagger UI 渲染一份 OpenAPI 文档。
+
+     参数：spec（必需）、height、id
+
+     **主题不打包 swagger-ui（1.5 MB）。** runtime 由作者给地址，见
+     params.ui.openapi.swagger。没配就只留一个指向 spec 的链接 —— 那份 JSON 本身
+     对读者有用，渲染器只是让它好看。构建时不联网。 */ -}}
+{{- partial "content/openapi-embed.html" (dict "shortcode" . "renderer" "swagger") -}}

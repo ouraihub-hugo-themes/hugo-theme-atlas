@@ -94,3 +94,8 @@ download_unpublished: Not published yet
 # 是"下载这份录屏"而不是"你的浏览器不支持"：文件本身对读者有用，asciicast 是
 # 纯文本，在终端里 `asciinema play` 就能看。
 cast_download: Download the terminal recording
+
+# OpenAPI 渲染器。runtime 未配置、脚本没下下来、渲染失败三种情况下这条都可见 ——
+# 因此说的是"打开这份 spec"而不是"渲染器不可用"：OpenAPI 文档是 JSON 或 YAML，
+# 能 curl、能导进 Postman、能喂给代码生成器，渲染器只是让它好看。
+openapi_spec_link: Open the OpenAPI specification

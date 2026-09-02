@@ -1,0 +1,21 @@
+{{- /* OpenAPI 渲染器的容器与回落。
+
+     容器上带 spec 地址，运行时读它。**不把 spec 内容嵌进页面** —— 它可能是几百
+     KB 的 JSON，而渲染器自己会去取（它要按 $ref 解析，取原文比拿一份被模板转义
+     过的副本可靠）。
+
+     回落是一个指向 spec 的链接：OpenAPI 文档是 JSON 或 YAML，能 curl、能导进
+     Postman、能喂给代码生成器。渲染器只是让它好看。runtime 没配、脚本没下下来、
+     渲染失败三种情况下读者拿到的都是它。
+
+     入参 dict：renderer、spec、height、id、configured、name
+     返回 string：整段 HTML */ -}}
+{{- $renderer := .renderer -}}
+<div class="td-openapi td-openapi--{{ $renderer }}" data-td-openapi="{{ $renderer }}"
+     data-td-openapi-spec="{{ .spec }}"{{ if not .configured }} data-td-openapi-unconfigured{{ end }}>
+  {{- /* 容器高度由行内 style 给：渲染器往空 div 里画，高度为 0 时什么都看不见。 */}}
+  <div class="td-openapi-out" id="{{ .id }}" data-td-openapi-out style="min-height: {{ .height }}px"></div>
+  <p class="td-openapi-fallback">
+    <a href="{{ .spec }}"{{ if or (hasPrefix .spec "http://") (hasPrefix .spec "https://") }} rel="noopener"{{ end }}>{{ i18n "openapi_spec_link" }}</a>
+  </p>
+</div>

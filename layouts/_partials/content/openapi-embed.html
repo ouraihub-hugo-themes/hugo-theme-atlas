@@ -1,0 +1,70 @@
+{{- /* swagger 与 redoc 共用的一半：参数校验、spec 地址、容器、回落。
+
+     两个 shortcode 只差 runtime 与初始化方式，其余一模一样 —— 分开写的话改一条
+     spec 校验规则要动两个文件，而漏掉一个是静默的。
+
+     **回落是一个指向 spec 的链接，不是一句"请开启 JS"。** OpenAPI 文档本身是
+     JSON 或 YAML，对读者有用：能用 curl 取、能导进 Postman、能喂给代码生成器。
+     渲染器只是让它好看，不是让它可读。
+
+     入参 dict：shortcode（传 `.`）、renderer（swagger | redoc）
+     返回 string：整段 HTML */ -}}
+{{- $sc := .shortcode -}}
+{{- $renderer := .renderer -}}
+{{- $at := $sc.Position -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" $sc "allowed" (slice
+  "spec" "height" "id")) -}}
+{{- $params := dict -}}
+{{- if $sc.IsNamedParams }}{{ $params = $sc.Params }}{{ end -}}
+
+{{- $spec := "" -}}
+{{- if isset $params "spec" -}}
+  {{- $policy := partial "content/url.html" (dict
+    "value" ($sc.Get "spec") "kind" "link" "parameter" "spec"
+    "position" $at "name" $renderer
+  ) -}}
+  {{- if and $policy.valid (ne $policy.scheme "mailto") -}}
+    {{- $spec = $policy.href -}}
+  {{- else if $policy.valid -}}
+    {{- warnf "shortcode %q: spec must be an http(s) or site-relative URL at %s; rendering nothing" $sc.Name $at -}}
+  {{- end -}}
+{{- else -}}
+  {{- warnf "shortcode %q requires spec at %s; rendering nothing" $sc.Name $at -}}
+{{- end -}}
+
+{{- /* 高度必须在这里定：渲染器往一个空 div 里画，容器高度为 0 时看不见任何
+       东西。默认给得大，API 文档天生长。 */ -}}
+{{- $height := 720 -}}
+{{- with index $params "height" -}}
+  {{- $value := strings.TrimSpace (printf "%v" .) -}}
+  {{- if findRE `^[1-9][0-9]{1,4}$` $value -}}
+    {{- $height = int $value -}}
+  {{- else -}}
+    {{- warnf "shortcode %q: height must be an integer between 10 and 99999 at %s; using %d" $sc.Name $at $height -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* 一页可以有多个渲染器实例，容器 id 要唯一。作者给了就用他的（便于外部
+       链接锚点），否则按 Ordinal 生成。 */ -}}
+{{- $id := printf "td-%s-%d" $renderer $sc.Ordinal -}}
+{{- with index $params "id" -}}
+  {{- $id = partial "book/validate-id.html" (dict "name" $sc.Name "value" . "position" $at) -}}
+{{- end -}}
+
+{{- /* 单出口：Hugo 的 partial 只允许一个 return，两个是模板解析错误。spec 不
+       合法时它是空串 —— 上面已经 warn 过，页面上不留半个容器。 */ -}}
+{{- $markup := "" -}}
+{{- if $spec -}}
+  {{- $runtime := partial "content/openapi-runtime.html" (dict "renderer" $renderer "position" $at) -}}
+  {{- if $runtime.configured -}}
+    {{- /* 标记按渲染器分开存：一页可以同时有 swagger 与 redoc，各自要各自的
+           runtime。foot/js.html 读它们决定注入哪几个配置。 */ -}}
+    {{- $sc.Page.Store.Set "hasOpenapi" true -}}
+    {{- $sc.Page.Store.Set (printf "openapi_%s" $renderer) $runtime -}}
+  {{- end -}}
+  {{- $markup = partial "content/openapi-markup.html" (dict
+    "renderer" $renderer "spec" $spec "height" $height "id" $id
+    "configured" $runtime.configured
+  ) -}}
+{{- end -}}
+{{- return $markup -}}

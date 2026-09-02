@@ -1,0 +1,20 @@
+{{- /* 校验一个 OpenAPI runtime 资源地址（js / css）。
+
+     过共享的 URL 策略，再加一条：mailto 在这里没有意义 —— 作者写了它说明配错了。
+     站内路径（自托管把文件放进 static/）由 url.html 过 relURL，子路径部署下不断。
+
+     入参 dict：value、renderer、parameter、position
+     返回 string：可用的 href，空串表示不可用（已 warn） */ -}}
+{{- $policy := partial "content/url.html" (dict
+  "value" .value "kind" "link" "parameter" .parameter
+  "position" .position "name" .renderer
+) -}}
+{{- $out := "" -}}
+{{- if $policy.valid -}}
+  {{- if eq $policy.scheme "mailto" -}}
+    {{- warnf "%s: %s must be an http(s) or site-relative URL at %s; the renderer stays off" .renderer .parameter .position -}}
+  {{- else -}}
+    {{- $out = $policy.href -}}
+  {{- end -}}
+{{- end -}}
+{{- return $out -}}

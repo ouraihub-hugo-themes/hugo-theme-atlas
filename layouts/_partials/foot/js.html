@@ -29,6 +29,22 @@
 {{- if .Store.Get "hasMindmap" -}}
   <script src="{{ "js/markmap/markmap.js" | relURL }}" type="module"></script>
 {{- end -}}
+{{- /* OpenAPI 渲染器的 runtime 地址走一个 JSON script，不走 data 属性：URL 里
+       可以有 `&`、`=`、逗号，而这里是四个值一组、两个渲染器各一组。
+
+       传数据结构而不是 jsonify 的结果 —— `<script>` 里是 JS 上下文，Go 的转义器
+       会把插进来的字符串再编码一次，浏览器 JSON.parse 得到的是字符串而不是对象。
+       直接给 map，它自己序列化，正好一次，并且把 `<` 转义掉。 */ -}}
+{{- if .Store.Get "hasOpenapi" -}}
+  {{- range $renderer := slice "swagger" "redoc" -}}
+    {{- with $.Store.Get (printf "openapi_%s" $renderer) -}}
+      <script type="application/json" data-td-openapi-config="{{ $renderer }}">
+        {{- dict "js" .js "css" .css "integrity" .integrity "cssIntegrity" .css_integrity -}}
+      </script>
+    {{- end -}}
+  {{- end -}}
+  {{- $runtimes = $runtimes | append "openapi" -}}
+{{- end -}}
 {{- range $runtimes -}}
   {{- with resources.Get (printf "dist/%s.js" .) -}}
     {{- if hugo.IsProduction -}}

@@ -1,0 +1,59 @@
+/* OpenAPI 渲染器（Swagger UI / Redoc）的容器。
+ *
+ * **不给库本身写样式。** 它们各自带一整套 CSS，由作者配的地址加载 —— 主题去覆盖
+ * 那些类名等于把自己绑在某个版本的内部结构上，而这个库连版本都不在主题的依赖里。
+ * 这里只管容器、间距与回落链接。 */
+
+@utility td-openapi {
+  display: block;
+  margin-block: 1.5rem;
+}
+
+/* 输出容器的高度由行内 style 给（每处不同）：渲染器往空 div 里画，高度为 0 时
+   什么都看不见。 */
+.td-openapi-out:empty {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-code);
+  background: var(--color-surface);
+}
+
+/* 画好之后容器不再需要边框 —— 库自己的样式接手。 */
+.td-openapi[data-td-openapi-ready] .td-openapi-out {
+  border: 0;
+  background: none;
+}
+
+/* 回落链接。runtime 没配、脚本没下下来、渲染失败三种情况下它是页面上的内容，
+   因此画成一个正常的行动项而不是一行小字。 */
+.td-openapi-fallback {
+  margin-block-start: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.td-openapi-fallback a {
+  color: var(--color-accent);
+  text-decoration: underline;
+}
+
+/* 渲染成功后回落链接收起来 —— 库自己带下载/导出入口。 */
+.td-openapi[data-td-openapi-ready] .td-openapi-fallback {
+  display: none;
+}
+
+/* 渲染失败时留一条警示边，读者知道这里本该是一份渲染好的文档。 */
+.td-openapi[data-td-openapi-failed] .td-openapi-fallback {
+  border-inline-start: 3px solid var(--color-status-danger);
+  padding-inline-start: 1rem;
+}
+
+/* 打印：这两个库都是可展开可交互的三栏/面板布局，纸上都不成立，而且它们的 CSS
+   本来就不为打印设计。图隐藏，回落链接出来 —— 纸上读者能拿到的是那个地址。 */
+@media print {
+  .td-openapi-out {
+    display: none;
+  }
+
+  .td-openapi[data-td-openapi-ready] .td-openapi-fallback {
+    display: block;
+  }
+}

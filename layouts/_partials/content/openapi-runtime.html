@@ -1,0 +1,84 @@
+{{- /* 解析 OpenAPI 渲染器的 runtime 地址。没配就是关着的。
+
+     **主题不打包 swagger-ui 与 redoc。** 它们分别是 1.5 MB 与 1.1 MB —— 装了
+     主题的站点九成没有 API 文档，不该为此背上这些字节。主题出 shortcode、容器、
+     样式与初始化那几行，runtime 由作者给地址：自托管一份，或指向 CDN。
+
+     因此这是一个联网特性，按契约默认关着：没配 runtime 地址时 shortcode 只渲染
+     一个指向 spec 的链接。构建时不联网 —— 脚本是读者的浏览器去取的。
+
+     配置：
+       [params.ui.openapi.swagger]
+       js = "https://cdn.example.com/swagger-ui-bundle.js"
+       css = "https://cdn.example.com/swagger-ui.css"
+       integrity = "sha384-…"        # js 的，跨域时强烈建议
+       css_integrity = "sha384-…"
+
+       [params.ui.openapi.redoc]
+       js = "https://cdn.example.com/redoc.standalone.js"
+       integrity = "sha384-…"
+
+     入参 dict：renderer（swagger | redoc）、position
+     返回 dict：js、css、integrity、css_integrity、configured */ -}}
+{{- $renderer := .renderer -}}
+{{- $position := .position | default "unknown position" -}}
+{{- $cfg := index (site.Params.ui.openapi | default dict) $renderer | default dict -}}
+
+{{- $js := "" -}}
+{{- $css := "" -}}
+{{- $integrity := "" -}}
+{{- $cssIntegrity := "" -}}
+
+{{- with $cfg.js -}}
+  {{- $js = partial "content/openapi-url.html" (dict
+    "value" . "renderer" $renderer "position" $position
+    "parameter" (printf "params.ui.openapi.%s.js" $renderer)
+  ) -}}
+{{- end -}}
+
+{{- with $cfg.css -}}
+  {{- $css = partial "content/openapi-url.html" (dict
+    "value" . "renderer" $renderer "position" $position
+    "parameter" (printf "params.ui.openapi.%s.css" $renderer)
+  ) -}}
+{{- end -}}
+
+{{- /* SRI 只在跨域脚本上有意义，也只在那里要紧：CDN 被换掉等于任意代码在读者
+       的浏览器里执行。不强制 —— 自托管的文件与站点同源，改它的人已经能改页面
+       本身了。跨域而没给就 warn：那是作者漏了，不是他不需要。 */ -}}
+{{- $external := or (hasPrefix $js "http://") (hasPrefix $js "https://") -}}
+{{- with $cfg.integrity -}}
+  {{- $value := strings.TrimSpace (printf "%v" .) -}}
+  {{- if findRE `^sha(256|384|512)-[A-Za-z0-9+/]+=*$` $value -}}
+    {{- $integrity = $value -}}
+  {{- else -}}
+    {{- warnf "%s: params.ui.openapi.%s.integrity must be a sha256/384/512 digest at %s; loading without it" $renderer $renderer $position -}}
+  {{- end -}}
+{{- end -}}
+{{- if and $js $external (not $integrity) -}}
+  {{- warnf "%s: params.ui.openapi.%s.js is cross-origin without integrity at %s; a compromised host would run arbitrary code — add params.ui.openapi.%s.integrity" $renderer $renderer $position $renderer -}}
+{{- end -}}
+
+{{- with $cfg.css_integrity -}}
+  {{- $value := strings.TrimSpace (printf "%v" .) -}}
+  {{- if findRE `^sha(256|384|512)-[A-Za-z0-9+/]+=*$` $value -}}
+    {{- $cssIntegrity = $value -}}
+  {{- else -}}
+    {{- warnf "%s: params.ui.openapi.%s.css_integrity must be a sha256/384/512 digest at %s; loading without it" $renderer $renderer $position -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* swagger-ui 的样式与脚本是一套，缺一半画不出来 —— 配了 js 没配 css 的话
+       页面上是一堆没有样式的裸元素，比不渲染更难看懂。 */ -}}
+{{- if and (eq $renderer "swagger") $js (not $css) -}}
+  {{- warnf "swagger: params.ui.openapi.swagger.css is required alongside js at %s; the renderer stays off" $position -}}
+  {{- $js = "" -}}
+{{- end -}}
+
+{{- return dict
+  "js" $js
+  "css" $css
+  "integrity" $integrity
+  "css_integrity" $cssIntegrity
+  "configured" (ne $js "")
+-}}

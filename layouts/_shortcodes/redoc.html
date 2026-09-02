@@ -1,0 +1,11 @@
+{{- /* Redoc 渲染一份 OpenAPI 文档。
+
+     参数：spec（必需）、height、id
+
+     与 swagger 同一套契约，差别只在 runtime 与初始化方式（见 openapi.ts）。
+     两个都在是因为它们的取向不同：Swagger UI 带"试一下"的交互面板，Redoc 是
+     三栏只读排版。选哪个是作者的事，不是主题的事。
+
+     **主题不打包 redoc（1.1 MB）。** runtime 由作者给地址，见
+     params.ui.openapi.redoc。没配就只留一个指向 spec 的链接。 */ -}}
+{{- partial "content/openapi-embed.html" (dict "shortcode" . "renderer" "redoc") -}}
