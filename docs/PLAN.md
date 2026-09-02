@@ -90,7 +90,10 @@ token → 代码块静默落回 Chroma 自带的 github 灰。Tailwind 的 `@the
 
 **剩余**：
 
-- ⬜ `book` / `blog` / `swagger` 三壳 + `params.ui.shell_types` 扩展点
+- ✅ `book` / `blog` / `swagger` 三壳 + `params.ui.shell_types` 扩展点。
+  四壳共用一份 baseof，实际差异只有一个标记类与 `reading_width` ——
+  见 `shell/resolve.html`。给每个壳各留一份 baseof 的代价是外壳级改动要改
+  四处，而 Hugo 的 baseof 变体是整体替换，漏改一处不报错。
 - ⏸ 侧栏宽度拖拽 —— **有意推迟**。三个 token（`--td-shell-sidebar-w` /
   `-min` / `-max`）已就位，桌面端宽度够用；而拖拽要引入指针捕获、双向 RTL、
   键盘等价操作和又一份持久化状态，成本约等于期 3 里一个带外部 runtime 的
@@ -200,9 +203,9 @@ Hugo 有没有内建。已交付。
 
    顺带修了资产表在窄屏让整页横滚 32px 的问题 —— `position: absolute` 的后代
    找不到定位祖先就逃出滚动壳的裁剪，给壳加 `position: relative`。
-6. 🔶 **带外部 runtime 的重头**（单独排，每个都要满足"未完整配置前不联网、
-   正常构建不下载任何东西"）：剩 `echarts` `markmap` `swagger` `redoc`
-   `asciinema`。
+6. ✅ **带外部 runtime 的重头**（每个都满足"未完整配置前不联网、正常构建
+   不下载任何东西"）：`echarts` `markmap` `swagger` `redoc` `asciinema`
+   `plantuml` 全部交付。
 
    **交付形态分级**（实测体积定的，不是按类别猜的）：`asciinema`（184 KB）、
    `echarts` 按需（530 KB）、`markmap`（733 KB）vendored 进仓库走代码分割；
@@ -219,6 +222,31 @@ Hugo 有没有内建。已交付。
    没选默认的 deflate + 自定义字母表 base64，是因为它在 Hugo 模板里没有实现
    路径（没有 deflate 函数，也没有能改字母表的 base64）。代价是 URL 随图变长，
    几十行的图约两千字符，仍在所有浏览器与服务器的限制之内。
+
+   **`echarts` 常用 8 种 + 代码分割**（line/bar/pie/scatter/radar/heatmap/
+   tree/graph）。整份 1 MB，按图种切 chunk 后有图的页面只下用到的那几个。
+   与 `mermaid` 同一套：产物在 `static/js/echarts/` 而不是 `assets/`，
+   因为 chunk 是浏览器按相对路径直取的，Hugo 只发布被 `resources.Get`
+   引用过的 asset。
+
+   **`markmap` 不引 `markmap-common` 只为一个类型**：节点树的类型从
+   `setData` 的签名上取（`NonNullable<Parameters<Markmap["setData"]>[0]>`），
+   要的正是"setData 收什么"，它改了结构编译器照样会说。
+
+   **`embedGlobalCSS` 不能关。** 它不只是配色 —— 节点宽度是靠
+   `.markmap-foreign{display:inline-block}` 配上
+   `.markmap-foreign>div{width:var(--markmap-max-width)}`（9999px）量出来的。
+   关掉后 foreignObject 里的 block 元素塌到最窄，每个节点被量成一个字宽、
+   几百像素高，文字竖排，`fit()` 据此算出 `scale(0.16)`。主题要改的配色与
+   字体走它的 `--markmap-*` 变量契约，不重抄它的样式表。
+   **教训：判断一份第三方样式能不能省掉之前，先把它解出来读，别按名字猜。**
+
+   另一处同因不同表现：`data-td-mindmap-rendered` 必须在 `create()`
+   **之前**挂上。CSS 在这个标记出现前让 SVG `display:none`，顺序反了
+   `fit()` 量到 0×0，算出 `scale(0)` —— 11 个节点都在 DOM 里，看起来像
+   画成了，页面上什么都没有。`autoFit: true` 让每次重画结尾自己取景，
+   替掉一个显式 `fit()` 加一个手写 observer（markmap 自带的 observer
+   调 `renderData()` 但不调 `fit()`，缩放比例冻在初次那一次）。
 
    **`mermaid` 已交付，`goat` 顺带交付。** 查 Hugo 内建时发现 `diagrams.Goat`
    是内建的（和 `transform.ToMath` 一样），ASCII 线框图构建时就成 SVG，零运行
@@ -300,7 +328,26 @@ narrative 字段渲染 Markdown、label 字段纯文本，这个区分要保住�
 - print 输出（`baseof.print.html` + `print:` variant 全量核对）
 - LLMS / BookManifest / Markdown / RSS
 - 32 locales 全量导入 + schema 对齐检查
-- VENDOR.json + license/version/checksum
+- ✅ VENDOR.json + license/version/checksum。提前做了，因为**仓库里一个
+  LICENSE 文件都没有** —— 主题自己声明 Apache-2.0（`theme.toml` 与
+  `package.json`）却不带副本，而 `static/js/` 下 148 个提交的 bundle 文件是
+  再分发，MIT 与 Apache-2.0 都要求许可文本与版权声明随之附带。
+
+  包名不从 `package.json` 抄，问 esbuild 的 metafile —— 它记的是每个 bundle
+  的真实输入文件，那才是"哪些第三方代码在产物里"的地面事实。
+  `pnpm-lock.yaml` 记的是构建用过的整棵树（含 eslint、vitest），不是被分发的
+  那一部分。实测：产物里是 **65 个包**，而直接依赖只有 4 个。
+
+  `scripts/gen-vendor.js` 出两份：`VENDOR.json`（机器读）与 `NOTICES.md`
+  （许可正文 + 上游 NOTICE，2270 行）。`--check` 进门禁。
+  手抄的那份 CSS 记的是**上游文件**的校验和，不是仓库里那份的 —— 仓库里那份
+  顶上加了说明头，字节不同；上游校验和回答"抄的是不是那个版本的那些字节"，
+  本地被改动这件事 git 已经在管。脚本另外验证本地副本正文与上游一致，
+  捕的是"升级了包但忘了重抄"。
+
+  两处手查不如脚本：`khroma` 不写 `license` 字段只放文件（回落读文件正文
+  认 SPDX，认不出就写 `see <file>`，不猜）；`es-toolkit` 是 MIT 却带
+  NOTICE —— 我按许可类型筛着手查时漏了它。
 - 无效配置的 warn + fallback 全量核对（禁止 `errorf`）
 - 文档：`README` + 定制入口说明（**明写 `@theme` 替代 Sass 覆盖**）
 

@@ -1,0 +1,398 @@
+{
+  "comment": "第三方代码在这个仓库的发布产物里的完整清单。bundled 的进 static/js/ 与 assets/dist/（由 esbuild 从 node_modules 打出，提交是因为消费者不装 Node）；copied 的是手抄进仓库的文件。用 node scripts/gen-vendor.js 重新生成，--check 在 CI 里验证它与产物一致。",
+  "entries": [
+    {
+      "name": "@braintree/sanitize-url",
+      "version": "7.1.2",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "@iconify/utils",
+      "version": "3.1.4",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "@mermaid-js/parser",
+      "version": "1.2.1",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "@upsetjs/venn.js",
+      "version": "2.0.0",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "asciinema-player",
+      "version": "3.17.0",
+      "license": "Apache-2.0",
+      "form": "bundled"
+    },
+    {
+      "name": "cose-base",
+      "version": "2.2.0",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "cytoscape",
+      "version": "3.34.2",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "cytoscape-cose-bilkent",
+      "version": "4.1.0",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "cytoscape-fcose",
+      "version": "2.2.0",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "d3",
+      "version": "7.9.0",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-array",
+      "version": "2.12.1",
+      "license": "BSD-3-Clause",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-axis",
+      "version": "3.0.0",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-brush",
+      "version": "3.0.0",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-chord",
+      "version": "3.0.1",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-color",
+      "version": "3.1.0",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-contour",
+      "version": "4.0.2",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-delaunay",
+      "version": "6.0.4",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-dispatch",
+      "version": "3.0.1",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-drag",
+      "version": "3.0.0",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-dsv",
+      "version": "3.0.1",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-ease",
+      "version": "3.0.1",
+      "license": "BSD-3-Clause",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-fetch",
+      "version": "3.0.1",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-force",
+      "version": "3.0.0",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-format",
+      "version": "3.1.2",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-geo",
+      "version": "3.1.1",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-hierarchy",
+      "version": "3.1.2",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-interpolate",
+      "version": "3.0.1",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-path",
+      "version": "1.0.9",
+      "license": "BSD-3-Clause",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-polygon",
+      "version": "3.0.1",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-quadtree",
+      "version": "3.0.1",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-random",
+      "version": "3.0.1",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-sankey",
+      "version": "0.12.3",
+      "license": "BSD-3-Clause",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-scale",
+      "version": "4.0.2",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-scale-chromatic",
+      "version": "3.1.0",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-selection",
+      "version": "3.0.0",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-shape",
+      "version": "1.3.7",
+      "license": "BSD-3-Clause",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-time",
+      "version": "3.1.0",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-time-format",
+      "version": "4.1.0",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-timer",
+      "version": "3.0.1",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-transition",
+      "version": "3.0.1",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "d3-zoom",
+      "version": "3.0.0",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "dagre-d3-es",
+      "version": "7.0.14",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "dayjs",
+      "version": "1.11.23",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "delaunator",
+      "version": "5.1.0",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "dompurify",
+      "version": "3.4.14",
+      "license": "(MPL-2.0 OR Apache-2.0)",
+      "form": "bundled"
+    },
+    {
+      "name": "echarts",
+      "version": "6.1.0",
+      "license": "Apache-2.0",
+      "form": "bundled"
+    },
+    {
+      "name": "es-toolkit",
+      "version": "1.52.0",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "fastdom",
+      "version": "1.0.12",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "internmap",
+      "version": "1.0.1",
+      "license": "ISC",
+      "form": "bundled"
+    },
+    {
+      "name": "katex",
+      "version": "0.16.47",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "khroma",
+      "version": "2.1.0",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "layout-base",
+      "version": "2.0.1",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "lodash-es",
+      "version": "4.18.1",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "marked",
+      "version": "16.4.2",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "markmap-common",
+      "version": "0.18.9",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "markmap-view",
+      "version": "0.18.10",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "mermaid",
+      "version": "11.17.2",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "robust-predicates",
+      "version": "3.0.3",
+      "license": "Unlicense",
+      "form": "bundled"
+    },
+    {
+      "name": "roughjs",
+      "version": "4.6.6",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "stylis",
+      "version": "4.4.0",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "ts-dedent",
+      "version": "2.3.0",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "tslib",
+      "version": "2.3.0",
+      "license": "0BSD",
+      "form": "bundled"
+    },
+    {
+      "name": "uuid",
+      "version": "14.0.2",
+      "license": "MIT",
+      "form": "bundled"
+    },
+    {
+      "name": "zrender",
+      "version": "6.1.0",
+      "license": "BSD-3-Clause",
+      "form": "bundled"
+    },
+    {
+      "name": "asciinema-player",
+      "version": "3.17.0",
+      "license": "Apache-2.0",
+      "form": "copied",
+      "path": "src/css/vendor/asciinema-player.css",
+      "upstream": "dist/bundle/asciinema-player.css",
+      "sha256": "f619fe17597043564f03b2c6918b3daf890ee8b912fb408542fba11afade4fdb"
+    }
+  ]
+}
