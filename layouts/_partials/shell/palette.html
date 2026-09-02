@@ -1,0 +1,120 @@
+{{- /* 命令面板。`Ctrl/Cmd+K` 打开，列的是**动作**，不是页面。
+
+     **为什么不列页面。** 参照过的实现里面板有一半是页面搜索：自己 fetch 一份
+     lunr 索引、自己算分、自己排序。这个主题的搜索是 pagefind，已经有分节锚点
+     （sub_results）、CJK 分词与增量索引 —— 面板再实现一遍会得到一个更差的
+     结果列表，还多一份索引要下载。所以两个入口各管一件事：`/` 找内容，
+     `Ctrl+K` 执行动作。
+
+     **动作全是主题内建的，站点配不了。** 因此这里没有 JSON manifest、没有
+     scheme 允许集、没有 `safeUrl` —— 那一套是为了让站点配置能塞进自定义命令
+     而又不让它塞进可执行的东西。站点塞不进来时，那层防护挡的是主题自己写的
+     字面量。
+
+     每个动作是一个 `<li>`，`data-td-action` 是类型，地址（如果有）在
+     `data-td-url`。运行时读这些属性，不认识 URL 的构成方式 —— 拼地址是构建期
+     的事，浏览器里只有"打开它"。
+
+     默认关着，跟着 `params.ui.search` 一起开：两者共用 navbar 上那个按钮的
+     位置感（`/` 与 `Ctrl+K` 是一对约定），而单独开面板不开搜索会让 `/` 落空。
+
+     **整块包在 `if` 里。** Hugo 的 `return` 只设返回值，不中断输出 —— 用它当
+     前置条件的表现是开关关着而标记全在。 */ -}}
+{{- if site.Params.ui.search | default false -}}
+
+{{- $repo := (site.Params.ui.repo | default dict).url | default "" -}}
+{{- $repoOK := false -}}
+{{- with $repo -}}
+  {{- $policy := partial "content/url.html" (dict
+    "value" . "kind" "link" "parameter" "params.ui.repo.url"
+    "position" "params.ui.repo" "name" "palette"
+  ) -}}
+  {{- if and $policy.valid $policy.external -}}
+    {{- $repo = strings.TrimSuffix "/" $policy.raw -}}
+    {{- $repoOK = true -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $items := slice -}}
+
+{{- /* 主题切换。永远在 —— 它不依赖任何配置。 */ -}}
+{{- $items = $items | append (dict
+  "action" "theme" "icon" "moon" "label" (i18n "palette_theme")) -}}
+
+{{- /* 复制本页地址。单页之外也有意义（列表页也有地址），所以不判 IsPage。 */ -}}
+{{- $items = $items | append (dict
+  "action" "copy-link" "icon" "link" "label" (i18n "palette_copy_link")
+  "url" .Permalink) -}}
+
+{{- /* 打印。运行时调 window.print()。 */ -}}
+{{- $items = $items | append (dict
+  "action" "print" "icon" "file-lines" "label" (i18n "palette_print")) -}}
+
+{{- /* 下面几条各自要条件。缺条件的不出现，而不是出现一个点了没反应的条目。 */ -}}
+{{- if and $repoOK .File -}}
+  {{- $subdir := strings.Trim ((site.Params.ui.repo | default dict).subdir | default "") "/" -}}
+  {{- $branch := (site.Params.ui.repo | default dict).branch | default "main" -}}
+  {{- $inRepo := path.Join $subdir "content" (replace .File.Path "\\" "/") -}}
+  {{- $items = $items | append (dict
+    "action" "open" "icon" "pen-to-square" "label" (i18n "edit_page")
+    "url" (printf "%s/edit/%s/%s" $repo $branch $inRepo)) -}}
+{{- end -}}
+
+{{- if $repoOK -}}
+  {{- $items = $items | append (dict
+    "action" "open" "icon" "github" "label" (i18n "palette_repo") "url" $repo) -}}
+{{- end -}}
+
+{{- /* 交给 AI 助手读这一页。地址里带的是这一页的绝对地址 —— 与分享条里那两个
+       目标同一个 i18n 提示语，同一件事不写两句。 */ -}}
+{{- if .IsPage -}}
+  {{- $prompt := replace (urlquery (i18n "share_ai_prompt" (dict "URL" .Permalink))) "+" "%20" -}}
+  {{- $items = $items | append
+    (dict "action" "open" "icon" "openai" "label" (i18n "palette_chatgpt")
+      "url" (printf "https://chatgpt.com/?hints=search&prompt=%s" $prompt))
+    (dict "action" "open" "icon" "claude" "label" (i18n "palette_claude")
+      "url" (printf "https://claude.ai/new?q=%s" $prompt)) -}}
+{{- end -}}
+
+{{- /* 从面板转到搜索。面板不列页面，所以这一条是那件事的出口 —— 读者按了
+       Ctrl+K 又想找内容时不必先关掉再按 `/`。 */ -}}
+{{- $items = $items | append (dict
+  "action" "search" "icon" "search" "label" (i18n "palette_search")) -}}
+
+<dialog class="td-palette" data-td-palette aria-label="{{ i18n "palette_label" }}">
+  {{- /* `role="combobox"` + `aria-activedescendant`：焦点始终在输入框上，
+         高亮项由那个属性指出。这是列表框的标准做法，比在每个条目上倒
+         tabindex 少一套状态 —— 而 tabindex 那套还要处理"焦点在第三项时列表
+         重排了"。 */ -}}
+  <div class="td-palette-form">
+    {{ partial "content/icon.html" (dict "name" "search" "class" "td-palette-icon" "page" page) }}
+    <input type="text" class="td-palette-input" data-td-palette-input
+           role="combobox" aria-expanded="true" aria-controls="td-palette-list"
+           aria-label="{{ i18n "palette_label" }}"
+           placeholder="{{ i18n "palette_placeholder" }}"
+           autocomplete="off" spellcheck="false">
+    <button type="button" class="td-palette-close" data-td-palette-close
+            aria-label="{{ i18n "search_close" }}">{{ i18n "search_close" }}</button>
+  </div>
+
+  <ul class="td-palette-list" id="td-palette-list" role="listbox"
+      aria-label="{{ i18n "palette_label" }}" data-td-palette-list>
+    {{- range $i, $item := $items }}
+    {{- /* `tabindex="-1"` 而不是可聚焦：焦点留在输入框。id 供
+           aria-activedescendant 指向。 */ -}}
+    <li class="td-palette-item" role="option" tabindex="-1"
+        id="td-palette-option-{{ $i }}" aria-selected="false"
+        data-td-action="{{ .action }}"{{ with .url }} data-td-url="{{ . }}"{{ end }}>
+      {{ partial "content/icon.html" (dict "name" .icon "page" $) }}
+      <span class="td-palette-label">{{ .label }}</span>
+    </li>
+    {{- end }}
+  </ul>
+
+  {{- /* 筛没了的时候显示。`:empty` 隐藏，与搜索那边同一套。 */ -}}
+  <p class="td-palette-empty" data-td-palette-empty role="status" aria-live="polite"></p>
+  <span class="sr-only" data-td-palette-status role="status" aria-live="polite"
+        data-td-palette-none="{{ i18n "palette_none" }}"
+        data-td-label-copied="{{ i18n "share_copied" }}"></span>
+</dialog>
+{{- end -}}

@@ -89,6 +89,9 @@
   </div>
 
   {{ partial "shell/footer.html" . }}
+  {{- /* 面板在栅格外、footer 之后：它是个 `<dialog>`，位置由顶层渲染决定，
+         放进 main 里只会让它继承一层不需要的定位祖先。 */ -}}
+  {{ partial "shell/palette.html" . }}
   {{- /* sprite 在最后：`content/icon.html` 渲染时才登记名字，而 footer 与
          navbar 里也有图标。放在这里之前的任何位置都会漏掉后面登记的那些。 */ -}}
   {{ partial "content/icon-sprite.html" . }}
@@ -111,6 +114,7 @@
   </main>
 
   {{ partial "shell/footer.html" . }}
+  {{ partial "shell/palette.html" . }}
   {{ partial "content/icon-sprite.html" . }}
   {{ partial "foot/js.html" . }}
 </body>

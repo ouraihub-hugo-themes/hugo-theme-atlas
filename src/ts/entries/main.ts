@@ -4,6 +4,7 @@
 import { init as initDrawer } from "../drawer.js";
 import { init as initFeedback } from "../feedback.js";
 import { init as initNavbar } from "../navbar.js";
+import { init as initPalette } from "../palette.js";
 import { init as initScrollRegion } from "../scroll-region.js";
 import { init as initScrollSpy } from "../scroll-spy.js";
 import { init as initSearch } from "../search.js";
@@ -23,3 +24,5 @@ initSearch();
 // 多一次请求。
 initShare();
 initFeedback();
+// 面板在搜索之后：它的「搜索本站」那一条要点 navbar 上那个已绑好的按钮。
+initPalette();

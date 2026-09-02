@@ -19,10 +19,13 @@
      输入框里按 Enter 要有个归宿，`submit` 被拦下就是那个归宿。
 
      `<dialog>` 里的输入框要 `autocomplete="off"`：浏览器的历史下拉会盖住
-     结果列表，而结果本身就是一份更好的建议。 */ -}}
-{{- if not (site.Params.ui.search | default false) -}}
-  {{- return -}}
-{{- end -}}
+     结果列表，而结果本身就是一份更好的建议。
+
+     **整块包在 `if` 里，不用 `{{ return }}` 当前置条件。** Hugo 的 `return`
+     只设返回值，不中断模板输出 —— 实测 `{{ if true }}{{ return }}{{ end }}`
+     之后的标记照样渲染。写成前置条件的表现是「开关关着但标记全在」：一个
+     点了没反应的搜索按钮出现在每个没开搜索的站点上，而构建全绿。 */ -}}
+{{- if site.Params.ui.search | default false -}}
 <button type="button" class="td-navbar-button td-search-open" data-td-search-open hidden
         aria-label="{{ i18n "search_open" }}" title="{{ i18n "search_open" }}">
   {{ partial "content/icon.html" (dict "name" "search" "page" page) }}
@@ -61,3 +64,4 @@
        data-td-search-unavailable="{{ i18n "search_unavailable" }}"></div>
   <ol class="td-search-results" data-td-search-results></ol>
 </dialog>
+{{- end -}}

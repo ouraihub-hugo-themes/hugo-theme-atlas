@@ -154,3 +154,15 @@ feedback_issue_body: "Page: {{ .URL }}\n\nWhat was missing or wrong?\n"
 # giscus 评论。开在 params.ui.comments 的四个必需键上。
 comments_label: Comments
 comments_noscript: View this page's discussion on GitHub
+
+# 命令面板（Ctrl/Cmd+K）。列动作，不列页面 —— 找内容走搜索。
+palette_label: Commands
+palette_placeholder: Type a command…
+palette_none: No matching command
+palette_theme: Toggle light and dark
+palette_copy_link: Copy link to this page
+palette_print: Print this page
+palette_repo: Open the repository
+palette_chatgpt: Open this page in ChatGPT
+palette_claude: Open this page in Claude
+palette_search: Search this site…
