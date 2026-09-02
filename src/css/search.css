@@ -1,0 +1,219 @@
+/* 搜索对话框。
+ *
+ * 用原生 `<dialog>`，所以这里不写遮罩层、不管 z-index、不做焦点样式的兜底 ——
+ * 顶层渲染与 `::backdrop` 由浏览器给。要写的只有几何与配色。
+ *
+ * 表面色走 `--td-shell-popover`：它就是为浮层定的那一档，与侧栏弹出层同色。
+ * 再定义一个 `--td-search-bg` 会让"浮层是什么颜色"这件事有两个答案。 */
+
+.td-search {
+  /* 对话框自己的盒子。`margin: auto` 配 `inset: 0` 是 <dialog> 的居中写法；
+     顶部留一段而不是垂直居中：结果列表向下生长，居中会让长列表的顶部跑出视口。 */
+  position: fixed;
+  inset: 0;
+  margin: 4rem auto auto;
+  inline-size: min(100% - 2rem, 40rem);
+  max-block-size: min(80dvh, 40rem);
+  padding: 0;
+  overflow: hidden auto;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
+  background: var(--td-shell-popover);
+  color: var(--color-ink);
+  box-shadow: 0 1.5rem 3rem oklch(20% 0.03 250deg / 24%);
+
+  &::backdrop {
+    background: oklch(20% 0.02 250deg / 45%);
+    /* 毛玻璃只在支持时加。`backdrop-filter` 在 ::backdrop 上的支持比在普通
+       元素上晚，不做特性查询的话不支持的浏览器拿到的是一层纯色 —— 那也可用。 */
+    backdrop-filter: blur(2px);
+  }
+}
+
+/* 输入行。`position: sticky` 让它在结果滚动时留在顶部：读者改词时不必先滚回去。 */
+.td-search-form {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.75rem;
+  border-block-end: 1px solid var(--color-border);
+  background: var(--td-shell-popover);
+}
+
+.td-search-field {
+  display: flex;
+  flex: 1;
+  gap: 0.5rem;
+  align-items: center;
+  min-inline-size: 0;
+}
+
+.td-search-field-icon {
+  flex: none;
+  color: var(--color-ink-faint);
+}
+
+.td-search-input {
+  flex: 1;
+  min-inline-size: 0;
+  padding: 0.375rem 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font-size: 1rem;
+
+  &:focus {
+    outline: none;
+  }
+
+  /* 清除按钮由浏览器画，样式不统一且与右侧的关闭按钮挨着容易误点。 */
+  &::-webkit-search-cancel-button {
+    display: none;
+  }
+}
+
+.td-search-close {
+  flex: none;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  color: var(--color-ink-muted);
+  font-size: 0.8125rem;
+
+  &:hover {
+    background: var(--td-shell-selected);
+    color: var(--color-ink);
+  }
+}
+
+/* 状态行。空的时候不占高度 —— `:empty` 而不是让运行时切类，少一处状态。 */
+.td-search-status {
+  padding: 0.5rem 0.75rem 0;
+  color: var(--color-ink-muted);
+  font-size: 0.8125rem;
+
+  &:empty {
+    display: none;
+  }
+}
+
+.td-search-results {
+  margin: 0;
+  padding: 0.5rem;
+  list-style: none;
+}
+
+.td-search-result {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+
+  /* 悬停与键盘聚焦同一个反馈。`:focus-within` 因为焦点落在里面的链接上。 */
+  &:hover,
+  &:focus-within {
+    background: var(--td-shell-selected);
+  }
+}
+
+.td-search-result-link {
+  display: block;
+  color: var(--color-ink-strong);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.td-search-subs {
+  margin: 0.25rem 0 0;
+  padding-inline-start: 0.75rem;
+  border-inline-start: 2px solid var(--color-border);
+  list-style: none;
+
+  > li + li {
+    margin-block-start: 0.375rem;
+  }
+}
+
+.td-search-sub-link {
+  color: var(--color-ink);
+  font-size: 0.875rem;
+  text-decoration: none;
+
+  &:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+  }
+}
+
+.td-search-excerpt {
+  margin: 0.125rem 0 0;
+  color: var(--color-ink-muted);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+
+  /* pagefind 用 <mark> 标命中词。默认的黄底在深色下刺眼，换成 accent 淡底。 */
+  mark {
+    border-radius: 0.125rem;
+    background: color-mix(in srgb, var(--color-accent) 22%, transparent);
+    color: inherit;
+    font-weight: 600;
+  }
+}
+
+/* navbar 里那个 `/` 提示。只在有精确指针时显示：触屏上没有物理键盘，
+   印一个 / 是一条读者执行不了的指令。 */
+.td-search-hint {
+  display: none;
+  padding: 0.0625rem 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.25rem;
+  color: var(--color-ink-faint);
+  font-size: 0.6875rem;
+  font-family: inherit;
+  line-height: 1.4;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .td-search-hint {
+    display: inline-block;
+  }
+}
+
+/* `:not([hidden])` 是必须的，不是修饰。模板给按钮写了 `hidden`，运行时才摘掉；
+   而 preflight 里的 `[hidden]` 规则是 `:where()` 包的、特异性为零，一个裸的
+   `.td-search-open { display: inline-flex }` 会盖过它 —— 于是无 JS 的读者看到
+   一个点了没反应的搜索按钮。 */
+.td-search-open:not([hidden]) {
+  display: inline-flex;
+  gap: 0.375rem;
+  align-items: center;
+}
+
+/* 打印：搜索是交互，纸上没有。整块收起而不是只藏对话框 —— navbar 里那个按钮
+   在纸上也是一个点不了的图标。 */
+@media print {
+  .td-search,
+  .td-search-open {
+    display: none !important;
+  }
+}
+
+/* 强制色彩模式下 box-shadow 会被丢掉，浮层与背景失去边界。给一道实边框顶上。 */
+@media (forced-colors: active) {
+  .td-search {
+    border: 1px solid CanvasText;
+  }
+
+  .td-search-result:hover,
+  .td-search-result:focus-within {
+    outline: 1px solid Highlight;
+  }
+}
+
+/* 减少动效：<dialog> 本身没有动画，但 mark 的高亮与悬停底色有过渡时一起关掉。 */
+@media (prefers-reduced-motion: reduce) {
+  .td-search-result,
+  .td-search-sub-link {
+    transition: none;
+  }
+}

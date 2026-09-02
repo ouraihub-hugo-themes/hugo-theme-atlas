@@ -39,6 +39,9 @@
     </nav>
 
     <div class="td-navbar-util">
+      {{- /* 搜索在主题切换之前：它是常用动作，而切换主题是一次性设置。
+             未开启搜索时这个 partial 什么都不输出。 */ -}}
+      {{ partial "shell/search.html" . }}
       {{ partial "shell/theme-toggle.html" . }}
     </div>
   </div>

@@ -1,0 +1,63 @@
+{{- /* 搜索入口与结果对话框。
+
+     **默认关着。** 站点没开搜索时什么都不输出 —— 一个点了没反应的搜索框比
+     没有搜索框更糟。开关是 `params.ui.search`，因为索引要消费方自己跑
+     `npx pagefind --site public`，主题无法替他保证那一步做了。
+
+     用原生 `<dialog>`：焦点陷阱、Escape 关闭、`::backdrop`、背景惰性这四件
+     浏览器都做了。抽屉那边是 2022 年写的所以自己实现了一遍，这里不重复那个
+     决定 —— `showModal()` 一行换掉 88 行。
+
+     **按钮带 `hidden`，由运行时摘掉。** 搜索整个依赖 JS：`<dialog>` 不调
+     `showModal()` 就是 `display:none`，所以无 JS 下这个按钮点了不会有任何反应。
+     一个亮着但没反应的按钮比没有按钮更糟，所以默认藏着，`init()` 拿到 DOM
+     之后才点亮 —— bundle 没加载、或者加载失败，读者看到的都是"这个站没有搜索"，
+     那是真话。
+
+     同理没有 `action`：表单在无 JS 下不可达（对话框打不开），配一个指向
+     `/search/` 的 `action` 只是一处永远走不到的分支。表单本身留着 ——
+     输入框里按 Enter 要有个归宿，`submit` 被拦下就是那个归宿。
+
+     `<dialog>` 里的输入框要 `autocomplete="off"`：浏览器的历史下拉会盖住
+     结果列表，而结果本身就是一份更好的建议。 */ -}}
+{{- if not (site.Params.ui.search | default false) -}}
+  {{- return -}}
+{{- end -}}
+<button type="button" class="td-navbar-button td-search-open" data-td-search-open hidden
+        aria-label="{{ i18n "search_open" }}" title="{{ i18n "search_open" }}">
+  {{ partial "content/icon.html" (dict "name" "search" "page" page) }}
+  {{- /* 快捷键提示只在指针设备上显示（见 search.css）：触屏上没有键盘，
+         印一个 / 是噪声。 */ -}}
+  <kbd class="td-search-hint" aria-hidden="true">/</kbd>
+</button>
+
+<dialog class="td-search" data-td-search aria-label="{{ i18n "search_open" }}">
+  <form class="td-search-form" data-td-search-form>
+    <label class="td-search-field">
+      <span class="sr-only">{{ i18n "search_label" }}</span>
+      {{ partial "content/icon.html" (dict "name" "search" "class" "td-search-field-icon" "page" page) }}
+      <input type="search" name="q" class="td-search-input" data-td-search-input
+             placeholder="{{ i18n "search_placeholder" }}"
+             autocomplete="off" spellcheck="false" enterkeyhint="search">
+    </label>
+    <button type="button" class="td-search-close" data-td-search-close
+            aria-label="{{ i18n "search_close" }}">{{ i18n "search_close" }}</button>
+  </form>
+
+  {{- /* `aria-live="polite"` 在结果容器上：搜索是打字驱动的，读屏用户需要
+         知道"出了 N 条"而不必自己去翻。用 polite 不用 assertive —— 每敲一个
+         字母都打断一次朗读会让人没法打字。
+
+         三句文案走 data 属性交给运行时，与 `data-td-scroll-label` 同一套做法：
+         JS 里写死英文会让 32 个 locale 只有界面框架被翻译，而这三句恰好是读屏
+         用户唯一听到的反馈。`search_results` 带计数占位符，所以传模板串。 */ -}}
+  <div class="td-search-status" data-td-search-status role="status" aria-live="polite"
+       {{- /* 计数位置由 `%d` 占着，运行时替换它。直接把占位符喂给 i18n 的
+              `.Count`，而不是渲染一个数字再正则回替 —— 那要求译文里字面出现
+              那个数字，32 个 locale 里未必成立。 */ -}}
+       data-td-search-many="{{ i18n "search_results" (dict "Count" "%d") }}"
+       data-td-search-one="{{ i18n "search_one_result" }}"
+       data-td-search-none="{{ i18n "search_no_results" }}"
+       data-td-search-unavailable="{{ i18n "search_unavailable" }}"></div>
+  <ol class="td-search-results" data-td-search-results></ol>
+</dialog>

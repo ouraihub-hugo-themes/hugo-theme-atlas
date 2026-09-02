@@ -79,6 +79,9 @@ try {
       'title = "outputs"',
       'theme = "hugo-theme-atlas"',
       'disableKinds = ["taxonomy", "term", "sitemap"]',
+      // 开搜索，下面那条 `hidden` 断言才有东西可断。默认关着。
+      "[params.ui]",
+      "search = true",
       "[markup.goldmark.renderer]",
       "unsafe = true",
       "[markup.goldmark.parser.attribute]",
@@ -180,6 +183,16 @@ try {
       failures.push(`${label} nav is inside the indexed body without data-pagefind-ignore`);
     }
   }
+
+  // 搜索按钮在 HTML 里必须是 `hidden` 的。搜索整个依赖 JS —— `<dialog>` 不调
+  // `showModal()` 就是 `display:none`，所以少了这个属性时无 JS 的读者会看到一个
+  // 点了完全没反应的按钮。这条回归在浏览器里也不显眼：开着 JS 的人一切正常。
+  const btn = /<button[^>]*data-td-search-open[^>]*>/.exec(nested);
+  if (!btn) {
+    failures.push("search button did not render; params.ui.search is set in the fixture");
+  } else if (!/\shidden[\s>]/.test(btn[0])) {
+    failures.push("search button is not hidden in HTML; without JS it is a dead control");
+  }
 } finally {
   rmSync(site, { recursive: true, force: true });
 }
@@ -199,3 +212,4 @@ if (failures.length > 0) {
 console.log("ok  RSS table output keeps semantics and drops theme-only markup");
 console.log("ok  every page class carries data-pagefind-body; navigation is excluded");
 console.log("ok  icon <use> references resolve in-document and inline exactly what the page uses");
+console.log("ok  the search button ships hidden and is revealed by the runtime");
