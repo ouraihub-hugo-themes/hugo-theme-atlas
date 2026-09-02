@@ -5,6 +5,12 @@ resources/
 exampleSite/public/
 exampleSite/resources/
 
+# 编辑器的本地配置。它属于开发者的机器而不是这个主题 —— 提交进来的话每个人
+# 打开仓库都会被改一次。
+.zed/
+.vscode/
+.idea/
+
 # assets/dist/ 是编译产物，但要提交 —— 用户直接消费，不装 Node。
 # 不参与 diff，见 .gitattributes。
 

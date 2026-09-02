@@ -347,7 +347,17 @@ print 静态展开。
   `@container (min-width: 44rem)`；用容器查询而不是媒体查询，因为塌栏的阈值
   是容器宽度，在侧栏与打印下与视口宽度不一致。
 
-- `landing.ts`（203 行）
+- ✅ `landing.ts`（203 行）—— **不做，22 个 section 没有一个需要它。**
+
+  逐个查过：折叠靠原生 `<details>`，条形图靠 CSS 变量，栅格塌栏靠 auto-fit，
+  两栏换序靠 `@container` + `order`，等高卡片里的按钮贴底靠 `margin-block-start:
+  auto`。整个 landing 目录只出现三个 `data-td-*`：`data-td-align` 与
+  `data-td-status` 是 CSS 选择器的钩子，`data-td-scroll-label` 喂给已经在跑的
+  `scroll-region.ts`（实测：360px 下 pricing-compare 的表拿到 `tabindex="0"`、
+  `role="region"` 与 i18n 来的可访问名）。
+
+  真需要 JS 的场合已经各自有运行时（代码块的复制按钮、图表围栏），landing 的
+  section 复用它们而不是自己带一份。凭空写一个入口等于留一段没人加载的代码。
 
 **验收**：每个 section 一个 Playwright 视觉用例 + 响应式断点确认。
 narrative 字段渲染 Markdown、label 字段纯文本，这个区分要保住。
