@@ -169,6 +169,152 @@ sections:
       - feature: 合规审计
         values: [false, false, true]
 
+  - type: code-plate
+    title: 说明配代码
+    subtitle: 代码块拼一段真围栏喂给 hook —— 高亮、复制按钮、文件名标题栏全都跟着来。
+    body: |
+      左边这段渲染 Markdown，所以能写 `code`、[链接](/docs/)、列表。
+      右边那块与正文里的代码块长得一样、行为也一样。
+    lang: yaml
+    filename: hugo.yaml
+    code: |
+      module:
+        imports:
+          - path: github.com/example/hugo-theme-atlas
+    actions:
+      - text: 看配置文档
+        href: /docs/
+        style: secondary
+
+  - type: command-box
+    tone: muted
+    title: 一条命令装完
+    commands: |
+      hugo mod init github.com/you/site
+      hugo mod get github.com/example/hugo-theme-atlas
+    note: 复制按钮来自代码块 hook —— 这一节没有自己的一套。
+
+  - type: gallery
+    title: 截图
+    subtitle: 与 ```gallery 围栏同一份栅格标记。条目从 YAML 读，不在这里插一套微语法。
+    items:
+      - src: hero.png
+        alt: 亮色主题下的文档页
+        description: 三栏布局，左侧导航、正文、右侧目录。
+      - src: hero.png
+        alt: 暗色主题下的同一页
+        description: 配色跟着系统，也能手动切。
+      - src: hero.png
+        alt: 窄屏下的同一页
+        description: 导航收进抽屉，目录移到正文上方。
+
+  - type: markdown
+    title: 没有专门 section 的东西
+    body: |
+      一段自由 Markdown。出路给那些没有专门 section 的内容 —— 一段说明、一张表、
+      一段自定义标记。
+
+      | 键 | 作用 |
+      | --- | --- |
+      | `body` | 必需，渲染 Markdown |
+
+      它不是万能 section：有专门 section 的东西用专门的，手搓一份卡片栅格得到的
+      是没有 `.td-card` 语义的一堆 div。
+
+  - type: contributors
+    tone: muted
+    title: 贡献者
+    subtitle: 数据来自 `data/contributors.yaml`，与 contributors shortcode 同一份数据和同一份标记。
+
+  - type: download
+    title: 下载
+    subtitle: 整块走 download/resolve + download/render —— 版本号只能来自数据文件。
+    data: atlas
+
+  - type: preview
+    tone: muted
+    title: 整幅截图
+    image: hero.png
+    image_alt: 文档页的完整截图，三栏布局
+    caption: 有 `caption` 时整块是 `<figure>`，说明与图的关联能被辅助技术读出来。
+    frame: true
+
+  - type: bar-chart
+    title: 零 JS 的条形对比
+    subtitle: |
+      条长由内联的 `--td-bar` 给。走 echarts 要 434 KB（量过：333 共享 + 79 core
+      + 22 bar），而这一节要画的是"谁大谁小"。
+    items:
+      - label: 首屏 CSS
+        value: 42
+        display: 42 KB
+      - label: 首屏 JS
+        value: 3.8
+        display: 3.8 KB
+      - label: 字体
+        value: 118
+        display: 118 KB
+
+  - type: capabilities
+    tone: muted
+    title: 能力清单
+    subtitle: 三档状态各配一份仅供朗读的文本 —— 图标是装饰，读屏软件会跳过它。
+    items:
+      - title: 四种阅读外壳
+      - title: 32 种语言
+        status: partial
+        note: 当前只有 en，其余在期 6
+      - title: 联网功能默认开启
+        status: no
+        note: 完整配置之前一律关着
+      - title: 打印样式
+        note: 每个组件各自的静态展开形态
+
+  - type: case-study
+    title: 一个案例
+    subtitle: 与 code-plate 同一条栅格定义，右侧放图而不是代码。
+    body: |
+      左侧是叙述加一组小指标，右侧是图。`reverse: true` 把图放到左边 —— 只换视觉
+      顺序，DOM 顺序不动，键盘与读屏软件仍然先到文字。
+    image: hero.png
+    image_alt: 案例站点的截图
+    reverse: true
+    metrics:
+      - value: 3.8 KB
+        label: 首屏 JS
+      - value: 155 ms
+        label: 构建耗时
+    actions:
+      - text: 读全文
+        href: /docs/
+        style: secondary
+
+  - type: testimonials
+    tone: muted
+    title: 引语
+    subtitle: 出处在 `<figcaption>` 里而不是 `<blockquote>` 里 —— 名字不是被引的话的一部分。
+    items:
+      - quote: |
+          它把**决定**写在注释里，而不是写在别处的文档里。半年后回来读还知道当时
+          为什么那样选。
+        name: 某位维护者
+        role: 文档站
+      - quote: 打印出来能直接用。这个在别处要自己补一整套样式。
+        name: 另一位
+        role: 内部手册
+
+  - type: logo-wall
+    title: 构建工具
+    subtitle: alt 必需 —— 这一节的全部信息就在那些名字里。
+    items:
+      - src: hero.png
+        alt: Hugo
+        href: https://gohugo.io
+      - src: hero.png
+        alt: Tailwind CSS
+      - src: hero.png
+        alt: esbuild
+
   - type: cta
     tone: accent
     title: 收尾那一块

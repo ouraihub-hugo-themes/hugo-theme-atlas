@@ -541,6 +541,369 @@
     color: var(--color-ink-muted);
   }
 
+  /* --- 左右两栏：code-plate 与 case-study ---
+     共用一条栅格定义。两者的区别在右侧放什么（代码 / 图）与左侧多不多一组
+     数字，栅格本身是同一个东西 —— 写两遍意味着改断点要改两处。 */
+
+  .td-landing-plate,
+  .td-landing-case {
+    display: grid;
+    /* 文字优先：右侧的东西在窄屏上排到下面去。min() 让两栏在容器窄于 44rem
+       时自动塌成一栏，不需要 @media。 */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    gap: 2.5rem;
+    align-items: center;
+    /* 下面的 @container 查询要一个查询容器。塌栏的阈值是容器宽度而不是视口
+       宽度，所以这个容器必须是栅格自己。 */
+    container-type: inline-size;
+  }
+
+  /* 代码块在栅格里要能收窄：min-inline-size: 0 撤掉 grid 项的 auto 最小尺寸，
+     否则一行长命令会把整栏顶宽，把文字栏挤扁。
+
+     排在 --reverse 之前：那条选择器更具体，而 stylelint 的
+     no-descending-specificity 要求同一个元素的规则按具体度递增出现 —— 反过来
+     写虽然在这里不冲突（两条改的是不同属性），但下次有人加一条同属性的规则时
+     就会静默被压掉。 */
+  .td-landing-plate-code {
+    min-inline-size: 0;
+  }
+
+  /* reverse 只换视觉顺序，不换 DOM 顺序 —— 键盘与读屏软件仍然先到文字。
+
+     **只在两栏时生效。** `order` 在塌成一栏之后照样管用，那时它换的是行序：
+     图跑到文字上面去，而窄屏上先看到一张图、要往下滚才知道这一节在讲什么。
+     实测过：不加这层 @container 的话 360px 下图确实在文字之上。
+
+     用 @container 而不是 @media：塌栏的阈值是**容器**宽度（栅格用的是
+     `minmax(min(100%, 22rem), 1fr)` 的 auto-fit），而视口宽度与容器宽度在
+     侧栏、打印、嵌套布局下并不一致 —— 按视口写会在这些场合与实际排版错位。 */
+  @container (min-width: 44rem) {
+    .td-landing-plate--reverse .td-landing-plate-code,
+    .td-landing-case--reverse .td-landing-case-media {
+      order: -1;
+    }
+  }
+
+  .td-landing-plate .td-landing-head,
+  .td-landing-case .td-landing-head {
+    margin-block-end: 1.25rem;
+  }
+
+  .td-landing-case-media img {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+    border-radius: 0.75rem;
+  }
+
+  .td-landing-case-metrics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem 2rem;
+    margin-block: 1.5rem 0;
+  }
+
+  .td-landing-case-metric {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .td-landing-case-value {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--color-accent);
+    font-variant-numeric: tabular-nums;
+    margin-inline-start: 0;
+  }
+
+  .td-landing-case-label {
+    font-size: 0.875rem;
+    color: var(--color-ink-muted);
+  }
+
+  /* --- command-box --- */
+
+  .td-landing-commandbox {
+    max-inline-size: 44rem;
+    text-align: center;
+  }
+
+  .td-landing-commandbox .td-landing-head {
+    margin-inline: auto;
+    margin-block-end: 1.5rem;
+  }
+
+  /* 命令本身左对齐：终端里的命令是左对齐的，居中会让多行命令读起来像诗。
+     居中的是这一节的标题与说明。 */
+  .td-landing-commandbox-code {
+    text-align: start;
+  }
+
+  .td-landing-commandbox-note {
+    margin-block-start: 1rem;
+    font-size: 0.9375rem;
+    color: var(--color-ink-muted);
+  }
+
+  /* --- logo-wall --- */
+
+  .td-landing-logos {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 2rem 3rem;
+  }
+
+  .td-landing-logo-image {
+    display: block;
+    /* 各家 logo 的原始尺寸差得远，统一按高度对齐 —— 按宽度对齐会让细长的
+       字标比方形的图标矮一半。 */
+    block-size: 2rem;
+    inline-size: auto;
+    max-inline-size: 10rem;
+    /* 彩色 logo 并排会打架，降饱和度让它们退到背景里；悬停恢复。
+       这不是隐藏信息：alt 文本与形状都在。 */
+    filter: grayscale(1);
+    opacity: 0.7;
+    transition:
+      filter 150ms var(--ease-color),
+      opacity 150ms var(--ease-color);
+  }
+
+  .td-landing-logo:hover .td-landing-logo-image,
+  .td-landing-logo a:focus-visible .td-landing-logo-image {
+    filter: none;
+    opacity: 1;
+  }
+
+  /* --- testimonials --- */
+
+  .td-landing-quotes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+    gap: 1.5rem;
+  }
+
+  .td-landing-quote {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+    padding: 1.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.75rem;
+    background-color: var(--color-canvas);
+  }
+
+  .td-landing-quote-body {
+    /* blockquote 的默认缩进要清掉 —— 卡片自己有内边距。 */
+    margin: 0;
+    padding: 0;
+    border: 0;
+    color: var(--color-ink);
+  }
+
+  /* 出处贴卡底：margin-block-start: auto 吃掉剩余高度，于是等高的几张卡里
+     出处横向对齐，哪怕引语长短不同。 */
+  .td-landing-quote-source {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-block-start: auto;
+    padding-block-start: 1.25rem;
+    /* 名字与角色在窄卡里换行，不要挤成一列单字。 */
+    flex-wrap: wrap;
+  }
+
+  .td-landing-quote-avatar {
+    flex: none;
+    inline-size: 2.5rem;
+    block-size: 2.5rem;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .td-landing-quote-name {
+    font-weight: 600;
+    color: var(--color-ink-strong);
+  }
+
+  .td-landing-quote-role {
+    font-size: 0.875rem;
+    color: var(--color-ink-muted);
+  }
+
+  /* --- capabilities --- */
+
+  .td-landing-capabilities {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    gap: 0.75rem 2rem;
+  }
+
+  .td-landing-capability {
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    flex-wrap: wrap;
+  }
+
+  .td-landing-capability-mark {
+    flex: none;
+    inline-size: 1em;
+    block-size: 1em;
+  }
+
+  .td-landing-capability[data-td-status="yes"] .td-landing-capability-mark {
+    color: var(--color-accent);
+  }
+
+  .td-landing-capability[data-td-status="partial"] .td-landing-capability-mark {
+    color: var(--color-ink-muted);
+  }
+
+  .td-landing-capability[data-td-status="no"] .td-landing-capability-mark {
+    color: var(--color-ink-muted);
+    opacity: 0.6;
+  }
+
+  .td-landing-capability-title {
+    color: var(--color-ink-strong);
+  }
+
+  /* 不支持的那些划掉：这是"有没有"的清单，划线让它一眼可辨 —— 而颜色差别
+     在色觉障碍下不可靠。 */
+  .td-landing-capability[data-td-status="no"] .td-landing-capability-title {
+    text-decoration: line-through;
+    color: var(--color-ink-muted);
+  }
+
+  .td-landing-capability-note {
+    font-size: 0.875rem;
+    color: var(--color-ink-muted);
+  }
+
+  /* --- preview --- */
+
+  .td-landing-preview {
+    margin: 0;
+  }
+
+  .td-landing-preview-media {
+    overflow: hidden;
+    border-radius: 0.75rem;
+  }
+
+  .td-landing-preview-media--framed {
+    border: 1px solid var(--color-border);
+    background-color: var(--color-surface);
+  }
+
+  /* 窗口外框的标题栏：三个圆点，纯装饰。 */
+  .td-landing-preview-bar {
+    display: flex;
+    gap: 0.375rem;
+    align-items: center;
+    padding: 0.625rem 0.875rem;
+    border-block-end: 1px solid var(--color-border);
+  }
+
+  .td-landing-preview-bar span {
+    inline-size: 0.625rem;
+    block-size: 0.625rem;
+    border-radius: 50%;
+    background-color: var(--color-border);
+  }
+
+  .td-landing-preview-image {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+  }
+
+  .td-landing-preview-caption {
+    margin-block-start: 0.75rem;
+    font-size: 0.9375rem;
+    color: var(--color-ink-muted);
+    text-align: center;
+  }
+
+  /* --- bar-chart ---
+     条长由内联的 --td-bar 给（那是数据，不可能有类名承载它）。零 JS。 */
+
+  .td-landing-bars {
+    display: grid;
+    gap: 1rem;
+    margin: 0;
+    max-inline-size: 44rem;
+  }
+
+  .td-landing-bar {
+    display: grid;
+    /* 标签一列、条一列。标签列按最长的标签自适应但有上限 —— 不设上限时一个
+       长标签会把条压得没有空间。 */
+    grid-template-columns: minmax(auto, 10rem) 1fr;
+    align-items: center;
+    gap: 0.875rem;
+  }
+
+  .td-landing-bar-label {
+    font-size: 0.9375rem;
+    color: var(--color-ink-strong);
+    /* 长标签换行而不是撑破那一列。 */
+    overflow-wrap: break-word;
+  }
+
+  .td-landing-bar-value {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    margin-inline-start: 0;
+    min-inline-size: 0;
+  }
+
+  .td-landing-bar-track {
+    flex: 1;
+    min-inline-size: 0;
+    block-size: 0.75rem;
+    border-radius: 0.375rem;
+    background-color: var(--color-surface);
+    overflow: hidden;
+  }
+
+  .td-landing-bar-fill {
+    display: block;
+    /* --td-bar 缺省 100%：内联样式被 CSP 拦掉时条是全长，读者看到"都一样长"
+       而不是全部消失 —— 数值仍然在旁边的文本里。 */
+    inline-size: var(--td-bar, 100%);
+    block-size: 100%;
+    border-radius: inherit;
+    background-color: var(--color-accent);
+  }
+
+  .td-landing-bar-number {
+    flex: none;
+    font-family: var(--font-meta);
+    font-size: 0.875rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-ink-muted);
+  }
+
+  /* --- markdown --- */
+
+  .td-landing-markdown {
+    max-inline-size: 48rem;
+  }
+
   /* --- 正文（landing 页最下面那段说明） --- */
 
   .td-landing-content {
@@ -601,6 +964,27 @@
     background-color: transparent;
     color: inherit;
     border: 1px solid #999;
+  }
+
+  /* logo 在纸上不降饱和度：灰度加半透明打印出来是一片看不清的浅灰，而
+     单色打印机本来就会把它们变成灰的。 */
+  .td-landing-logo-image {
+    filter: none;
+    opacity: 1;
+  }
+
+  /* 条形图的条在纸上换成描边加浅填充：实心色块费墨，而长度才是信息。 */
+  .td-landing-bar-track {
+    border: 1px solid #999;
+  }
+
+  .td-landing-bar-fill {
+    background-color: #ccc;
+  }
+
+  /* 窗口外框那三个圆点在纸上是三个灰点，没有含义。 */
+  .td-landing-preview-bar {
+    display: none;
   }
 }
 
@@ -663,5 +1047,29 @@
   .td-landing-compare-yes,
   .td-landing-compare-no {
     color: CanvasText;
+  }
+
+  /* 条形图的条是 background-color 画的，强制配色下背景一律被接管 —— 填充与
+     轨道会变成同一个颜色，长度这个唯一的信息就没了。填充改用系统的高亮色，
+     轨道留描边。 */
+  .td-landing-bar-track {
+    background-color: Canvas;
+    border: 1px solid CanvasText;
+  }
+
+  .td-landing-bar-fill {
+    background-color: Highlight;
+  }
+
+  /* 能力清单三档的颜色差别在强制配色下全部消失，所以"不支持"那档的划线是
+     唯一可靠的区分 —— 它在上面的 @layer 里，这里只要保证颜色不打架。 */
+  .td-landing-capability-mark {
+    color: CanvasText;
+  }
+
+  /* logo 的降饱和度在强制配色下没有意义，而 opacity 会让它更难看清。 */
+  .td-landing-logo-image {
+    filter: none;
+    opacity: 1;
   }
 }

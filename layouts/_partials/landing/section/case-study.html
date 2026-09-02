@@ -1,0 +1,99 @@
+{{- /* Case-study：一个案例，图配叙述加几个数字。
+
+     与 `code-plate` 同样是左右两栏，但内容不同：那边右侧是代码，这边是图，而
+     左侧多了一组小指标。合成一个 section 要给它一个"右侧放什么"的开关，然后
+     两组只在某个取值下生效的字段 —— 那种 section 的文档没法写清楚。
+
+     指标复用 metrics 的 `<dl>` 分组语义（值 + 它是什么的配对），但类名分开：
+     案例里的数字是补充证据，字号比整节的 metrics 小一档。
+
+     section 的键：body、image、image_alt、metrics、actions、reverse。
+     每个 metric 的键：value（必需）、label（必需）。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice
+  "body" "image" "image_alt" "metrics" "actions" "reverse")) -}}
+
+{{- $image := dict "src" "" -}}
+{{- if isset $raw "image" -}}
+  {{- $image = partial "content/image-resolve.html" (dict
+    "page" $page "src" (index $raw "image")
+    "alt" (index $raw "image_alt" | default "")
+    "position" $c.at "name" "landing case study") -}}
+{{- else if isset $raw "image_alt" -}}
+  {{- warnf "%s: image_alt needs image; ignoring it" $c.at -}}
+{{- end -}}
+
+{{- /* metrics 走 landing/items.html 拿不到 —— 那个 partial 认的是 `items` 键，
+       而这一节的 `items` 名额已经没有意义（一个案例只有一份叙述）。所以这里
+       自己走一遍，键名是 `metrics`。 */ -}}
+{{- $metrics := index $raw "metrics" -}}
+{{- if and $metrics (not (reflect.IsSlice $metrics)) -}}
+  {{- warnf "%s: case-study metrics must be an array; ignoring them" $c.at -}}
+  {{- $metrics = slice -}}
+{{- end -}}
+{{- $stats := slice -}}
+{{- range $i, $m := $metrics -}}
+  {{- $where := printf "%s metrics[%d]" $c.at $i -}}
+  {{- if not (reflect.IsMap $m) -}}
+    {{- warnf "%s: each case-study metric must be a map; skipping it" $where -}}
+  {{- else -}}
+    {{- range $name, $_ := $m -}}
+      {{- if not (in (slice "value" "label") $name) -}}
+        {{- warnf "%s: unknown key %q (allowed: label, value); ignoring it" $where $name -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $value := strings.TrimSpace (printf "%v" (index $m "value" | default "")) -}}
+    {{- $label := strings.TrimSpace (printf "%v" (index $m "label" | default "")) -}}
+    {{- if not $value -}}
+      {{- warnf "%s: case-study metric requires value; skipping it" $where -}}
+    {{- else if not $label -}}
+      {{- warnf "%s: case-study metric requires label; skipping it" $where -}}
+    {{- else -}}
+      {{- $stats = $stats | append (dict "value" $value "label" $label) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- $body := "" -}}
+{{- with index $raw "body" -}}
+  {{- with strings.TrimSpace (printf "%v" .) -}}
+    {{- $body = $page.RenderString (dict "display" "block") . -}}
+  {{- end -}}
+{{- end -}}
+{{- $actions := partial "landing/actions.html" (dict
+  "page" $page "items" (index $raw "actions") "at" $c.at) -}}
+{{- $reverse := eq (index $raw "reverse" | default false) true -}}
+
+{{- if or $body $image.src $stats -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner td-landing-case{{ if $reverse }} td-landing-case--reverse{{ end }}">
+    <div class="td-landing-case-text">
+      {{- partial "landing/head.html" (dict "common" $c) }}
+      {{- with $body }}<div class="td-prose">{{ . }}</div>{{ end }}
+      {{- with $stats }}
+      <dl class="td-landing-case-metrics">
+        {{- range . }}
+        <div class="td-landing-case-metric">
+          <dd class="td-landing-case-value">{{ .value }}</dd>
+          <dt class="td-landing-case-label">{{ .label }}</dt>
+        </div>
+        {{- end }}
+      </dl>
+      {{- end }}
+      {{- with $actions }}{{ . }}{{ end }}
+    </div>
+    {{- with $image.src }}
+    <div class="td-landing-case-media">
+      {{- /* 尺寸要带上：没有 width/height 的 <img> 在载入前占 0 高，载入后把
+             下面的内容顶下去。远程图拿不到固有尺寸，那时不输出属性 ——
+             width="0" 会把图压成不可见。 */ -}}
+      <img src="{{ . }}" alt="{{ $image.alt }}" loading="lazy" decoding="async"
+        {{- with $image.width }} width="{{ . }}"{{ end }}
+        {{- with $image.height }} height="{{ . }}"{{ end }}>
+    </div>
+    {{- end }}
+  </div>
+</section>
+{{- end -}}

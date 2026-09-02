@@ -1,0 +1,103 @@
+{{- /* Bar-chart：几个数值的横向条形对比。
+
+     **零 JS，条长由内联的 --td-bar CSS 变量给。** echarts 的 runtime 在这里
+     量过：一个条形图要 333 KB 共享块 + 79 KB core + 22 KB bar ≈ 434 KB，而这
+     一节要画的是"三个数字谁大谁小"。CSS 一行搞定，而且 JS 关掉时数值仍然是
+     文本 —— 读者看到的是数字，不是一块空白。
+
+     真要坐标轴、图例、缩放、tooltip 的图表用 ```echarts 围栏，那才是它存在的
+     场合。这一节是排版，不是图表。
+
+     宽度用内联 `style="--td-bar: 62%"`：这是每条各不相同的数据，不是样式选择 ——
+     不可能有一个类名承载它。CSP 的 `style-src` 若禁了内联样式，条会全长但
+     数值仍然正确，读者看到的是"都一样长"而不是错的长度。
+
+     输出 `<dl>`：每条是"标签 + 它的值"的配对，与 metrics 同一个道理。
+
+     section 的键：items（必需）、max。
+     每项的键：label（必需）、value（必需，数字）、display。
+
+     `max` 缺省取最大值 —— 那时最长的条铺满，读者比的是相对关系。要比绝对比例
+     （几个都远小于 100 的值）就显式给 max。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "items" "max")) -}}
+
+{{- $bars := slice -}}
+{{- range partial "landing/items.html" (dict
+  "section" $raw "noun" "bar-chart" "at" $c.at
+  "allowed" (slice "label" "value" "display")) -}}
+  {{- $item := .item -}}
+  {{- $where := .at -}}
+  {{- $label := strings.TrimSpace (printf "%v" (index $item "label" | default "")) -}}
+  {{- $value := index $item "value" -}}
+  {{- if not $label -}}
+    {{- warnf "%s: bar requires label; skipping it" $where -}}
+  {{- else -}}
+    {{- /* **判数字靠试算而不是看类型名。** `reflect` 没有 IsFloat/IsInt，而
+           `printf "%T"` 的结果取决于解析器：实测 YAML 里 `42` 是 uint64、
+           `-5` 是 int64、`3.8` 是 float64，同一个整数换个大小还可能换类型。
+           照着一份类型名单判，明天换个数就漏。
+
+           `try` 包住乘法：字符串（YAML 里加了引号的 `"62"`）在这里会失败，
+           而那正是要拒的 —— 这一节拿这个值算长度，`"62"` 与 `62` 在算术上
+           不通用。 */ -}}
+    {{- $probe := try (mul $value 1.0) -}}
+    {{- if $probe.Err -}}
+      {{- warnf "%s: bar value must be a number; got %v; skipping it" $where $value -}}
+    {{- else if lt $probe.Value 0.0 -}}
+      {{- /* 负值算出来是负宽度，浏览器当 0 处理，于是那一条消失而其余照常 ——
+             看起来像数据缺失而不是写错了。 */ -}}
+      {{- warnf "%s: bar value must not be negative; got %v; skipping it" $where $value -}}
+    {{- else -}}
+      {{- $bars = $bars | append (dict
+        "label" $label "value" $probe.Value
+        "display" (strings.TrimSpace (printf "%v" (index $item "display" | default $value)))) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* 基准：显式的 max 优先，否则取最大值。 */ -}}
+{{- $max := 0.0 -}}
+{{- if isset $raw "max" -}}
+  {{- $given := index $raw "max" -}}
+  {{- $probe := try (mul $given 1.0) -}}
+  {{- if $probe.Err -}}
+    {{- warnf "%s: max must be a number; got %v; using the largest value instead" $c.at $given -}}
+  {{- else if le $probe.Value 0.0 -}}
+    {{- warnf "%s: max must be positive; got %v; using the largest value instead" $c.at $given -}}
+  {{- else -}}
+    {{- $max = $probe.Value -}}
+  {{- end -}}
+{{- end -}}
+{{- if eq $max 0.0 -}}
+  {{- range $bars -}}
+    {{- if gt .value $max }}{{ $max = .value }}{{ end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if and $bars (gt $max 0.0) -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    <dl class="td-landing-bars">
+      {{- range $bars }}
+      {{- /* 百分比留一位小数：整数取整会让相近的两条看起来一样长。 */ -}}
+      {{- $pct := printf "%.1f" (mul (div .value $max) 100) -}}
+      <div class="td-landing-bar">
+        <dt class="td-landing-bar-label">{{ .label }}</dt>
+        <dd class="td-landing-bar-value">
+          {{- /* 条本身 aria-hidden：数值已经在旁边的文本里，读屏软件再念一遍
+                 这个空 span 只是噪音。 */ -}}
+          <span class="td-landing-bar-track" aria-hidden="true"
+            ><span class="td-landing-bar-fill" style="--td-bar: {{ $pct }}%"></span
+          ></span>
+          <span class="td-landing-bar-number">{{ .display }}</span>
+        </dd>
+      </div>
+      {{- end }}
+    </dl>
+  </div>
+</section>
+{{- end -}}

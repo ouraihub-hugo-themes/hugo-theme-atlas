@@ -74,6 +74,69 @@ sections:
         values: 一个
       - feature: values 少一格
         values: [true]
+  - type: code-plate
+    body: 没有 code
+  - type: code-plate
+    code: echo hi
+    lang: 不合法的语言
+    filename: 带"引号
+  - type: command-box
+    note: 没有 commands
+  - type: gallery
+    items:
+      - alt: 没有 src
+      - src: hero.png
+  - type: logo-wall
+    items:
+      - alt: 没有 src
+      - src: hero.png
+  - type: testimonials
+    items:
+      - name: 没有 quote
+      - quote: 没有 name
+  - type: case-study
+    body: metrics 不是数组
+    metrics: 一条
+  - type: case-study
+    body: metric 缺字段
+    metrics:
+      - label: 没有 value
+      - value: 没有 label
+      - value: "1"
+        label: ok
+        unknown: 未知键
+  - type: case-study
+    image_alt: 没有 image
+  - type: capabilities
+    items:
+      - status: 没有 title
+      - title: 坏 status
+        status: maybe
+  - type: preview
+    caption: 没有 image
+  - type: preview
+    image: hero.png
+  - type: bar-chart
+    items:
+      - value: 1
+      - label: 没有 value
+      - label: value 是字符串
+        value: "62"
+      - label: value 是负数
+        value: -5
+  - type: bar-chart
+    max: 零
+    items:
+      - label: ok
+        value: 1
+  - type: markdown
+    title: 没有 body
+  - type: contributors
+    data: 不合法/的名字
+  - type: contributors
+    data: nosuchfile
+  - type: download
+    title: 没有 data
 expect:
   - 'unknown landing section type "nope"'
   - 'landing section type must match ^[a-z][a-z0-9-]*$; got "Hero"'
@@ -107,6 +170,33 @@ expect:
   - 'row requires feature'
   - 'row values must be an array'
   - 'row has 1 values but there are 2 plans'
+  - 'code-plate requires code'
+  - 'invalid lang "不合法的语言"'
+  - 'filename contains characters that break the fence'
+  - 'command-box requires commands'
+  - 'gallery item requires src'
+  - 'gallery item requires alt'
+  - 'logo requires src'
+  - 'logo requires alt'
+  - 'testimonial requires quote'
+  - 'testimonial requires name'
+  - 'case-study metrics must be an array'
+  - 'case-study metric requires value'
+  - 'case-study metric requires label'
+  - 'unknown key "unknown" (allowed: label, value)'
+  - 'image_alt needs image'
+  - 'capability requires title'
+  - 'invalid capability status "maybe"'
+  - 'preview requires image'
+  - 'preview requires image_alt'
+  - 'bar requires label'
+  - 'bar value must be a number'
+  - 'bar value must not be negative'
+  - 'max must be a number'
+  - 'markdown requires body'
+  - 'data must name one top-level data file'
+  - 'data file "nosuchfile" was not found'
+  - 'download requires data naming one data/download/<key>.yaml'
 ---
 
 `type` 未知、拼错的键、空的 items、少必需字段、坏 URL —— 每一条都只丢它自己那

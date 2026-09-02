@@ -95,6 +95,13 @@ download_unpublished: Not published yet
 # 纯文本，在终端里 `asciinema play` 就能看。
 cast_download: Download the terminal recording
 
+# 能力清单的三档状态。同样是"图标装饰 + 一份朗读文本"，少了它读者只听到能力
+# 名，听不出有没有。"Partial" 单独一档而不是说"部分支持"：这一节的条目不都是
+# 功能，"部分"能同时描述功能、平台、格式。
+capability_yes: Supported
+capability_partial: Partial
+capability_no: Not supported
+
 # 价格对比表的布尔格。勾与叉是图标（装饰，读屏软件跳过），所以每个格里配一份
 # sr-only 文本 —— 少了它整张表在读屏软件那里是一片空格，读者听到的是"行标题、
 # 空、空、空"。用形容词而不是 "Yes"/"No"：读出来是"实时备份，包含"。

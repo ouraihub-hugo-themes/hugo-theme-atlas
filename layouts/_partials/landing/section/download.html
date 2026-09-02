@@ -1,0 +1,38 @@
+{{- /* Download：分渠道的安装指引。
+
+     整块走 download/resolve.html + download/render.html —— 与 download
+     shortcode 同一份。版本号、仓库、tag 都是事实，只能来自 `data/download/
+     <key>.yaml`：允许在 section 上写，同一页上就可能出现两个互相矛盾的版本号。
+
+     section 的键：data（必需，数据文件名）。
+
+     不做重复检测。shortcode 那边做是因为同一份数据在一页上渲染两次会让每个
+     元素 id 都撞车，而那种重复来自作者在正文里粘了两遍；landing 的 sections
+     是一个数组，作者能一眼看到自己写了两个同样的 section。真撞了的话表现是
+     锚点跳到第一个，不是静默错误。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "data")) -}}
+
+{{- $key := strings.TrimSpace (printf "%v" (index $raw "data" | default "")) -}}
+{{- $rendered := "" -}}
+{{- if not $key -}}
+  {{- warnf "%s: download requires data naming one data/download/<key>.yaml; rendering nothing" $c.at -}}
+{{- else -}}
+  {{- $data := partial "download/resolve.html" (dict
+    "page" $page "key" $key "position" $c.at) -}}
+  {{- /* channels 为空说明 resolve 整块丢弃了，它自己已经警告过原因。 */ -}}
+  {{- with $data.channels -}}
+    {{- $rendered = partial "download/render.html" (dict "page" $page "data" $data) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- with $rendered -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    {{- . -}}
+  </div>
+</section>
+{{- end -}}

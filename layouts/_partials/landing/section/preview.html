@@ -1,0 +1,60 @@
+{{- /* Preview：一张大图，整幅展示。
+
+     与 hero 的图不同：hero 的图是标题旁边的陪衬，preview 的图**就是内容** ——
+     产品截图铺满一节的宽度，读者是来看它的。所以 `alt` 必需：一张没有替代文本
+     的产品截图对读屏软件是完全不存在的，而这一节除了它没有别的内容。
+
+     `caption` 出 `<figcaption>` 而不是一个 `<p>`：说明与图的关联要能被辅助技术
+     读出来，而 figure/figcaption 是规范给出的方式。有 caption 时整块是
+     `<figure>`，没有时就是一张图 —— 不输出空的 figcaption。
+
+     section 的键：image（必需）、image_alt（必需）、caption、frame。
+
+     `frame` 给图套一个窗口外框。布尔而不是 `frame: browser`：现在只有一种外框，
+     而枚举会让人以为还有别的值可填。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice
+  "image" "image_alt" "caption" "frame")) -}}
+
+{{- $alt := strings.TrimSpace (printf "%v" (index $raw "image_alt" | default "")) -}}
+{{- $image := dict "src" "" -}}
+{{- if not (isset $raw "image") -}}
+  {{- warnf "%s: preview requires image; rendering nothing" $c.at -}}
+{{- else if not $alt -}}
+  {{- warnf "%s: preview requires image_alt (the image is the whole section); rendering nothing" $c.at -}}
+{{- else -}}
+  {{- $image = partial "content/image-resolve.html" (dict
+    "page" $page "src" (index $raw "image") "alt" $alt
+    "position" $c.at "name" "landing preview") -}}
+{{- end -}}
+
+{{- $caption := strings.TrimSpace (printf "%v" (index $raw "caption" | default "")) -}}
+{{- $frame := eq (index $raw "frame" | default false) true -}}
+
+{{- with $image.src -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    {{- if $caption }}<figure class="td-landing-preview">{{ else }}<div class="td-landing-preview">{{ end }}
+      <div class="td-landing-preview-media{{ if $frame }} td-landing-preview-media--framed{{ end }}">
+        {{- if $frame }}
+        {{- /* 外框上那三个圆点是纯装饰，aria-hidden 挡住它们 —— 读屏软件念出
+               三个圆圈符号只是噪音。 */ -}}
+        <div class="td-landing-preview-bar" aria-hidden="true">
+          <span></span><span></span><span></span>
+        </div>
+        {{- end }}
+        <img class="td-landing-preview-image" src="{{ . }}" alt="{{ $image.alt }}"
+          loading="lazy" decoding="async"
+          {{- with $image.width }} width="{{ . }}"{{ end }}
+          {{- with $image.height }} height="{{ . }}"{{ end }}>
+      </div>
+      {{- with $caption }}
+      <figcaption class="td-landing-preview-caption">{{ $page.RenderString . }}</figcaption>
+      {{- end }}
+    {{- if $caption }}</figure>{{ else }}</div>{{ end }}
+  </div>
+</section>
+{{- end -}}

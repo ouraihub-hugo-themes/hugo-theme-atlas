@@ -321,9 +321,32 @@ print 静态展开。
   而这两个是合法的 HTML `datetime` 值，也是时间线里最常见的写法 —— 所以先按
   形状认，再回落到 `try (time.AsTime ...)`，都不成就不给属性。
 
-- 最后 `bar-chart` `logo-wall` `testimonials` `case-study` `code-plate`
+- ✅ 最后 `bar-chart` `logo-wall` `testimonials` `case-study` `code-plate`
   `command-box` `gallery` `contributors` `download` `preview` `markdown`
   `capabilities`
+
+  22 个 section 齐了。四处复用既有实现而不是并行再写一份：`contributors` 与
+  `download` 走 shortcode 用的同一套 partial，`gallery` 与围栏共用抽出来的
+  `content/gallery-markup.html`，`code-plate` 与 `command-box` 拼真围栏喂给
+  `render-block`（于是高亮、复制按钮、文件名标题栏、折叠全部跟着来）。三次
+  抽取都逐字节验过整站输出不变 —— 抽取时留在末尾的换行会变成输出字节，
+  card 那次已经踩过。
+
+  **`bar-chart` 不走 echarts。** 量过：一个条形图要 333 KB 共享块 + 79 KB
+  core + 22 KB bar ≈ 434 KB，而这一节画的是"谁大谁小"。条长用内联
+  `--td-bar`，零 JS，JS 关掉时数值仍然是文本。要坐标轴/图例/缩放/tooltip 的
+  才用围栏。
+
+  **判数字不能看类型名。** `reflect` 没有 IsFloat/IsInt，而 `printf "%T"` 的
+  结果取决于解析器：实测 YAML 里 `42` 是 uint64、`-5` 是 int64、`3.8` 是
+  float64。照类型名单判会漏。改成 `try (mul $value 1.0)` 试算 —— 字符串在这里
+  失败，而那正是要拒的。
+
+  **`order` 在栅格塌成一栏后照样管用。** `reverse` 起初在 360px 下把图排到了
+  文字上面（我自己的注释还写着"塌栏时失效"，是错的）。现在把 `order: -1` 关进
+  `@container (min-width: 44rem)`；用容器查询而不是媒体查询，因为塌栏的阈值
+  是容器宽度，在侧栏与打印下与视口宽度不一致。
+
 - `landing.ts`（203 行）
 
 **验收**：每个 section 一个 Playwright 视觉用例 + 响应式断点确认。

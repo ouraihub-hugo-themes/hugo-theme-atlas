@@ -1,0 +1,66 @@
+{{- /* Logo-wall：一排使用者/集成方的标识。
+
+     每个 logo 是一张图，`alt` 必需 —— 这一节的全部信息就在那些名字里，少了
+     替代文本的 logo 墙对读屏软件是一片空白，而这一节存在的目的是让读者看到
+     "谁在用"。所以不接受装饰性 logo：那样的话整节不该存在。
+
+     `<ul role="list">` 而不是一串 `<img>`：这是一组同类条目，条目数（"12 家"）
+     是读者该知道的信息。
+
+     每项的键：src（必需）、alt（必需）、href。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "items")) -}}
+
+{{- $items := slice -}}
+{{- range partial "landing/items.html" (dict
+  "section" $raw "noun" "logo-wall" "at" $c.at
+  "allowed" (slice "src" "alt" "href")) -}}
+  {{- $item := .item -}}
+  {{- $where := .at -}}
+  {{- $alt := strings.TrimSpace (printf "%v" (index $item "alt" | default "")) -}}
+  {{- if not (isset $item "src") -}}
+    {{- warnf "%s: logo requires src; skipping it" $where -}}
+  {{- else if not $alt -}}
+    {{- warnf "%s: logo requires alt (the name is the whole point of this section); skipping it" $where -}}
+  {{- else -}}
+    {{- $image := partial "content/image-resolve.html" (dict
+      "page" $page "src" (index $item "src") "alt" $alt
+      "position" $where "name" "landing logo") -}}
+    {{- with $image.src -}}
+      {{- $href := "" -}}
+      {{- $external := false -}}
+      {{- with index $item "href" -}}
+        {{- $url := partial "content/url.html" (dict
+          "value" . "kind" "link" "parameter" "href"
+          "position" $where "name" "landing logo") -}}
+        {{- $href = $url.href -}}
+        {{- $external = $url.external -}}
+      {{- end -}}
+      {{- $items = $items | append (dict
+        "src" . "alt" $image.alt "width" $image.width "height" $image.height
+        "href" $href "external" $external) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- with $items -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    <ul class="td-landing-logos" role="list">
+      {{- range . }}
+      <li class="td-landing-logo">
+        {{- /* 链接包在图外面：整块可点，而链接的可访问名来自图的 alt。 */ -}}
+        {{- if .href }}<a href="{{ .href }}"{{ if .external }} rel="noopener"{{ end }}>{{ end -}}
+        <img class="td-landing-logo-image" src="{{ .src }}" alt="{{ .alt }}"
+          {{- with .width }} width="{{ . }}"{{ end }}
+          {{- with .height }} height="{{ . }}"{{ end }} loading="lazy" decoding="async">
+        {{- if .href }}</a>{{ end }}
+      </li>
+      {{- end }}
+    </ul>
+  </div>
+</section>
+{{- end -}}

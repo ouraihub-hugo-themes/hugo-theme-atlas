@@ -1,0 +1,62 @@
+{{- /* Capabilities：一份能力清单，每条带状态。
+
+     与 `principles` 的区别是每条带状态而不是解释：principles 讲"我们为什么这样
+     做"，capabilities 讲"这个能力有没有、到什么程度"。做成两个 section 而不是
+     给 principles 加一个可选的 status，是因为那会让同一个 section 在有无 status
+     时读起来是两种东西 —— 而清单最有用的时候恰恰是所有条目都有状态。
+
+     状态三档：`yes`、`partial`、`no`。用图标加一份仅供朗读的文本 —— 图标是
+     装饰，读屏软件会跳过它，少了那份文本读者听到的只有能力名，听不出有没有。
+
+     每项的键：title（必需）、status、note。
+     status 默认 yes：清单多数在列已经有的能力。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "items")) -}}
+
+{{- /* 三档各自的图标与朗读文本。放在一个 dict 里而不是模板里三个分支：加一档
+       时只改这里，而三个分支要记得三处都改。 */ -}}
+{{- $marks := dict
+  "yes" (dict "icon" "check" "label" "capability_yes")
+  "partial" (dict "icon" "angle-down" "label" "capability_partial")
+  "no" (dict "icon" "close" "label" "capability_no") -}}
+
+{{- $items := slice -}}
+{{- range partial "landing/items.html" (dict
+  "section" $raw "noun" "capabilities" "at" $c.at
+  "allowed" (slice "title" "status" "note")) -}}
+  {{- $title := strings.TrimSpace (printf "%v" (index .item "title" | default "")) -}}
+  {{- if not $title -}}
+    {{- warnf "%s: capability requires title; skipping it" .at -}}
+  {{- else -}}
+    {{- $status := partial "validate-enum.html" (dict
+      "value" (index .item "status") "allowed" (slice "yes" "partial" "no")
+      "fallback" "yes" "key" "capability status" "where" .at) -}}
+    {{- $items = $items | append (dict
+      "title" ($page.RenderString $title)
+      "status" $status
+      "mark" (index $marks $status)
+      "note" (strings.TrimSpace (printf "%v" (index .item "note" | default "")))) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- with $items -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    {{- /* `<ul role="list">`：list-style: none 会让 Safari 摘掉列表语义，而
+           条目数是读者该知道的信息。 */}}
+    <ul class="td-landing-capabilities" role="list">
+      {{- range . }}
+      <li class="td-landing-capability" data-td-status="{{ .status }}">
+        {{ partial "content/icon.html" (dict "name" .mark.icon "class" "td-landing-capability-mark") }}
+        <span class="sr-only">{{ i18n .mark.label }}</span>
+        <span class="td-landing-capability-title">{{ .title }}</span>
+        {{- with .note }}<span class="td-landing-capability-note">{{ . }}</span>{{ end }}
+      </li>
+      {{- end }}
+    </ul>
+  </div>
+</section>
+{{- end -}}

@@ -1,0 +1,40 @@
+{{- /* Contributors：头像墙。
+
+     数据来自 `data/<key>.yaml`，与 contributors shortcode 同一份，标记也走
+     同一个 contributors/wall.html。不联网 —— 主题不在构建时打 GitHub API：
+     那会让离线构建失败，也会把限流问题带进每一次 hugo server。
+
+     section 的键：data（可选，默认 contributors）。 */ -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "data")) -}}
+
+{{- /* 数据文件名会进 hugo.Data 的索引，限成标识符：带斜杠的键永远查不到东西
+       （index 只查内存里的 map），早警告比渲染出一片空白好懂。 */ -}}
+{{- $key := strings.TrimSpace (printf "%v" (index $raw "data" | default "contributors")) -}}
+{{- if not (findRE `^[A-Za-z][A-Za-z0-9_-]*$` $key) -}}
+  {{- warnf "%s: data must name one top-level data file; got %q; rendering nothing" $c.at $key -}}
+  {{- $key = "" -}}
+{{- end -}}
+
+{{- $items := slice -}}
+{{- with $key -}}
+  {{- $data := index hugo.Data . -}}
+  {{- if $data -}}
+    {{- $items = partial "contributors/items.html" (dict "data" $data "key" .) -}}
+  {{- else -}}
+    {{- warnf "%s: data file %q was not found; rendering nothing" $c.at . -}}
+  {{- end -}}
+{{- end -}}
+
+{{- with $items -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    {{- /* 墙自己是一个 <section>，它的可访问名来自计数那一行 —— id 用 section
+           的 id 派生，同页两面墙不会撞。 */ -}}
+    {{- partial "contributors/wall.html" (dict
+      "items" . "id" (printf "%s-count" $c.id) "class" "") -}}
+  </div>
+</section>
+{{- end -}}

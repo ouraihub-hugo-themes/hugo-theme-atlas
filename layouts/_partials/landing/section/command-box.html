@@ -1,0 +1,70 @@
+{{- /* Command-box：一条（或几条）安装命令，居中放大。
+
+     与 `code-plate` 的区别是用途而不是样式：code-plate 是"说明配代码"的左右
+     两栏，command-box 是"照这个敲"的一块 —— 它没有说明栏，命令本身就是全部
+     内容，所以能放大居中。用 code-plate 加空 body 得到的是一个半边空着的栅格。
+
+     代码块同样拼真围栏喂给 render-block：复制按钮是这一节的核心（读者要的就是
+     把它粘到终端里），而那个按钮来自代码块 hook。
+
+     section 的键：commands（必需，字符串或数组）、lang、note。
+
+     `commands` 接受字符串或数组：单条命令是最常见的情形，为它写一个单元素
+     数组是纯粹的仪式。这是"多设置特性也接受简写"的那一类。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice
+  "commands" "lang" "note")) -}}
+
+{{- $lines := slice -}}
+{{- $commands := index $raw "commands" -}}
+{{- if reflect.IsSlice $commands -}}
+  {{- range $commands -}}
+    {{- with strings.TrimSpace (printf "%v" .) -}}
+      {{- $lines = $lines | append . -}}
+    {{- end -}}
+  {{- end -}}
+{{- else if $commands -}}
+  {{- /* 字符串里的换行拆成多条：作者用 YAML 的块标量写几行命令是自然的。 */ -}}
+  {{- range split (printf "%v" $commands) "\n" -}}
+    {{- with strings.TrimSpace (replace . "\r" "") -}}
+      {{- $lines = $lines | append . -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- if not $lines -}}
+  {{- warnf "%s: command-box requires commands; rendering nothing" $c.at -}}
+{{- end -}}
+
+{{- /* 默认 shell：这一节存在的理由就是终端命令，让作者每次都写一遍 lang: shell
+       是没有信息量的重复。 */ -}}
+{{- $lang := strings.TrimSpace (printf "%v" (index $raw "lang" | default "shell")) -}}
+{{- if not (findRE `^[A-Za-z][A-Za-z0-9+#._-]*$` $lang) -}}
+  {{- warnf "%s: invalid lang %q; rendering the fence without a language" $c.at $lang -}}
+  {{- $lang = "" -}}
+{{- end -}}
+
+{{- $rendered := "" -}}
+{{- with $lines -}}
+  {{- $fence := printf "````%s\n%s\n````" $lang (delimit . "\n") -}}
+  {{- $rendered = partial "content/render-block.html" (dict
+    "page" $page "scope" $c.id "content" $fence) -}}
+{{- end -}}
+
+{{- $note := "" -}}
+{{- with index $raw "note" -}}
+  {{- with strings.TrimSpace (printf "%v" .) -}}
+    {{- $note = $page.RenderString (dict "display" "block") . -}}
+  {{- end -}}
+{{- end -}}
+
+{{- with $rendered -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner td-landing-commandbox">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    <div class="td-landing-commandbox-code">{{ . }}</div>
+    {{- with $note }}<div class="td-landing-commandbox-note">{{ . }}</div>{{ end }}
+  </div>
+</section>
+{{- end -}}

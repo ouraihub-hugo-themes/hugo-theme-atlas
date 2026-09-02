@@ -1,0 +1,74 @@
+{{- /* Code-plate：左边一段说明，右边一块代码。
+
+     **代码块是拼一段真围栏喂给 render-block，不是自己写 `<pre><code>`。**
+     那样高亮、复制按钮、文件名标题栏、折叠、软换行全都跟着来，而自己写标记
+     意味着这一节的代码块与页面正文里的代码块长得不一样、行为也不一样。
+
+     `lang` 与 `filename` 进围栏的信息串，所以两者都要限形状 —— 它们最终落在
+     围栏的第一行，一个带反引号或换行的值会把围栏结构破坏掉。
+
+     section 的键：body、code（必需）、lang、filename、actions、reverse。
+
+     `reverse` 把代码放到左边。做成布尔而不是 `layout: code-first`：只有两态，
+     枚举会让人以为还有第三档。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice
+  "body" "code" "lang" "filename" "actions" "reverse")) -}}
+
+{{- $code := index $raw "code" | default "" -}}
+{{- $code = strings.TrimRight "\n" (printf "%v" $code) -}}
+{{- if not (strings.ContainsNonSpace $code) -}}
+  {{- warnf "%s: code-plate requires code; rendering nothing" $c.at -}}
+  {{- $code = "" -}}
+{{- end -}}
+
+{{- /* lang 落在围栏的信息串里，限成标识符。不合法时退回无语言的围栏而不是
+       丢掉整块：代码本身仍然有用，只是没有高亮。 */ -}}
+{{- $lang := strings.TrimSpace (printf "%v" (index $raw "lang" | default "")) -}}
+{{- if and $lang (not (findRE `^[A-Za-z][A-Za-z0-9+#._-]*$` $lang)) -}}
+  {{- warnf "%s: invalid lang %q; rendering the fence without a language" $c.at $lang -}}
+  {{- $lang = "" -}}
+{{- end -}}
+
+{{- /* filename 进围栏的属性块 `{filename="…"}`，所以引号与花括号必须挡住 ——
+       它们会提前闭合属性块，把剩下的部分变成别的属性。 */ -}}
+{{- $filename := strings.TrimSpace (printf "%v" (index $raw "filename" | default "")) -}}
+{{- if and $filename (findRE `["'{}\n\r]` $filename) -}}
+  {{- warnf "%s: filename contains characters that break the fence; dropping it" $c.at -}}
+  {{- $filename = "" -}}
+{{- end -}}
+
+{{- $rendered := "" -}}
+{{- with $code -}}
+  {{- /* 围栏用四个反引号：代码里出现三个反引号（Markdown 教程里很常见）时
+         三个反引号的围栏会被提前关掉。 */ -}}
+  {{- $fence := printf "````%s%s\n%s\n````" $lang
+    (cond (ne $filename "") (printf ` {filename="%s"}` $filename) "") . -}}
+  {{- $rendered = partial "content/render-block.html" (dict
+    "page" $page "scope" $c.id "content" $fence) -}}
+{{- end -}}
+
+{{- $body := "" -}}
+{{- with index $raw "body" -}}
+  {{- with strings.TrimSpace (printf "%v" .) -}}
+    {{- $body = $page.RenderString (dict "display" "block") . -}}
+  {{- end -}}
+{{- end -}}
+{{- $actions := partial "landing/actions.html" (dict
+  "page" $page "items" (index $raw "actions") "at" $c.at) -}}
+{{- $reverse := eq (index $raw "reverse" | default false) true -}}
+
+{{- with $rendered -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner td-landing-plate{{ if $reverse }} td-landing-plate--reverse{{ end }}">
+    <div class="td-landing-plate-text">
+      {{- partial "landing/head.html" (dict "common" $c) }}
+      {{- with $body }}<div class="td-prose">{{ . }}</div>{{ end }}
+      {{- with $actions }}{{ . }}{{ end }}
+    </div>
+    <div class="td-landing-plate-code">{{ . }}</div>
+  </div>
+</section>
+{{- end -}}

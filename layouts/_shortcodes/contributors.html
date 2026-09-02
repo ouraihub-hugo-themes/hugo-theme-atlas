@@ -41,35 +41,8 @@
 {{- end -}}
 
 {{- with $items -}}
-{{- $id := printf "contributors-%d" $.Ordinal -}}
-{{- /* aria-labelledby 指向计数那一行，屏幕阅读器进这个区域时先听到"12 位贡献
-       者"，而不是一串没有上下文的链接。 */ -}}
-<section class="td-contributors{{ with $class }} {{ . }}{{ end }}" aria-labelledby="{{ $id }}">
-  <p class="td-contributors-summary" id="{{ $id }}">
-    <span class="td-contributors-count">{{ len . }}</span>
-    <span>{{ i18n "contributors_count" (dict "Count" (len .)) }}</span>
-  </p>
-  <ul class="td-contributors-grid" role="list">
-    {{- range . }}
-    {{- /* 一条完整说明既做 aria-label 也做 title：视觉上格子里只有 handle，
-           鼠标停留和屏幕阅读器都该拿到名字与角色。 */ -}}
-    {{- $label := cond (eq .name .github) (printf "@%s" .github) (printf "%s · @%s" .name .github) -}}
-    {{- with .role }}{{ $label = printf "%s · %s" $label . }}{{ end -}}
-    <li>
-      <a class="td-contributors-link" href="{{ .url }}" aria-label="{{ $label }}" title="{{ $label }}">
-        {{- with .avatar }}
-        {{- /* alt="" 是对的：链接自己有 aria-label，头像重复一遍名字会让朗读
-               变成"张三 链接 张三"。referrerpolicy 挡住把阅读页面的地址带给
-               头像所在的第三方 CDN。 */ -}}
-        <img class="td-contributors-avatar" src="{{ . }}" alt="" width="48" height="48"
-             loading="lazy" decoding="async" referrerpolicy="no-referrer">
-        {{- else }}
-        <span class="td-contributors-avatar td-contributors-avatar--placeholder" aria-hidden="true">{{ strings.Substr .github 0 1 | upper }}</span>
-        {{- end }}
-        <span class="td-contributors-handle" aria-hidden="true">{{ .github }}</span>
-      </a>
-    </li>
-    {{- end }}
-  </ul>
-</section>
+  {{- /* 标记走 contributors/wall.html：landing 的 contributors section 出同一
+         面墙，两套标记意味着 `.td-contributors` 的样式改一次要动两处。 */ -}}
+  {{- partial "contributors/wall.html" (dict
+    "items" . "id" (printf "contributors-%d" $.Ordinal) "class" $class) -}}
 {{- end -}}

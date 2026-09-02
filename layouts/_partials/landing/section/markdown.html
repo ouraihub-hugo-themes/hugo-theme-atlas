@@ -1,0 +1,37 @@
+{{- /* Markdown：一段自由 Markdown 当作一节。
+
+     出路给那些没有专门 section 的东西：一段说明、一张表、一段自定义标记。
+     写在这里而不是让作者把内容挪到页面正文，是因为正文只有一段且恒在所有
+     section 之后 —— 想在两个 section 之间插一段话，正文做不到。
+
+     **它不是"万能 section"。** 有专门 section 的东西用专门的：手搓一份卡片
+     栅格得到的是没有 `.td-card` 语义的一堆 div，样式改了不跟着变。
+
+     section 的键：body（必需）。
+
+     渲染走 content/render-block.html 而不是直接 RenderString：作者在这里写
+     围栏是常事，而围栏里的 id（复制按钮的 aria-controls、行号锚点）要带上
+     作用域前缀，否则与页面正文里的第一个围栏撞车。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "body")) -}}
+
+{{- $body := strings.TrimSpace (printf "%v" (index $raw "body" | default "")) -}}
+{{- if not $body -}}
+  {{- warnf "%s: markdown requires body; rendering nothing" $c.at -}}
+{{- end -}}
+
+{{- with $body -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    {{- /* 包 .td-prose：这一节的内容是正文，该拿到正文的排版（标题间距、
+           列表缩进、表格边框）。不包的话作者写的表格是浏览器默认样式。 */ -}}
+    <div class="td-prose td-landing-markdown">
+      {{- partial "content/render-block.html" (dict
+        "page" $page "scope" $c.id "content" .) -}}
+    </div>
+  </div>
+</section>
+{{- end -}}

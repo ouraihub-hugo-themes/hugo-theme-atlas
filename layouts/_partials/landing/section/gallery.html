@@ -1,0 +1,62 @@
+{{- /* Gallery：图片栅格。
+
+     标记走 content/gallery-markup.html —— 与 ```gallery 围栏同一份。
+
+     条目从 YAML 读而不是解析 Markdown 图片行：landing 的 section 全都是结构化
+     的键值，在这里插一段"写 `![alt](src) # 说明`"的微语法会让作者在同一个文件
+     里切换两种写法。围栏那边用微语法是对的（正文里作者已经在写 Markdown），
+     这里不是。
+
+     每项的键：src（必需）、alt（必需）、description、href。
+     `alt` 必需且不接受省略：图集里的图承载信息（截图、示意图），一张没有替代
+     文本的图对读屏软件是完全不存在的。装饰性的图不该放进图集。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "items")) -}}
+
+{{- $items := slice -}}
+{{- $hasDescription := false -}}
+{{- range partial "landing/items.html" (dict
+  "section" $raw "noun" "gallery" "at" $c.at
+  "allowed" (slice "src" "alt" "description" "href")) -}}
+  {{- $item := .item -}}
+  {{- $where := .at -}}
+  {{- $alt := strings.TrimSpace (printf "%v" (index $item "alt" | default "")) -}}
+  {{- if not (isset $item "src") -}}
+    {{- warnf "%s: gallery item requires src; skipping it" $where -}}
+  {{- else if not $alt -}}
+    {{- warnf "%s: gallery item requires alt; skipping it" $where -}}
+  {{- else -}}
+    {{- $image := partial "content/image-resolve.html" (dict
+      "page" $page "src" (index $item "src") "alt" $alt
+      "position" $where "name" "landing gallery") -}}
+    {{- with $image.src -}}
+      {{- $href := "" -}}
+      {{- $external := false -}}
+      {{- with index $item "href" -}}
+        {{- $url := partial "content/url.html" (dict
+          "value" . "kind" "link" "parameter" "href"
+          "position" $where "name" "landing gallery") -}}
+        {{- $href = $url.href -}}
+        {{- $external = $url.external -}}
+      {{- end -}}
+      {{- $description := strings.TrimSpace (printf "%v" (index $item "description" | default "")) -}}
+      {{- if $description }}{{ $hasDescription = true }}{{ end -}}
+      {{- $items = $items | append (dict
+        "src" $image.src "alt" $image.alt
+        "width" $image.width "height" $image.height
+        "description" $description "href" $href "external" $external "class" "") -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- with $items -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    {{- partial "content/gallery-markup.html" (dict
+      "items" . "hasDescription" $hasDescription "class" "" "attrs" "") -}}
+  </div>
+</section>
+{{- end -}}

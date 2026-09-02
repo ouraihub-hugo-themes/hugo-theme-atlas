@@ -1,0 +1,69 @@
+{{- /* Testimonials：引语加出处。
+
+     输出 `<blockquote>` + `<figcaption>`，整个包在 `<figure>` 里。**出处不能
+     放进 blockquote。** HTML 规范明确说了这一点：blockquote 里的内容是被引用
+     的话，而"某某，某公司"不是那句话的一部分 —— 放进去等于声称被引者说了自己
+     的名字。figure/figcaption 是规范给出的正确组合。
+
+     每项的键：quote（必需）、name（必需）、role、avatar。
+     `quote` 渲染 Markdown（引语里有强调是常事），`name` 与 `role` 是纯文本。
+     `name` 必需：没有出处的"引语"是一句无法核实的话，那不是引用而是文案。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "items")) -}}
+
+{{- $items := slice -}}
+{{- range partial "landing/items.html" (dict
+  "section" $raw "noun" "testimonials" "at" $c.at
+  "allowed" (slice "quote" "name" "role" "avatar")) -}}
+  {{- $item := .item -}}
+  {{- $where := .at -}}
+  {{- $quote := strings.TrimSpace (printf "%v" (index $item "quote" | default "")) -}}
+  {{- $name := strings.TrimSpace (printf "%v" (index $item "name" | default "")) -}}
+  {{- if not $quote -}}
+    {{- warnf "%s: testimonial requires quote; skipping it" $where -}}
+  {{- else if not $name -}}
+    {{- warnf "%s: testimonial requires name; skipping it" $where -}}
+  {{- else -}}
+    {{- $avatar := dict "src" "" -}}
+    {{- with index $item "avatar" -}}
+      {{- $avatar = partial "content/image-resolve.html" (dict
+        "page" $page "src" . "position" $where "name" "landing testimonial avatar") -}}
+    {{- end -}}
+    {{- $items = $items | append (dict
+      "quote" ($page.RenderString (dict "display" "block") $quote)
+      "name" $name
+      "role" (strings.TrimSpace (printf "%v" (index $item "role" | default "")))
+      "avatar" $avatar.src
+      "avatarW" $avatar.width "avatarH" $avatar.height) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- with $items -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    <div class="td-landing-quotes">
+      {{- range $q := . }}
+      <figure class="td-landing-quote">
+        <blockquote class="td-landing-quote-body">{{ $q.quote }}</blockquote>
+        <figcaption class="td-landing-quote-source">
+          {{- with $q.avatar }}
+          {{- /* alt="" 是对的：名字就在旁边的文本里，头像重复一遍会让朗读变成
+                 "张三 张三"。referrerpolicy 挡住把阅读页面的地址带给头像所在的
+                 第三方 CDN。 */ -}}
+          <img class="td-landing-quote-avatar" src="{{ . }}" alt=""
+            {{- with $q.avatarW }} width="{{ . }}"{{ end }}
+            {{- with $q.avatarH }} height="{{ . }}"{{ end }}
+            loading="lazy" decoding="async" referrerpolicy="no-referrer">
+          {{- end }}
+          <span class="td-landing-quote-name">{{ $q.name }}</span>
+          {{- with $q.role }}<span class="td-landing-quote-role">{{ . }}</span>{{ end }}
+        </figcaption>
+      </figure>
+      {{- end }}
+    </div>
+  </div>
+</section>
+{{- end -}}
