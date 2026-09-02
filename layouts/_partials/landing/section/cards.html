@@ -1,0 +1,89 @@
+{{- /* Cards：一组卡片。
+
+     卡片标记走 content/card-markup.html —— 与 card shortcode 同一份。并行写
+     两套的话 `.td-card` 的样式改一次要动两处，漏改的表现是同一个组件在两个
+     地方长得不一样，而构建照常绿。
+
+     列数不做参数：网格按可用宽度 auto-fit（`.td-cards` 已经是这样），给一个
+     `columns: 3` 只会让作者在窄屏上手动改回来。
+
+     每项的键：title（必需）、body、href、icon、badge、image、image_alt。
+     `body` 渲染 Markdown（它是叙述），`title` 与 `badge` 是纯文本。
+     一项写错只丢那一项 —— 六张卡里一处笔误不该把整节打空。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "items")) -}}
+
+{{- $items := index $raw "items" -}}
+{{- if and $items (not (reflect.IsSlice $items)) -}}
+  {{- warnf "%s: cards items must be an array; rendering none" $c.at -}}
+  {{- $items = slice -}}
+{{- end -}}
+{{- if not $items -}}
+  {{- warnf "%s: cards requires a non-empty items array; rendering nothing" $c.at -}}
+{{- end -}}
+
+{{- $cards := slice -}}
+{{- range $i, $item := $items -}}
+  {{- $where := printf "%s items[%d]" $c.at $i -}}
+  {{- if not (reflect.IsMap $item) -}}
+    {{- warnf "%s: each card must be a map; skipping it" $where -}}
+  {{- else -}}
+    {{- $allowed := slice "title" "body" "href" "icon" "badge" "image" "image_alt" -}}
+    {{- range $name, $_ := $item -}}
+      {{- if not (in $allowed $name) -}}
+        {{- warnf "%s: unknown key %q (allowed: %s); ignoring it" $where $name (delimit $allowed ", ") -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $title := strings.TrimSpace (printf "%v" (index $item "title" | default "")) -}}
+    {{- if not $title -}}
+      {{- warnf "%s: card requires title; skipping it" $where -}}
+    {{- else -}}
+      {{- $href := "" -}}
+      {{- $external := false -}}
+      {{- with index $item "href" -}}
+        {{- $policy := partial "content/url.html" (dict
+          "value" . "kind" "link" "parameter" "href" "position" $where "name" "landing card") -}}
+        {{- $href = $policy.href -}}
+        {{- $external = $policy.external -}}
+      {{- end -}}
+      {{- $icon := "" -}}
+      {{- with index $item "icon" -}}
+        {{- $icon = partial "content/icon.html" (dict
+          "name" (strings.TrimSpace (printf "%v" .)) "class" "td-card-icon") -}}
+      {{- end -}}
+      {{- $image := false -}}
+      {{- if isset $item "image" -}}
+        {{- $image = partial "content/image-resolve.html" (dict
+          "page" $page "src" (index $item "image") "position" $where "name" "landing card"
+          "alt" (index $item "image_alt" | default "")) -}}
+      {{- else if isset $item "image_alt" -}}
+        {{- warnf "%s: image_alt needs image; ignoring it" $where -}}
+      {{- end -}}
+      {{- /* body 渲染 Markdown：它是描述，作者在里面写 `code` 与链接是常事。
+             scope 带上序号 —— render-block 用它区隔同页多次调用。 */ -}}
+      {{- $body := "" -}}
+      {{- with index $item "body" -}}
+        {{- with strings.TrimSpace (printf "%v" .) -}}
+          {{- $body = $page.RenderString (dict "display" "block") . -}}
+        {{- end -}}
+      {{- end -}}
+      {{- $cards = $cards | append (partial "content/card-markup.html" (dict
+        "title" $title "body" $body "href" $href "external" $external
+        "icon" $icon "badge" (strings.TrimSpace (printf "%v" (index $item "badge" | default "")))
+        "image" $image)) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if $cards -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    <div class="td-cards">
+      {{- range $cards }}{{ . }}{{ end }}
+    </div>
+  </div>
+</section>
+{{- end -}}

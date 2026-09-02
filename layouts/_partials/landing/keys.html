@@ -1,0 +1,18 @@
+{{- /* Section 的键名校验。
+
+     作者把 `items` 拼成 `itmes` 时 Hugo 不报错，那个键只是静默不存在 ——
+     页面上少一整块内容，而构建是绿的。结构化 front matter 里这是最常见也最难
+     自己发现的一类错，所以未知键必须 warn。
+
+     公共键在这里兜住，section 只报它自己的那几个：22 个 section 各写一遍
+     `"type" "id" "tone" "title" "subtitle" "eyebrow"` 是 22 处要跟着改的地方。
+
+     入参 dict：section、allowed（这个 section 自己的键名 slice）、at */ -}}
+{{- $common := slice "type" "id" "tone" "title" "subtitle" "eyebrow" -}}
+{{- $allowed := union $common (.allowed | default slice) -}}
+{{- range $name, $_ := .section -}}
+  {{- if not (in $allowed $name) -}}
+    {{- warnf "%s: unknown key %q (allowed: %s); ignoring it" $.at $name (delimit (sort $allowed) ", ") -}}
+  {{- end -}}
+{{- end -}}
+{{- return "" -}}

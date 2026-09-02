@@ -1,0 +1,20 @@
+{{- /* Section 的开头：eyebrow、标题、副标题。三者都可省。
+
+     不做成"容器 + 正文"两个 partial（open/close 各出半个标签）：不成对的标签
+     靠人记，而漏一个 `</section>` 的表现是后面所有 section 嵌进前一个里，
+     样式全错而构建照常。所以容器标签留在各 section 自己的模板里，只有这段
+     共用的头抽出来。
+
+     标题层级恒为 h2。landing 页的 h1 是 hero 里那个（或页面标题），而 section
+     标题在它之下同一层 —— 让作者选层级会做出 h1 后面直接跟 h4 的文档。
+     整节没有标题时不输出空的 h2。
+
+     入参 dict：common（landing/resolve.html 的返回） */ -}}
+{{- $c := .common -}}
+{{- if or $c.eyebrow $c.title $c.subtitle -}}
+  <div class="td-landing-head">
+    {{- with $c.eyebrow }}<p class="td-landing-eyebrow">{{ . }}</p>{{ end }}
+    {{- with $c.title }}<h2 class="td-landing-title">{{ . }}</h2>{{ end }}
+    {{- with $c.subtitle }}<div class="td-landing-subtitle">{{ . }}</div>{{ end }}
+  </div>
+{{- end -}}

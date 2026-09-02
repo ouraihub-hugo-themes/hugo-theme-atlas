@@ -1,0 +1,326 @@
+/* Landing 页的 section。由 layouts/landing.html 与 landing/section/*.html 渲染。
+ *
+ * **section 满宽出血，内容靠 .td-landing-inner 收回。** 带底色那几档必须铺满
+ * 视口 —— 一个居中的色块看起来像渲染错了。所以外层不设宽度，内层给上限。
+ *
+ * 间距用 padding 而不是 margin：相邻两节都带底色时 margin 会塌陷成一段，两块
+ * 颜色贴在一起；padding 不塌陷，每节自己的呼吸各自算。 */
+
+@layer components {
+  .td-landing {
+    /* 正文列宽的上限在 .td-landing-inner 上。这里只管纵向节奏。 */
+    display: flow-root;
+  }
+
+  .td-landing-section {
+    padding-block: 4rem;
+  }
+
+  .td-landing-inner {
+    margin-inline: auto;
+    max-inline-size: 72rem;
+    padding-inline: 1rem;
+  }
+
+  /* 三档配色成套给，不让作者填十六进制 —— 那会做出对比度不足的组合，而这里
+     每档的前景色是跟着背景配好的。 */
+  .td-landing-section--muted {
+    background-color: var(--color-surface);
+  }
+
+  .td-landing-section--accent {
+    background-color: var(--color-accent);
+    color: var(--color-canvas);
+  }
+
+  /* accent 档里的标题与副标题跟着反色。继承不够用：它们各自有自己的颜色。 */
+  .td-landing-section--accent :is(.td-landing-title, .td-landing-headline) {
+    color: var(--color-canvas);
+  }
+
+  .td-landing-section--accent :is(.td-landing-subtitle, .td-landing-tagline, .td-landing-eyebrow) {
+    color: color-mix(in oklab, var(--color-canvas) 82%, transparent);
+  }
+
+  .td-landing-head {
+    margin-block-end: 2.5rem;
+    max-inline-size: 44rem;
+  }
+
+  .td-landing-eyebrow {
+    font-family: var(--font-meta);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-block-end: 0.5rem;
+  }
+
+  .td-landing-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.75rem, 1.2rem + 2vw, 2.5rem);
+    font-weight: 700;
+    line-height: 1.15;
+    color: var(--color-ink-strong);
+    /* 长的复合词与 URL 不撑破容器。 */
+    overflow-wrap: break-word;
+  }
+
+  .td-landing-subtitle {
+    margin-block-start: 0.75rem;
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+  }
+
+  /* --- hero --- */
+
+  .td-landing-hero {
+    padding-block: 5rem;
+  }
+
+  .td-landing-hero-inner--split {
+    display: grid;
+    /* 文字优先：图在窄屏上排到下面去，而不是把文字挤成一列单词。
+       min() 让两列在容器窄于 44rem 时自动塌成一列，不需要 @media。 */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+    gap: 3rem;
+    align-items: center;
+  }
+
+  .td-landing-headline {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 1.3rem + 3vw, 3.25rem);
+    font-weight: 700;
+    line-height: 1.1;
+    color: var(--color-ink-strong);
+    overflow-wrap: break-word;
+  }
+
+  .td-landing-tagline {
+    margin-block-start: 1rem;
+    font-size: 1.125rem;
+    line-height: 1.6;
+    color: var(--color-ink-muted);
+    max-inline-size: 40rem;
+  }
+
+  .td-landing-hero-media img {
+    display: block;
+    /* height: auto 配上模板给的 width/height 属性，让浏览器按固有比例预留
+       空间 —— 少了它那两个属性反而把图压成固定像素高。 */
+    inline-size: 100%;
+    block-size: auto;
+    border-radius: 0.75rem;
+  }
+
+  /* --- actions --- */
+
+  .td-landing-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-block-start: 2rem;
+  }
+
+  .td-landing-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    /* 触摸目标下限 44px：padding 加字号算出来是 2.75rem。 */
+    padding: 0.625rem 1.25rem;
+    border: 1px solid transparent;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    text-decoration: none;
+    transition:
+      background-color 150ms var(--ease-color),
+      border-color 150ms var(--ease-color),
+      color 150ms var(--ease-color);
+  }
+
+  .td-landing-action--primary {
+    background-color: var(--color-accent);
+    color: var(--color-canvas);
+  }
+
+  .td-landing-action--primary:hover {
+    background-color: var(--color-accent-hover);
+  }
+
+  .td-landing-action--secondary {
+    border-color: var(--color-border);
+    color: var(--color-ink-strong);
+  }
+
+  .td-landing-action--secondary:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+
+  .td-landing-action--text {
+    padding-inline: 0;
+    color: var(--color-link);
+  }
+
+  .td-landing-action--text:hover {
+    color: var(--color-link-hover);
+    text-decoration: underline;
+  }
+
+  /* accent 档里按钮要反色，否则实心蓝按钮压在蓝底上看不见。 */
+  .td-landing-section--accent .td-landing-action--primary {
+    background-color: var(--color-canvas);
+    color: var(--color-accent);
+  }
+
+  .td-landing-section--accent .td-landing-action--primary:hover {
+    background-color: color-mix(in oklab, var(--color-canvas) 88%, transparent);
+  }
+
+  .td-landing-section--accent :is(.td-landing-action--secondary, .td-landing-action--text) {
+    border-color: color-mix(in oklab, var(--color-canvas) 45%, transparent);
+    color: var(--color-canvas);
+  }
+
+  .td-landing-action-icon {
+    inline-size: 1em;
+    block-size: 1em;
+  }
+
+  /* --- cta --- */
+
+  .td-landing-cta-inner {
+    text-align: center;
+  }
+
+  .td-landing-cta .td-landing-head {
+    margin-inline: auto;
+    margin-block-end: 0;
+  }
+
+  .td-landing-cta .td-landing-actions {
+    justify-content: center;
+  }
+
+  /* --- metrics --- */
+
+  .td-landing-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    gap: 2rem;
+  }
+
+  /* 每项包一层 div 是 HTML 规范给 dl 定的分组方式，不是排版凑的 —— 视觉上
+     值在上、标签在下（dd 先于 dt），而分组让读屏软件仍能把两者关联。 */
+  .td-landing-metric {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .td-landing-metric-value {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 1.5rem + 2vw, 2.75rem);
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-accent);
+    /* 数字用表格数字对齐，几个指标并排时小数点不会错位。 */
+    font-variant-numeric: tabular-nums;
+    margin-inline-start: 0;
+  }
+
+  .td-landing-metric-label {
+    font-weight: 600;
+    color: var(--color-ink-strong);
+  }
+
+  .td-landing-metric-note {
+    font-size: 0.875rem;
+    color: var(--color-ink-muted);
+    margin-inline-start: 0;
+  }
+
+  .td-landing-section--accent .td-landing-metric-value,
+  .td-landing-section--accent .td-landing-metric-label {
+    color: var(--color-canvas);
+  }
+
+  .td-landing-section--accent .td-landing-metric-note {
+    color: color-mix(in oklab, var(--color-canvas) 82%, transparent);
+  }
+
+  /* --- 正文（landing 页最下面那段说明） --- */
+
+  .td-landing-content {
+    margin-inline: auto;
+    max-inline-size: 48rem;
+    padding: 3rem 1rem;
+  }
+}
+
+/* 纸上不要满屏底色：整块 accent 打印出来是一页实心油墨，而它承载的信息全在
+   文字里。边框替代底色区隔各节。 */
+@media print {
+  .td-landing-section {
+    padding-block: 1.5rem;
+    border-block-end: 1px solid #999;
+  }
+
+  .td-landing-section--muted,
+  .td-landing-section--accent {
+    background-color: transparent;
+    color: inherit;
+  }
+
+  .td-landing-section--accent
+    :is(
+      .td-landing-title,
+      .td-landing-headline,
+      .td-landing-metric-value,
+      .td-landing-metric-label
+    ) {
+    color: inherit;
+  }
+
+  /* 按钮在纸上是链接，不是控件 —— 实心色块打印出来是一块油墨，而按钮的
+     去向已经由 prose 的打印规则在链接后展开成 URL。 */
+  .td-landing-action {
+    padding-inline: 0;
+    border: 0;
+    background-color: transparent;
+    color: inherit;
+    text-decoration: underline;
+  }
+}
+
+/* 强制颜色模式下 color-mix 出来的半透明前景会被系统色替换，但底色不会 ——
+   那会做出同色前景。这里让两者都交给系统。 */
+@media (forced-colors: active) {
+  .td-landing-section--accent {
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .td-landing-section--accent
+    :is(
+      .td-landing-title,
+      .td-landing-headline,
+      .td-landing-subtitle,
+      .td-landing-tagline,
+      .td-landing-eyebrow,
+      .td-landing-metric-value,
+      .td-landing-metric-label,
+      .td-landing-metric-note
+    ) {
+    color: CanvasText;
+  }
+
+  .td-landing-action {
+    border: 1px solid ButtonBorder;
+    color: ButtonText;
+    background-color: ButtonFace;
+  }
+}

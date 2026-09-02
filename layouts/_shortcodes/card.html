@@ -63,29 +63,19 @@
 {{- end -}}
 
 {{- if $ok -}}
-{{- $body := strings.TrimSpace .InnerDeindent -}}
-<article class="td-card">
-  {{- with $image }}{{ with .src }}
-  <img class="td-card-image" src="{{ . }}" alt="{{ $image.alt }}"
-    {{- with $image.width }} width="{{ . }}" height="{{ $image.height }}"{{ end }}
-    loading="lazy" decoding="async">
-  {{- end }}{{ end }}
-  <div class="td-card-body">
-    <div class="td-card-head">
-      {{- with .Get "icon" }}{{ partial "content/icon.html" (dict "name" . "class" "td-card-icon") }}{{ end }}
-      {{- /* 整张卡片的面都是链接：标题的 ::after 铺满卡片。链接文字仍只是标题
-             —— 屏幕阅读器读到的是"某标题，链接"，而不是连描述一起念完。 */ -}}
-      {{- if $href }}
-      <a class="td-card-title" href="{{ $href }}"{{ if $external }} rel="noopener"{{ end }}>{{ $title }}</a>
-      {{- else }}
-      <strong class="td-card-title">{{ $title }}</strong>
-      {{- end }}
-      {{- with .Get "badge" }}<span class="td-card-badge">{{ . }}</span>{{ end }}
-    </div>
-    {{- with $body }}
-    <div class="td-card-text">{{ partial "content/render-block.html" (dict
-      "page" $.Page "scope" (printf "card%d" $.Ordinal) "content" .) }}</div>
-    {{- end }}
-  </div>
-</article>
+  {{- /* 标记走 content/card-markup.html：landing 的 cards section 出同一份卡片，
+         两套标记意味着 .td-card 的样式改一次要动两处，而漏改的表现是同一个
+         组件在两个地方长得不一样，构建照常绿。 */ -}}
+  {{- $body := "" -}}
+  {{- with strings.TrimSpace .InnerDeindent -}}
+    {{- $body = partial "content/render-block.html" (dict
+      "page" $.Page "scope" (printf "card%d" $.Ordinal) "content" .) -}}
+  {{- end -}}
+  {{- $icon := "" -}}
+  {{- with .Get "icon" -}}
+    {{- $icon = partial "content/icon.html" (dict "name" . "class" "td-card-icon") -}}
+  {{- end -}}
+  {{- partial "content/card-markup.html" (dict
+    "title" $title "body" $body "href" $href "external" $external
+    "icon" $icon "badge" (.Get "badge" | default "") "image" $image) -}}
 {{- end -}}

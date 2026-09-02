@@ -1,0 +1,37 @@
+{{- /* 一张卡片的标记。card shortcode 与 landing 的 cards section 共用。
+
+     抽出来是因为两边的输入形式不同（shortcode 参数 / front matter map）而输出
+     必须一样：并行写两套的话 `.td-card` 的样式改一次要动两处标记，而漏改的
+     表现是同一个组件在两个地方长得不一样，构建照常绿。
+
+     校验不在这里 —— 两边的位置信息与参数名不同，消息措辞也不同。这里只收
+     已经校验过的值。
+
+     入参 dict：title（必需）、body（已渲染的 HTML）、href、external、icon
+               （已渲染的 svg）、badge、image（image-resolve 的返回或 false） */ -}}
+{{- $image := .image -}}
+{{- /* 末尾不留换行（下面 </article> 后没有空行）：partial 的返回值原样进输出，
+       多一个换行就是多一个输出字节。 */ -}}
+<article class="td-card">
+  {{- with $image }}{{ with .src }}
+  <img class="td-card-image" src="{{ . }}" alt="{{ $image.alt }}"
+    {{- with $image.width }} width="{{ . }}" height="{{ $image.height }}"{{ end }}
+    loading="lazy" decoding="async">
+  {{- end }}{{ end }}
+  <div class="td-card-body">
+    <div class="td-card-head">
+      {{- .icon }}
+      {{- /* 整张卡片的面都是链接：标题的 ::after 铺满卡片。链接文字仍只是标题
+             —— 屏幕阅读器读到的是"某标题，链接"，而不是连描述一起念完。 */ -}}
+      {{- if .href }}
+      <a class="td-card-title" href="{{ .href }}"{{ if .external }} rel="noopener"{{ end }}>{{ .title }}</a>
+      {{- else }}
+      <strong class="td-card-title">{{ .title }}</strong>
+      {{- end }}
+      {{- with .badge }}<span class="td-card-badge">{{ . }}</span>{{ end }}
+    </div>
+    {{- with .body }}
+    <div class="td-card-text">{{ . }}</div>
+    {{- end }}
+  </div>
+</article>

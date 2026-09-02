@@ -1,0 +1,103 @@
+{{- /* 校验一个 landing section 的公共部分，并算出它的容器属性。
+
+     每个 section 是 front matter `sections:` 数组里的一个 map，`type` 决定渲染
+     它的 partial。公共键在这里统一处理，section 自己的键由它自己的 partial 处理
+     —— 22 个 section 各写一遍"title 要是字符串"是 22 处要跟着改的地方。
+
+     **type 的合法性靠 templates.Exists 判，不维护第二份名单。** 与
+     content/icon.html 同一条原则：名单和实现一旦分开，加一个 section 忘了改名单
+     是静默失败。`readDir` 在这里不能用 —— 它读的是**站点**根，主题被当模块用时
+     数到 0 个 partial，于是每个 section 都被判成未知。实测过。
+
+     未知 type 只报名字，不列合法清单：清单在文档里，而模板拿不到它。
+
+     **narrative 与 label 的区分在这里定死。** title / subtitle 一类是叙述字段，
+     渲染 Markdown（作者要在标题里加个 `code` 或强调是常事）；label / eyebrow
+     一类是纯文本。混用的代价是纯文本字段里的 `<` 变成标签，或叙述字段里的
+     `*强调*` 显示成星号。
+
+     未知键的校验不在这里 —— 派发前还不知道这个 type 允许哪些键。各 section
+     自己调 landing/keys.html，公共键在那里兜住。
+
+     入参 dict：page、section（那个 map）、index（从 0 数，用于消息与默认 id）
+     返回 dict：ok、type、id、title、subtitle、eyebrow、tone、at */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $index := .index -}}
+{{- $at := printf "%s sections[%d]" $page.Path $index -}}
+{{- $ok := true -}}
+
+{{- if not (reflect.IsMap $raw) -}}
+  {{- warnf "%s: each landing section must be a map; skipping it" $at -}}
+  {{- $ok = false -}}
+  {{- $raw = dict -}}
+{{- end -}}
+
+{{- $type := "" -}}
+{{- if $ok -}}
+  {{- $type = strings.TrimSpace (printf "%v" (index $raw "type" | default "")) -}}
+  {{- if not $type -}}
+    {{- warnf "%s: landing section requires type; skipping it" $at -}}
+    {{- $ok = false -}}
+  {{- else if not (findRE `^[a-z][a-z0-9-]*$` $type) -}}
+    {{- /* type 会拼进 partial 路径。限成标识符 —— 带 `/` 或 `..` 的值能让
+           partial 查找跑到别的目录去。 */ -}}
+    {{- warnf "%s: landing section type must match ^[a-z][a-z0-9-]*$; got %q; skipping it" $at $type -}}
+    {{- $ok = false -}}
+  {{- else if not (templates.Exists (printf "_partials/landing/section/%s.html" $type)) -}}
+    {{- warnf "%s: unknown landing section type %q; skipping it" $at $type -}}
+    {{- $ok = false -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* id 用于页内锚点（导航指到某一节是 landing 页最常见的需求）。作者不给就
+       按 type 与序号生成 —— 序号在里面，因为一页可以有两个 cards。 */ -}}
+{{- $id := "" -}}
+{{- if $ok -}}
+  {{- $id = printf "%s-%d" $type $index -}}
+  {{- with index $raw "id" -}}
+    {{- $given := strings.TrimSpace (printf "%v" .) -}}
+    {{- if findRE `^[A-Za-z][A-Za-z0-9_:.-]*$` $given -}}
+      {{- $id = $given -}}
+    {{- else -}}
+      {{- warnf "%s: landing section id must start with a letter and contain only letters, digits, and _:.- ; got %q; using %q" $at $given $id -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* tone 是背景与文字的成套取值，不是单个颜色 —— 让作者填十六进制会做出
+       对比度不足的组合，而这三档各自的前景色是配好的。 */ -}}
+{{- $tone := "plain" -}}
+{{- if $ok -}}
+  {{- $tone = partial "validate-enum.html" (dict
+    "value" (index $raw "tone") "allowed" (slice "plain" "muted" "accent")
+    "fallback" "plain" "key" "landing section tone" "where" $at) -}}
+{{- end -}}
+
+{{- /* 叙述字段渲染 Markdown：作者在标题里写 `code` 或 *强调* 是常事。
+       RenderString 而不是 markdownify —— 后者恒定包一层 <p>，标题里不要。 */ -}}
+{{- $title := "" -}}
+{{- $subtitle := "" -}}
+{{- if $ok -}}
+  {{- with index $raw "title" -}}
+    {{- $title = $page.RenderString (strings.TrimSpace (printf "%v" .)) -}}
+  {{- end -}}
+  {{- with index $raw "subtitle" -}}
+    {{- $subtitle = $page.RenderString (dict "display" "block") (strings.TrimSpace (printf "%v" .)) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* eyebrow 是标题上方那行小字（"新版本"、"案例"）。纯文本 —— 它是标签，
+       不是叙述。 */ -}}
+{{- $eyebrow := "" -}}
+{{- if $ok -}}
+  {{- $eyebrow = strings.TrimSpace (printf "%v" (index $raw "eyebrow" | default "")) -}}
+{{- end -}}
+
+{{- $result := dict "ok" false "type" "" "id" "" "title" "" "subtitle" "" "eyebrow" "" "tone" "plain" "at" $at -}}
+{{- if $ok -}}
+  {{- $result = dict
+    "ok" true "type" $type "id" $id "title" $title "subtitle" $subtitle
+    "eyebrow" $eyebrow "tone" $tone "at" $at -}}
+{{- end -}}
+{{- return $result -}}

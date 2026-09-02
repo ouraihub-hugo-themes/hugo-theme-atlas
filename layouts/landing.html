@@ -1,0 +1,26 @@
+{{- /* Landing 页。
+
+     section 从 front matter 的 `sections:` 数组来，按 `type` 派发到
+     landing/section/<type>.html。数组而不是 map：顺序是作者要控制的东西，
+     而 Go 模板遍历 map 的顺序按键排序 —— 那意味着作者得把 section 命名成
+     `01-hero`、`02-cards` 才能排出想要的次序。
+
+     正文（`.Content`）在 section 之后输出。landing 页多数没有正文，但有的
+     作者会在最下面写一段说明；直接丢掉它等于作者写的东西凭空消失。 */ -}}
+{{ define "main" }}
+{{- $sections := .Params.sections -}}
+{{- if and $sections (not (reflect.IsSlice $sections)) -}}
+  {{- warnf "%s: sections must be an array; rendering nothing" .Path -}}
+  {{- $sections = slice -}}
+{{- end -}}
+{{- range $index, $raw := $sections -}}
+  {{- $common := partial "landing/resolve.html" (dict "page" $ "section" $raw "index" $index) -}}
+  {{- if $common.ok -}}
+    {{- partial (printf "landing/section/%s.html" $common.type) (dict
+      "page" $ "section" $raw "common" $common) -}}
+  {{- end -}}
+{{- end -}}
+{{- with .Content -}}
+  <div class="td-landing-content"><div class="td-prose">{{ . }}</div></div>
+{{- end -}}
+{{ end }}

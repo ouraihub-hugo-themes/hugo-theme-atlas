@@ -78,11 +78,16 @@
   {{ partial "foot/js.html" . }}
 </body>
 {{- else -}}
-<body>
+{{- /* Landing 不套正文列宽：它的 section 要满宽出血（带底色的那几档得铺满
+       视口），而下面那串约束是给独立单页用的。两个完整类名分支而不是拼接
+       —— 模板里拼出来的类 Tailwind 扫不到。 */ -}}
+{{- $landing := eq .Layout "landing" -}}
+<body{{ if $landing }} class="td-landing-page"{{ end }}>
   {{ partial "skip-link.html" . }}
   {{ partial "shell/navbar.html" . }}
 
-  <main id="td-main" class="mx-auto max-w-4xl px-4 py-16" tabindex="-1">
+  <main id="td-main" tabindex="-1"
+        class="{{ if $landing }}td-landing{{ else }}mx-auto max-w-4xl px-4 py-16{{ end }}">
     {{ block "main" . }}{{ end }}
   </main>
 

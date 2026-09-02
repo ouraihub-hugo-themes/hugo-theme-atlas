@@ -1,0 +1,69 @@
+{{- /* 一组按钮/链接。hero、cta、cards、pricing 都要它。
+
+     每项形如 `{text, href, style, icon}`。`text` 与 `href` 缺一不可 —— 没有
+     文字的按钮读屏软件念的是它的 href，没有 href 的按钮不是按钮。缺了就丢那
+     一项，不是整块：三个按钮里一个写错，另两个仍然有用。
+
+     `text` 是纯文本，不渲染 Markdown。按钮上的文字是标签而不是叙述，而
+     `<em>` 一类标记在按钮里既没意义又会打断读屏软件的连读。
+
+     `style` 三档：primary（实心，一节里最多一个是设计意图，但不强制 ——
+     强制的代价是作者写了两个 primary 时第二个静默变样，比让它难看更难查）、
+     secondary（描边）、text（纯文字带箭头）。
+
+     外链带 rel="noopener"：被打开的页面能通过 window.opener 改写来源页。
+     不加 noreferrer —— 那会连正常的 referer 统计一起掐掉，而防的是前者。
+
+     入参 dict：page、items（原始数组）、at
+     返回 string：整段 HTML；一项都不合法时是空串 */ -}}
+{{- $page := .page -}}
+{{- $at := .at -}}
+{{- $items := .items -}}
+{{- $out := "" -}}
+{{- if and $items (not (reflect.IsSlice $items)) -}}
+  {{- warnf "%s: actions must be an array; rendering none" $at -}}
+  {{- $items = slice -}}
+{{- end -}}
+{{- $rendered := slice -}}
+{{- range $i, $raw := $items -}}
+  {{- $where := printf "%s actions[%d]" $at $i -}}
+  {{- if not (reflect.IsMap $raw) -}}
+    {{- warnf "%s: each action must be a map; skipping it" $where -}}
+  {{- else -}}
+    {{- $allowed := slice "text" "href" "style" "icon" -}}
+    {{- range $name, $_ := $raw -}}
+      {{- if not (in $allowed $name) -}}
+        {{- warnf "%s: unknown key %q (allowed: %s); ignoring it" $where $name (delimit $allowed ", ") -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $text := strings.TrimSpace (printf "%v" (index $raw "text" | default "")) -}}
+    {{- $policy := dict "valid" false "href" "" "external" false -}}
+    {{- if isset $raw "href" -}}
+      {{- $policy = partial "content/url.html" (dict
+        "value" (index $raw "href") "kind" "link" "parameter" "href"
+        "position" $where "name" "landing action") -}}
+    {{- else -}}
+      {{- warnf "%s: action requires href; skipping it" $where -}}
+    {{- end -}}
+    {{- if not $text -}}
+      {{- warnf "%s: action requires text; skipping it" $where -}}
+    {{- end -}}
+    {{- if and $text $policy.valid -}}
+      {{- $style := partial "validate-enum.html" (dict
+        "value" (index $raw "style") "allowed" (slice "primary" "secondary" "text")
+        "fallback" "secondary" "key" "action style" "where" $where) -}}
+      {{- $icon := "" -}}
+      {{- with index $raw "icon" -}}
+        {{- $icon = partial "content/icon.html" (dict
+          "name" (strings.TrimSpace (printf "%v" .)) "class" "td-landing-action-icon") -}}
+      {{- end -}}
+      {{- $rendered = $rendered | append (dict
+        "text" $text "href" $policy.href "external" $policy.external
+        "style" $style "icon" $icon) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- if $rendered -}}
+  {{- $out = partial "landing/actions-markup.html" (dict "items" $rendered) -}}
+{{- end -}}
+{{- return $out -}}

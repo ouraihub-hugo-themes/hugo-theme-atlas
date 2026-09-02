@@ -42,3 +42,7 @@
 @import "./assets.css";
 @import "./release.css";
 @import "./download.css";
+
+/* landing 在 card.css 之后：cards section 复用 .td-card，而 landing 里的
+   accent 档要覆盖它的配色。 */
+@import "./landing.css";

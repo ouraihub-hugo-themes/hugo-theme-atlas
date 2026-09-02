@@ -1,0 +1,12 @@
+{{- /* 按钮组的标记。校验在 landing/actions.html，这里只出 HTML。
+
+     分开是因为 partial 只能有一个 return：校验那半边要在若干分支里累积结果，
+     而它同时又得返回字符串。
+
+     入参 dict：items（已校验过的项） */ -}}
+<div class="td-landing-actions">
+  {{- range .items }}
+  <a class="td-landing-action td-landing-action--{{ .style }}" href="{{ .href }}"
+     {{- if .external }} rel="noopener"{{ end }}>{{ .text }}{{ .icon }}</a>
+  {{- end }}
+</div>

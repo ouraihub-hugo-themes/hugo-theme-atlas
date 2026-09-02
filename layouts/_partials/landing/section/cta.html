@@ -1,0 +1,27 @@
+{{- /* CTA：一段话加一组按钮。
+
+     结构上它就是 head + actions，没有自己的字段 —— 但它不是"多余的 section"：
+     `tone: accent` 加居中排版是 landing 页收尾那一块的固定形态，让作者用
+     `markdown` section 手搓一遍等于把这个排版重复写进每个站点。
+
+     没有按钮时仍然渲染：一段带底色的话是成立的收尾。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "actions")) -}}
+
+{{- $actions := "" -}}
+{{- with index $raw "actions" -}}
+  {{- $actions = partial "landing/actions.html" (dict "page" $page "items" . "at" $c.at) -}}
+{{- end -}}
+
+{{- if or $c.title $c.subtitle $c.eyebrow $actions -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-cta td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner td-landing-cta-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    {{- $actions }}
+  </div>
+</section>
+{{- else -}}
+  {{- warnf "%s: cta has nothing to render (needs title, subtitle, eyebrow, or actions)" $c.at -}}
+{{- end -}}

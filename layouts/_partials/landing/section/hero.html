@@ -1,0 +1,61 @@
+{{- /* Hero：landing 页最上面那一屏。
+
+     标题层级在这里是 h1，不是 head.html 的 h2 —— hero 的标题就是这一页的
+     标题，所以它自己出标题而不调那个共享件。一页有两个 hero 时第二个仍出 h1，
+     这是作者的问题，而校验它需要跨 section 的状态，代价高于收益。
+
+     `image` 是装饰性的：alt 恒为空。hero 图承载的信息在标题与副标题里已经说过
+     了，给它一段重复的 alt 只是让读屏软件把同一句话念两遍。真正承载信息的图
+     应该在正文里用 image render hook，那里 alt 是必需的。
+
+     键：headline、tagline、image、actions。用 headline 而不复用公共的 title：
+     公共 title 出 h2，而这里要 h1，两个键名分开比一个键在不同 section 里出
+     不同层级更少意外。 */ -}}
+{{- $page := .page -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict
+  "section" $raw "at" $c.at
+  "allowed" (slice "headline" "tagline" "image" "actions")) -}}
+
+{{- $headline := "" -}}
+{{- with index $raw "headline" -}}
+  {{- $headline = $page.RenderString (strings.TrimSpace (printf "%v" .)) -}}
+{{- end -}}
+{{- $tagline := "" -}}
+{{- with index $raw "tagline" -}}
+  {{- $tagline = $page.RenderString (dict "display" "block") (strings.TrimSpace (printf "%v" .)) -}}
+{{- end -}}
+
+{{- /* 尺寸要带上：没有 width/height 的 <img> 在载入前占 0 高，载入后把下面的
+       内容顶下去。hero 图大，这个抖动尤其刺眼。远程图拿不到固有尺寸（返回 0），
+       那时不输出属性 —— 输出 width="0" 会把图压成不可见。 */ -}}
+{{- $image := dict "src" "" -}}
+{{- with index $raw "image" -}}
+  {{- $image = partial "content/image-resolve.html" (dict
+    "page" $page "src" (printf "%v" .) "position" $c.at "name" "landing hero") -}}
+{{- end -}}
+
+{{- $actions := "" -}}
+{{- with index $raw "actions" -}}
+  {{- $actions = partial "landing/actions.html" (dict "page" $page "items" . "at" $c.at) -}}
+{{- end -}}
+
+<section id="{{ $c.id }}" class="td-landing-section td-landing-hero td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner td-landing-hero-inner{{ if $image.src }} td-landing-hero-inner--split{{ end }}">
+    <div class="td-landing-hero-text">
+      {{- with $c.eyebrow }}<p class="td-landing-eyebrow">{{ . }}</p>{{ end }}
+      {{- with $headline }}<h1 class="td-landing-headline">{{ . }}</h1>{{ end }}
+      {{- with $tagline }}<div class="td-landing-tagline">{{ . }}</div>{{ end }}
+      {{- $actions }}
+    </div>
+    {{- with $image.src }}
+    <div class="td-landing-hero-media">
+      {{- /* loading="eager"：hero 在首屏，懒加载只会让它晚一个往返才出现。 */}}
+      <img src="{{ . }}" alt="" loading="eager" decoding="async"
+        {{- with $image.width }} width="{{ . }}"{{ end }}
+        {{- with $image.height }} height="{{ . }}"{{ end }}>
+    </div>
+    {{- end }}
+  </div>
+</section>

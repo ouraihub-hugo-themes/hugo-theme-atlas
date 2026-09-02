@@ -1,0 +1,69 @@
+{{- /* Metrics：几个大数字加各自的说明。
+
+     **数字用 <dl> 而不是一排 <div>。** 每项是"值 + 它是什么"的配对，而 dl 正是
+     为此存在的元素 —— 读屏软件会把 dt 与 dd 关联起来播报。用 div 的话读者听到
+     的是"99.9 百分号"和"可用性"两段互不相干的文字。
+
+     dd 在前 dt 在后是刻意的：视觉上大数字在上、说明在下，而 dl 允许 dd 先出现
+     只要它们在同一个 <div> 里成组。所以每项包一层 div —— 那是 HTML 规范给
+     dl 定的分组方式，不是排版凑出来的。
+
+     每项的键：value（必需）、label（必需）、note。三者都是纯文本：数字与它的
+     标签是数据而不是叙述，让它们渲染 Markdown 只会让 `1.5*` 这样的值变成斜体。 */ -}}
+{{- $raw := .section -}}
+{{- $c := .common -}}
+{{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "items")) -}}
+
+{{- $items := index $raw "items" -}}
+{{- if and $items (not (reflect.IsSlice $items)) -}}
+  {{- warnf "%s: metrics items must be an array; rendering none" $c.at -}}
+  {{- $items = slice -}}
+{{- end -}}
+{{- if not $items -}}
+  {{- warnf "%s: metrics requires a non-empty items array; rendering nothing" $c.at -}}
+{{- end -}}
+
+{{- $metrics := slice -}}
+{{- range $i, $item := $items -}}
+  {{- $where := printf "%s items[%d]" $c.at $i -}}
+  {{- if not (reflect.IsMap $item) -}}
+    {{- warnf "%s: each metric must be a map; skipping it" $where -}}
+  {{- else -}}
+    {{- $allowed := slice "value" "label" "note" -}}
+    {{- range $name, $_ := $item -}}
+      {{- if not (in $allowed $name) -}}
+        {{- warnf "%s: unknown key %q (allowed: %s); ignoring it" $where $name (delimit $allowed ", ") -}}
+      {{- end -}}
+    {{- end -}}
+    {{- $value := strings.TrimSpace (printf "%v" (index $item "value" | default "")) -}}
+    {{- $label := strings.TrimSpace (printf "%v" (index $item "label" | default "")) -}}
+    {{- if not $value -}}
+      {{- warnf "%s: metric requires value; skipping it" $where -}}
+    {{- else if not $label -}}
+      {{- /* 只有数字没有标签的话读者不知道它在量什么。丢掉比显示一个孤零零的
+             "99.9%" 好 —— 后者看起来像渲染成功了。 */ -}}
+      {{- warnf "%s: metric requires label; skipping it" $where -}}
+    {{- else -}}
+      {{- $metrics = $metrics | append (dict
+        "value" $value "label" $label
+        "note" (strings.TrimSpace (printf "%v" (index $item "note" | default "")))) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if $metrics -}}
+<section id="{{ $c.id }}" class="td-landing-section td-landing-section--{{ $c.tone }}">
+  <div class="td-landing-inner">
+    {{- partial "landing/head.html" (dict "common" $c) }}
+    <dl class="td-landing-metrics">
+      {{- range $metrics }}
+      <div class="td-landing-metric">
+        <dd class="td-landing-metric-value">{{ .value }}</dd>
+        <dt class="td-landing-metric-label">{{ .label }}</dt>
+        {{- with .note }}<dd class="td-landing-metric-note">{{ . }}</dd>{{ end }}
+      </div>
+      {{- end }}
+    </dl>
+  </div>
+</section>
+{{- end -}}
