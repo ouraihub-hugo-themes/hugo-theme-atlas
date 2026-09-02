@@ -21,9 +21,25 @@ product_version = "0.1.0"
 #
 # 表头必须在 [params] 的所有顶层键之后 —— TOML 里表头一开，后续键就归它，
 # 放在前面会把 product_version 变成 params.ui.plantuml.product_version。
+#
+# 分享目标。这是列表不是开关：`true` 说不出要分享到哪儿。单页上写
+# `share: false` 关掉那一页。不配就没有分享条。
+[params.ui]
+share = ["x", "bluesky", "linkedin", "hackernews", "email", "copy"]
+
 [params.ui.plantuml]
 server = "https://www.plantuml.com/plantuml"
 format = "svg"
+
+# 仓库位置。开启「编辑本页」链接的唯一条件 —— 不配就没有那个链接。
+# branch 默认 main，edit 路径默认 `/edit/{branch}/{path}`（GitHub、GitLab、
+# Gitea 都是这个形状），subdir 是站点在仓库里的位置。
+#
+# 这里 subdir 写 exampleSite：这个站点确实住在仓库的那个子目录下，链接要指到
+# 真实文件才有意义。
+[params.ui.repo]
+url = "https://github.com/ouraihub-hugo-themes/hugo-theme-atlas"
+subdir = "exampleSite"
 
 # navbar 菜单。不配也能跑 —— navbar 会退回顶层 section。这里显式配置是
 # 为了让两条路径都有验证覆盖。

@@ -1,0 +1,96 @@
+/* 分享条。由 layouts/_partials/shell/share.html 渲染。
+
+   一排图标 + 文字的小按钮，横向换行。不做成「一个分享图标点开一个浮层」：
+   多一次点击换来的是少几十像素，而浮层要焦点管理、要 Escape、要定位 ——
+   与被它藏起来的那几个链接不成比例。
+
+   项目本身是链接（`<a>`）和一个按钮（复制），两者外观必须一致，所以样式挂在
+   共用的 `.td-share-item` 上而不是元素选择器上。 */
+
+@layer components {
+  .td-share {
+    margin-block-start: 3rem;
+    padding-block-start: 1.5rem;
+    border-block-start: 1px solid var(--color-border);
+  }
+
+  /* 标题降到与页尾其他小标题同一档：它不是一节内容，是一行操作的说明。 */
+  .td-share-title {
+    margin: 0 0 0.75rem;
+    color: var(--color-ink-muted);
+    font-family: var(--font-meta);
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+  }
+
+  .td-share-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* 与资产表的复制按钮同款：同一套边框、圆角、2rem 见方的触屏下限。两处都是
+     "一个不抢注意力的小操作"，长得不一样只会让人以为它们行为不同。 */
+  .td-share-item {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+    justify-content: center;
+    min-width: 2rem;
+    min-height: 2rem;
+    padding: 0.3rem 0.6rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--color-ink-muted);
+    font-family: var(--font-meta);
+    font-size: 0.82rem;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:is(:hover, :focus-visible) {
+      border-color: var(--color-accent);
+      color: var(--color-accent);
+    }
+  }
+
+  .td-share-item[data-td-share-copied] {
+    border-color: var(--color-status-success);
+    color: var(--color-status-success);
+  }
+
+  /* 窄屏只留图标。文字在这个宽度下会把一行挤成三行，而品牌标志本身就是那个
+     平台的名字 —— 这是图标承担识别的少数场合之一。复制那一项的 `link` 图标
+     不自明，所以它的文字留着。 */
+  @media (width < 30rem) {
+    .td-share-item:not([data-td-share-copy]) span {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      margin: -1px;
+      padding: 0;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+
+  /* 纸上没有分享。整块收起 —— 一排点不了的图标只是占掉一行。 */
+  @media print {
+    .td-share {
+      display: none;
+    }
+  }
+
+  /* 强制色彩模式下自定义色被系统色顶掉，悬停反馈会消失。用 Highlight 顶上。 */
+  @media (forced-colors: active) {
+    .td-share-item:is(:hover, :focus-visible) {
+      outline: 1px solid Highlight;
+    }
+  }
+}

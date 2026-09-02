@@ -1,0 +1,36 @@
+/* 页尾。由 layouts/_partials/shell/page-end.html 及其下的几个 partial 渲染。
+
+   这个文件只放「编辑本页」——分享条在 share.css，评论在 comments.css。放在
+   一起的理由不成立：它们各自默认关着，一个站点很可能只开一个。
+
+   页尾各块之间的间距由各自的 margin 负责，不由这里统一：开一个和开三个都得
+   看着对，而"第一块不要上边距"这种规则要知道谁是第一块 —— 那是模板的知识，
+   写进 CSS 就得跟着模板改。 */
+
+@layer components {
+  .td-edit-page {
+    margin-block-start: 2rem;
+  }
+
+  .td-edit-page-link {
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+    color: var(--color-ink-muted);
+    font-family: var(--font-meta);
+    font-size: 0.82rem;
+    text-decoration: none;
+
+    &:is(:hover, :focus-visible) {
+      color: var(--color-accent);
+      text-decoration: underline;
+    }
+  }
+
+  /* 纸上没有编辑。地址是一串 forge 的 URL，印出来读者也不会照着敲。 */
+  @media print {
+    .td-edit-page {
+      display: none;
+    }
+  }
+}

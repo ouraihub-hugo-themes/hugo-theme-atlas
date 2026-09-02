@@ -1,0 +1,25 @@
+{{- /* 取一个「站点在 params.ui 下、页面直接写」的参数。
+
+     契约里这条：主题策略住在 `params.ui.*`，页面覆盖时去掉 `ui.`。所以同一个
+     开关有两个位置：
+
+       [params.ui]        →  site.Params.ui.share
+       页面 front matter  →  .Params.share
+
+     `.Param` 桥不了这两者 —— 它查页面参数，然后查站点的**顶层** params，不会
+     下到 `ui` 里。所以每个这样的参数都要自己写两行查找，而两行里漏掉一行的
+     表现是「站点配了没用」或「页面覆盖不了」，两者都不报错。
+
+     抽出来是因为出现了第二个调用方（share 与 edit_page），不是为了预留。
+
+     入参 dict：page、key
+     返回：参数值，两处都没有时返回 nil */ -}}
+{{- $page := .page -}}
+{{- $key := .key -}}
+{{- $value := index (site.Params.ui | default dict) $key -}}
+{{- /* 页面上显式写了就用页面的，包括写 `false` —— 那是关掉这一页的方式。
+       用 `isset` 而不是判真值：`false` 与「没写」是两件事。 */ -}}
+{{- if isset $page.Params $key -}}
+  {{- $value = index $page.Params $key -}}
+{{- end -}}
+{{- return $value -}}

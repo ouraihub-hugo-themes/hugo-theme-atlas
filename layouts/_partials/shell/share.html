@@ -1,0 +1,132 @@
+{{- /* 分享条。
+
+     **`params.ui.share` 是目标列表，不是开关。** 一个 `true` 说不出要分享到
+     哪里，所以写成 `true` 会 warn 并且什么都不渲染 —— 而 `share: false` 是
+     单页的退出方式，那个有意义。默认不配就没有分享条。
+
+     地址在构建期拼好，除了「复制链接」全都是普通 `<a>`：分享到某个平台本质
+     上是打开那个平台的一个 URL，用 JS 组装它只是把同一件事推迟到运行时。
+     `navigator.share` 也不用 —— 它只在移动端和 https 下存在，而它顶掉的是
+     整条列表，读者会看到桌面上什么都没有。
+
+     只在单页上渲染：列表页、分类页、首页没有「这一篇」可分享。
+
+     配置：
+       [params.ui]
+       share = ["x", "bluesky", "linkedin", "email", "copy"]
+
+     页面上 `share: false` 关掉这一页，或给一个自己的列表覆盖站点的。 */ -}}
+{{- $allowed := slice
+  "x" "bluesky" "mastodon" "facebook" "linkedin" "reddit" "hackernews"
+  "telegram" "whatsapp" "line" "weibo" "chatgpt" "claude" "email" "copy" -}}
+{{- $names := delimit $allowed ", " -}}
+{{- $ids := slice -}}
+
+{{- $raw := partial "ui-param.html" (dict "page" . "key" "share") -}}
+{{- if eq (printf "%T" $raw) "bool" -}}
+  {{- if $raw -}}
+    {{- warnidf "share-bool" "%s: params.ui.share is the list of share targets, not a switch (allowed: %s); use `share: false` to turn one page off; rendering no bar" .Path $names -}}
+  {{- end -}}
+{{- else if $raw -}}
+  {{- if reflect.IsSlice $raw -}}
+    {{- $ids = $raw -}}
+  {{- else -}}
+    {{- warnidf "share-type" "%s: params.ui.share must be a list of share targets (allowed: %s); got %v; rendering no bar" .Path $names $raw -}}
+  {{- end -}}
+{{- end -}}
+
+{{- if and $ids .IsPage -}}
+  {{- /* 编码一次，所有模板共用。`urlquery` 把空格编成 `+`，那在查询串里能用
+         但 `mailto:` 的 body 里不行 —— 换成 `%20`，两处都对。 */ -}}
+  {{- $url := replace (urlquery .Permalink) "+" "%20" -}}
+  {{- $title := replace (urlquery .Title) "+" "%20" -}}
+  {{- /* 一个参数里同时要标题和地址的那些平台（Bluesky、Mastodon、WhatsApp）。 */ -}}
+  {{- $both := replace (urlquery (printf "%s %s" .Title .Permalink)) "+" "%20" -}}
+  {{- $prompt := replace (urlquery (i18n "share_ai_prompt" (dict "URL" .Permalink))) "+" "%20" -}}
+
+  {{- /* `form` 说明模板里的 `%s` 按什么顺序填：
+           u   只要地址        t   只要标题
+           ut  地址在前        tu  标题在前
+           b   标题与地址合成一段     p   AI 提示语 */ -}}
+  {{- $catalog := dict
+    "x" (dict "label" "X" "icon" "x-twitter" "form" "ut"
+      "template" "https://x.com/intent/post?url=%s&text=%s")
+    "bluesky" (dict "label" "Bluesky" "icon" "bluesky" "form" "b"
+      "template" "https://bsky.app/intent/compose?text=%s")
+    "mastodon" (dict "label" "Mastodon" "icon" "mastodon" "form" "b"
+      "template" "https://share.joinmastodon.org/#text=%s")
+    "facebook" (dict "label" "Facebook" "icon" "facebook" "form" "u"
+      "template" "https://www.facebook.com/sharer/sharer.php?u=%s")
+    "linkedin" (dict "label" "LinkedIn" "icon" "linkedin" "form" "u"
+      "template" "https://www.linkedin.com/sharing/share-offsite/?url=%s")
+    "reddit" (dict "label" "Reddit" "icon" "reddit" "form" "ut"
+      "template" "https://www.reddit.com/submit?url=%s&title=%s")
+    "hackernews" (dict "label" "Hacker News" "icon" "hackernews" "form" "ut"
+      "template" "https://news.ycombinator.com/submitlink?u=%s&t=%s")
+    "telegram" (dict "label" "Telegram" "icon" "telegram" "form" "ut"
+      "template" "https://t.me/share/url?url=%s&text=%s")
+    "whatsapp" (dict "label" "WhatsApp" "icon" "whatsapp" "form" "b"
+      "template" "https://wa.me/?text=%s")
+    "line" (dict "label" "LINE" "icon" "line" "form" "ut"
+      "template" "https://social-plugins.line.me/lineit/share?url=%s&text=%s")
+    "weibo" (dict "label" "Weibo" "icon" "weibo" "form" "ut"
+      "template" "https://service.weibo.com/share/share.php?url=%s&title=%s")
+    "chatgpt" (dict "label" "ChatGPT" "icon" "openai" "form" "p"
+      "template" "https://chatgpt.com/?hints=search&prompt=%s")
+    "claude" (dict "label" "Claude" "icon" "claude" "form" "p"
+      "template" "https://claude.ai/new?q=%s")
+    "email" (dict "label" (i18n "share_email") "icon" "email" "form" "tu"
+      "template" "mailto:?subject=%s&body=%s")
+    "copy" (dict "label" (i18n "share_copy") "icon" "link" "form" "" "template" "")
+  -}}
+
+  {{- $items := slice -}}
+  {{- range $id := $ids -}}
+    {{- if not (in $allowed $id) -}}
+      {{- warnidf (printf "share-entry:%v" $id) "%s: unknown params.ui.share entry %q (allowed: %s); dropping it" $.Path $id $names -}}
+    {{- else -}}
+      {{- $e := index $catalog $id -}}
+      {{- $href := "" -}}
+      {{- if eq $e.form "u" }}{{ $href = printf $e.template $url }}
+      {{- else if eq $e.form "ut" }}{{ $href = printf $e.template $url $title }}
+      {{- else if eq $e.form "tu" }}{{ $href = printf $e.template $title $url }}
+      {{- else if eq $e.form "b" }}{{ $href = printf $e.template $both }}
+      {{- else if eq $e.form "p" }}{{ $href = printf $e.template $prompt }}
+      {{- end -}}
+      {{- $items = $items | append (merge $e (dict "id" $id "href" $href)) -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- with $items }}
+  <nav class="td-share" aria-label="{{ i18n "share_label" }}" data-pagefind-ignore>
+    <h2 class="td-share-title">{{ i18n "share_label" }}</h2>
+    <ul class="td-share-list">
+      {{- range . }}
+      <li>
+        {{- if eq .id "copy" }}
+        {{- /* 复制是唯一一个不是「去别处」的项，所以是 button 不是链接。
+               `data-td-copy` 带的是绝对地址：读者复制的要能贴到别处去。 */ -}}
+        <button type="button" class="td-share-item" data-td-share-copy
+                data-td-copy="{{ $.Permalink }}"
+                data-td-label-copied="{{ i18n "share_copied" }}">
+          {{ partial "content/icon.html" (dict "name" .icon "page" $) }}
+          <span>{{ .label }}</span>
+        </button>
+        {{- else }}
+        {{- /* 外站链接一律 `rel="noopener"`：被打开的页面能通过
+               `window.opener` 改这一页的地址。`mailto:` 不开新窗口 —— 那会
+               留下一个空白标签页。 */ -}}
+        <a class="td-share-item" href="{{ .href }}"
+           {{ if hasPrefix .href "https://" }}target="_blank" rel="noopener noreferrer"{{ end }}>
+          {{ partial "content/icon.html" (dict "name" .icon "page" $) }}
+          <span>{{ .label }}</span>
+        </a>
+        {{- end }}
+      </li>
+      {{- end }}
+    </ul>
+    {{- /* 复制结果的播报区。按钮上的图标变化对读屏不可见。 */ -}}
+    <span class="sr-only" role="status" aria-live="polite" data-td-share-status></span>
+  </nav>
+  {{- end }}
+{{- end -}}

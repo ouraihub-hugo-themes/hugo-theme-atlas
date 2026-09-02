@@ -125,3 +125,16 @@ search_no_results: No results
 # 索引没建时的提示。这不是错误而是消费方少跑了一步（`npx pagefind --site public`），
 # 所以文案要指向那一步，不能只说"搜索不可用"。
 search_unavailable: Search index not found. Run pagefind after building.
+
+# 分享。`share_label` 同时是 nav 的 aria-label 与可见标题 —— 两处同一句话，
+# 读屏用户听到的与看到的一致。
+share_label: Share this page
+share_email: Email
+share_copy: Copy link
+share_copied: Link copied
+# 发给 AI 助手时带的提示语。`.URL` 是这一页的绝对地址。不写成"总结这个网页"
+# 之类的指令 —— 读者点进去之后自己会说要什么，这里只负责把地址交过去。
+share_ai_prompt: "Read {{ .URL }}"
+
+# 编辑本页。开在 params.ui.repo.url 上。
+edit_page: Edit this page

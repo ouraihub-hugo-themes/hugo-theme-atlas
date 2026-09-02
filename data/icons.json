@@ -69,5 +69,35 @@
   "python": "brands/python",
   "js": "brands/js",
   "html5": "brands/html5",
-  "css3-alt": "brands/css3-alt"
+  "css3-alt": "brands/css3-alt",
+
+  "$comment_share": [
+    "分享目标的图标。全收而不是按平台流行度裁：作者配 params.ui.share 时能列的",
+    "平台就是这一批，少一个的表现是那一项渲染不出图标而链接还在。",
+    "品牌标志按各家商标规范只能用原样式，所以这里与其他图标一样只取路径、",
+    "由 currentColor 上色 —— 不引各家的彩色版本。"
+  ],
+  "x-twitter": "brands/x-twitter",
+  "bluesky": "brands/bluesky",
+  "mastodon": "brands/mastodon",
+  "facebook": "brands/facebook",
+  "linkedin": "brands/linkedin-in",
+  "reddit": "brands/reddit-alien",
+  "hackernews": "brands/hacker-news",
+  "telegram": "brands/telegram",
+  "whatsapp": "brands/whatsapp",
+  "line": "brands/line",
+  "weibo": "brands/weibo",
+  "openai": "brands/openai",
+  "claude": "brands/claude",
+  "email": "solid/envelope",
+  "share": "solid/share-nodes",
+
+  "$comment_pageend": [
+    "页尾那批：反馈的两个手势、评论区、编辑本页。"
+  ],
+  "thumbs-up": "regular/thumbs-up",
+  "thumbs-down": "regular/thumbs-down",
+  "comments": "regular/comments",
+  "pen-to-square": "solid/pen-to-square"
 }

@@ -78,6 +78,9 @@
           {{ if $hasSidebar }}data-td-shell-drawer-inert{{ end }}>
       {{ partial "shell/breadcrumb.html" . }}
       {{ block "main" . }}{{ end }}
+      {{- /* 页尾那批在正文之后、翻页之前：它们都是关于「这一篇」的，而翻页
+             已经是去下一篇了。各自默认关着，没配的站点这里什么都不输出。 */ -}}
+      {{ partial "shell/page-end.html" . }}
       {{ partial "shell/pager.html" . }}
     </main>
 

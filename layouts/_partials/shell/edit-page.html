@@ -1,0 +1,71 @@
+{{- /* 「编辑本页」链接。默认不出现 —— 没有仓库地址就没有可编辑的地方。
+
+     配置：
+       [params.ui.repo]
+       url = "https://github.com/owner/repo"
+       branch = "main"          # 默认 main
+       subdir = ""              # Hugo 站点在仓库里的子目录，默认仓库根
+       edit = "/edit/{branch}/{path}"   # 少见的 forge 才要写
+
+     `edit` 是一个模板而不是几个 forge 的名字：主题认得 GitHub、GitLab 与
+     Gitea 的路径恰好都是 `/edit/<branch>/<path>`，而认不出的那些（Bitbucket
+     是 `?mode=edit&at=`，Sourcehut 没有网页编辑）与其猜错，不如让作者写一行。
+     所以这里没有 forge 检测，只有一个默认模板加一个覆盖点。
+
+     **路径来自 `.File`，而 `.File` 可以是 nil。** 内容生成自 content adapter
+     或 `_content.gotmpl` 的页面没有源文件 —— 那时不渲染，而不是拼一个 404
+     出来。
+
+     **一个 `{{ return }}` 都不用。** Hugo 执行它遇到的第一个 return，不管那个
+     return 在哪个逻辑块里 —— 所以「几个前置条件各自 return」这种写法在 Hugo
+     里不成立，它会在第一个条件的位置就结束整个 partial。改用一层层收窄的
+     `if`：多两层缩进，换来的是条件真的被求值。 */ -}}
+{{- $cfg := site.Params.ui.repo | default dict -}}
+{{- $url := $cfg.url | default "" -}}
+
+{{- /* 页面上的 `edit_page: false` 关掉这一页。整站关就把 repo.url 拿掉。 */ -}}
+{{- $want := partial "ui-param.html" (dict "page" . "key" "edit_page") -}}
+{{- /* 判类型名而不是与 `nil` 比：裸 `nil` 在 `and` 的参数位置不是合法的模板
+       命令（Go 模板只在少数位置认它），实测报 "nil is not a command"。没写这
+       个键时类型名就是 `<nil>`。 */ -}}
+{{- $type := printf "%T" $want -}}
+{{- $off := eq $want false -}}
+{{- if and (ne $type "<nil>") (ne $type "bool") -}}
+  {{- warnidf "edit-page-type" "%s: edit_page must be a boolean; got %v; keeping the link" .Path $want -}}
+  {{- $off = false -}}
+{{- end -}}
+
+{{- if and $url (not $off) -}}
+  {{- $policy := partial "content/url.html" (dict
+    "value" $url "kind" "link" "parameter" "params.ui.repo.url"
+    "position" "params.ui.repo" "name" "edit-page"
+  ) -}}
+  {{- /* 必须是绝对地址：仓库不在这个站点里。站内相对路径说明配错了。
+         `position` 传的是参数位置而不是页面路径 —— 这个值来自站点配置，
+         每页报一次同一件事没有意义，而 warnidf 的去重键也该跟着配置走。 */ -}}
+  {{- if and $policy.valid (not $policy.external) -}}
+    {{- warnidf "edit-page-relative" "edit-page: params.ui.repo.url must be an absolute http(s) URL; got %q; no edit link" $url -}}
+  {{- end -}}
+
+  {{- if and $policy.valid $policy.external -}}
+    {{- with .File -}}
+      {{- $branch := $cfg.branch | default "main" -}}
+      {{- $subdir := strings.Trim ($cfg.subdir | default "") "/" -}}
+      {{- $pattern := $cfg.edit | default "/edit/{branch}/{path}" -}}
+
+      {{- /* `.Path` 相对 content/，前面要补回站点在仓库里的位置。Windows 上
+             Hugo 给的是反斜杠，换成正斜杠 —— URL 里反斜杠不是分隔符，那样
+             拼出来的地址只在作者自己机器上构建时是坏的。 */ -}}
+      {{- $inRepo := path.Join $subdir "content" (replace .Path "\\" "/") -}}
+      {{- $path := replace (replace $pattern "{branch}" $branch) "{path}" $inRepo -}}
+      {{- $href := printf "%s%s" (strings.TrimSuffix "/" $policy.raw) $path -}}
+
+      <div class="td-edit-page" data-pagefind-ignore>
+        <a class="td-edit-page-link" href="{{ $href }}" target="_blank" rel="noopener noreferrer">
+          {{ partial "content/icon.html" (dict "name" "pen-to-square" "page" $) }}
+          <span>{{ i18n "edit_page" }}</span>
+        </a>
+      </div>
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
