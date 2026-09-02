@@ -20,7 +20,10 @@ export function apply(theme: "light" | "dark", root: HTMLElement = document.docu
   root.setAttribute(ATTR, theme);
 }
 
-export function store(choice: ThemeChoice, s: Pick<Storage, "setItem" | "removeItem"> = localStorage): void {
+export function store(
+  choice: ThemeChoice,
+  s: Pick<Storage, "setItem" | "removeItem"> = localStorage,
+): void {
   if (choice === "system") s.removeItem(STORAGE_KEY);
   else s.setItem(STORAGE_KEY, choice);
 }

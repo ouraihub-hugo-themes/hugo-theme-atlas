@@ -111,12 +111,12 @@
      六个语义角色，两个预设。default 用随主题分发的 Inter；system 退回平台
      字体栈。平台栈始终在 Inter 之后兜底 —— CJK、emoji、Inter 缺的字形都由
      它渲染。 */
-  --td-font-platform-sans: system-ui, -apple-system, "Segoe UI", roboto,
-    "Helvetica Neue", arial, "Noto Sans", sans-serif, "Apple Color Emoji",
-    "Segoe UI Emoji";
-  --td-font-platform-mono: sfmono-regular, "Cascadia Code", "Roboto Mono", menlo,
-    consolas, "Liberation Mono", "Sarasa Mono SC", "Noto Sans Mono CJK SC",
-    monospace;
+  --td-font-platform-sans:
+    system-ui, -apple-system, "Segoe UI", roboto, "Helvetica Neue", arial, "Noto Sans", sans-serif,
+    "Apple Color Emoji", "Segoe UI Emoji";
+  --td-font-platform-mono:
+    sfmono-regular, "Cascadia Code", "Roboto Mono", menlo, consolas, "Liberation Mono",
+    "Sarasa Mono SC", "Noto Sans Mono CJK SC", monospace;
 
   /* 正文与标题同族：文档正文由字号台阶承担层级，不靠换字族。display 属于
      chrome（navbar brand、footer、landing hero），不进正文。 */
@@ -185,7 +185,6 @@
   --td-shell-card: color-mix(in srgb, var(--td-canvas) 96%, #fff 4%);
   --td-shell-rail: oklch(95% 0.01 250deg / 10%);
 }
-
 
 /* ============================================================
    映射进 utility 生成

@@ -18,7 +18,7 @@
     "check": "pnpm type-check && pnpm lint && pnpm test:run && pnpm check:warnings",
     "type-check": "tsc --noEmit",
     "lint": "eslint src/ts && stylelint \"src/css/**/*.css\"",
-    "format": "prettier --write \"src/**/*.{ts,css}\" \"layouts/**/*.html\"",
+    "format": "prettier --write \"src/**/*.{ts,css}\"",
     "test": "vitest",
     "test:run": "vitest run",
     "check:warnings": "node scripts/check-warnings.js",

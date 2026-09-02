@@ -1,0 +1,31 @@
+# Hugo 模板不交给 prettier 格式化。
+#
+# 它的 HTML 解析器不认识 Go 模板，模板动作出现在属性位置就直接报语法错：
+#
+#   <a href="{{ . }}"{{ if eq $kind "remote" }} rel="noopener"{{ end }} download>
+#
+# 解析到 `{{` 的地方它等的是属性名或 `>`，于是 `Opening tag "a" not terminated`。
+#
+# prettier-plugin-go-template 能解析，但格式化的结果不能用，试过了：
+#
+#   - 它把 `{{- /* 注释 */ -}}` 拆成两行，`*/` 与 `-}}` 之间多一个换行。Go 要求
+#     `*/` 紧跟结束定界符，于是 `comment ends before closing delimiter` —— 构建
+#     直接失败。
+#   - 它往 `{{- if x }}{{ y }}{{ end -}}` 里加换行与缩进，而内层定界符没有 `-`，
+#     那些空白就成了输出字节。渲染结果因此改变，而这类改变没有报错，只是页面上
+#     多出空白。
+#
+# 模板的空白是语义的（`{{-` 控制裁剪），任何不理解这件事的格式化器都会改行为。
+# 因此模板靠人手对齐，CSS 与 TS 照旧交给 prettier。
+layouts/
+
+# 生成物
+assets/dist/
+public/
+resources/
+static/js/
+exampleSite/resources/
+exampleSite/public/
+
+# 供应的第三方产物，按上游原样保留
+src/css/vendor/

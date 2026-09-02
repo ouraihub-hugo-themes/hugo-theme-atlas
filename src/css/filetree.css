@@ -95,7 +95,8 @@
     transparent 0 calc(var(--td-filetree-indent) - 1px),
     var(--color-border) calc(var(--td-filetree-indent) - 1px) var(--td-filetree-indent)
   );
-  background-position: right calc(var(--td-filetree-gutter) + 1ch - var(--td-filetree-indent) + 1px) top 0;
+  background-position: right calc(var(--td-filetree-gutter) + 1ch - var(--td-filetree-indent) + 1px)
+    top 0;
 }
 
 /* 整段没有注释时只剩一列，名字铺满。 */

@@ -11,7 +11,7 @@
  *    渲染成空白的话，读者不知道自己错过了什么。
  */
 
-type MermaidModule = typeof import("mermaid")["default"];
+type MermaidModule = (typeof import("mermaid"))["default"];
 
 let loading: Promise<MermaidModule> | null = null;
 

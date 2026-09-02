@@ -144,12 +144,12 @@
 
   /* Markdown 链接不带 class。正文里仅靠颜色区分太弱，hover/focus 加下划
      线；组件链接（卡片、翻页、徽章）有自己的处理，用 :not([class]) 排除。 */
-  & :where(p, li, dd, dt, td, th, blockquote, figcaption, .lead)
-    a:not([class]) {
+  & :where(p, li, dd, dt, td, th, blockquote, figcaption, .lead) a:not([class]) {
     text-underline-offset: 0.16em;
   }
 
-  & :where(p, li, dd, dt, td, th, blockquote, figcaption, .lead)
+  &
+    :where(p, li, dd, dt, td, th, blockquote, figcaption, .lead)
     a:not([class]):is(:hover, :focus-visible) {
     text-decoration: underline;
   }
@@ -161,7 +161,9 @@
      嵌了一段代码。一列底色块会盖过名字自己的层级，而元信息里的 code 要跟着
      周围的安静色走。见本文件开头那条规矩 —— 这一层赢过 components，不排除的话
      field.css 里的 reset 一条都不生效。 */
-  & :not(pre) > code:not(
+  &
+    :not(pre)
+    > code:not(
       .td-field-name,
       .td-field-type,
       .td-field-default > code,

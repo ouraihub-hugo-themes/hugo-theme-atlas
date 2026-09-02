@@ -10,12 +10,11 @@
 
     /* 一层极薄的暖色渐变。页脚是页面的收束，纯画布色会让它看着像内容
        断在半路；但只要 5% —— 再多就成了一个色块。 */
-    background:
-      linear-gradient(
-        to bottom,
-        transparent,
-        color-mix(in srgb, var(--color-copper) 5%, transparent)
-      );
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      color-mix(in srgb, var(--color-copper) 5%, transparent)
+    );
   }
 
   .td-footer-inner {
@@ -84,8 +83,7 @@
       minmax(
         min(
           120px,
-          (100% - (var(--td-footer-cols, 4) - 1) * var(--td-footer-gap)) /
-            var(--td-footer-cols, 4)
+          (100% - (var(--td-footer-cols, 4) - 1) * var(--td-footer-gap)) / var(--td-footer-cols, 4)
         ),
         1fr
       )

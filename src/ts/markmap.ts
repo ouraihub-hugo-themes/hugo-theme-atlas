@@ -30,9 +30,7 @@ type CreateFn = (typeof import("markmap-view"))["Markmap"]["create"];
 let loading: Promise<CreateFn> | null = null;
 
 async function load(): Promise<CreateFn> {
-  loading ??= import("markmap-view").then((m) =>
-    m.Markmap.create.bind(m.Markmap),
-  );
+  loading ??= import("markmap-view").then((m) => m.Markmap.create.bind(m.Markmap));
   return loading;
 }
 
@@ -53,9 +51,7 @@ export function treeFromList(list: Element): MindmapNode[] {
     // 克隆后摘掉子列表，剩下的 innerHTML 就是本节点的内容。直接在原节点上删会
     // 毁掉无 JS 时的回落列表。
     const clone = li.cloneNode(true) as Element;
-    const sublists = [...clone.children].filter(
-      (c) => c.tagName === "UL" || c.tagName === "OL",
-    );
+    const sublists = [...clone.children].filter((c) => c.tagName === "UL" || c.tagName === "OL");
     for (const sub of sublists) sub.remove();
 
     const children = [...li.children]
@@ -87,9 +83,7 @@ export function animationDuration(
   win: { matchMedia?: typeof matchMedia } = globalThis,
   fallback = 500,
 ): number {
-  return win.matchMedia?.("(prefers-reduced-motion: reduce)").matches
-    ? 0
-    : fallback;
+  return win.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 0 : fallback;
 }
 
 /** 初始展开到第几层。0 或非法值都退回 -1（全展开）。 */
@@ -146,10 +140,7 @@ export async function render(host: HTMLElement): Promise<boolean> {
 
 /** 主色从 CSS 变量读，切主题时跟着变。 */
 function palette(root: HTMLElement = document.documentElement): string {
-  return (
-    getComputedStyle(root).getPropertyValue("--color-accent").trim() ||
-    "#2f6fdb"
-  );
+  return getComputedStyle(root).getPropertyValue("--color-accent").trim() || "#2f6fdb";
 }
 
 export function init(doc: Document = document): void {
