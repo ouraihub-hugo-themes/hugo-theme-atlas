@@ -25,26 +25,29 @@ sections、4 阅读外壳、32 locales。
 
 ## 2. 当前状态
 
-**期 0、期 1、期 2 已完成（宽度拖拽有意推迟）。
-期 3（内容原语）进行中：shortcode 26/29、hook 11/18。**
+**期 0–5 已完成（期 2 的宽度拖拽有意推迟）。期 6「输出格式与收尾」是剩下的
+唯一一期。**
 
-每期的完成定义、已过的验收项、有意简化之处，都记在 `PLAN.md` 对应小节。
-别在这里重复维护一份。工作量重估见 `PLAN.md` §工作量重估。
+**还剩什么看 `TODO.md`** —— 那份是权威清单。每期的完成定义、已过的验收项、
+有意简化之处在 `PLAN.md` 对应小节。这三处各管一件事，别互相复制。
+工作量重估见 `PLAN.md` §工作量重估。
 
-已交付的东西（截至 2026-09-01）：
+已交付的东西（截至 2026-09-02，下表是实测计数；数字容易过期，**不确定时以
+`ls | wc -l` 为准而不是这张表**）：
 
 | 目录 | 内容 |
 |---|---|
-| `src/css/` | 27 个文件：`main.css` 入口、`theme.css` token，外壳 4 份，其余按组件一份 |
+| `src/css/` | 39 个文件：`main.css` 入口、`theme.css` token，外壳 4 份，其余按组件一份 |
 | `src/css/vendor/` | `fonts.css`（18 个 @font-face）、`chroma-{light,dark}.css`（生成） |
-| `src/ts/` | 10 个模块 + `entries/` 5 个 esbuild 入口 |
-| `layouts/` | 95 个文件：54 个 partial、11 个 render hook、26 个 shortcode，其余是 baseof 与页面模板 |
-| `static/webfonts/` | 18 个 woff2 + 3 个 LICENSE |
-| `tests/` | 8 个 `*.test.ts`，44 个用例 + `tests/invalid/` 非法输入夹具 14 份 |
-| `scripts/` | `build-ts` `gen-chroma` `build-icons` `check-warnings` `make-fixture-image` |
+| `src/ts/` | 25 个模块 + `entries/` 10 个 esbuild 入口 |
+| `layouts/` | 152 个文件：101 个 partial、16 个 render hook（含输出变体）、30 个 shortcode，其余是 baseof 与页面模板 |
+| `static/webfonts/` | `inter/` 与 `brand/` 两组，共 18 个 woff2 + LICENSE |
+| `tests/` | 16 个 `*.test.ts`，103 个用例 + `tests/invalid/` 非法输入夹具 24 份 |
+| `scripts/` | `build-ts` `gen-chroma` `build-icons` `gen-vendor` `check-templates` `check-warnings` `check-outputs` `make-fixture-image` |
 | `assets/dist/` | 编译产物，**提交进仓库**（`.map` 除外，见 `.gitignore`） |
 
-分支 `main`，无 remote。按 `PLAN.md` 的批次表对照提交号。
+分支 `main`，remote `origin` 是 `ouraihub-hugo-themes/hugo-theme-atlas`。
+按 `PLAN.md` 的批次表对照提交号。
 
 ## 3. 环境
 
@@ -388,4 +391,6 @@ hugo --source exampleSite --themesDir ../.. --printPathWarnings --panicOnWarning
 3. 另起文档站，等主题开发完再做。
 4. clone-and-own 分发，不做 Hugo Module。
 
-**没有悬而未决的阻塞项。**
+**有阻塞项，在 `TODO.md`。** 写这一行时（视觉复核之前）确实没有；现在有五条
+视觉判断卡在「这一侧读 PNG 只能拿到一个 `.` 字符」上，必须由看得见图的一方
+给结论，其中一条还卡着 `exampleSite` 里一次临时 fixture 的回退。

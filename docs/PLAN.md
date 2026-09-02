@@ -1,6 +1,12 @@
 # 规划：实施分期
 
-前置阅读 `HANDOFF.md`（环境与陷阱）。本文只讲怎么做、什么顺序、每期怎么算完。
+**要知道还剩什么，读 `TODO.md`，不要读这份。** 这份是分期计划：怎么做、什么
+顺序、每期怎么算完，以及每个「不做」的理由。已完成的期次留在这里是为了保住
+那些理由，不是待办。
+
+前置阅读 `HANDOFF.md`（环境与陷阱）。
+
+**进度**：期 0–5 ✅，期 6 是剩下的唯一一期。
 
 ## 铁律
 
@@ -61,7 +67,7 @@ h2 24px/600/mt-48px、h3 20px/mt-36px、正文 16px/27.2px、lead 18px/400；
 token → 代码块静默落回 Chroma 自带的 github 灰。Tailwind 的 `@theme`
 不校验引用，写错变量名不报错。
 
-### 期 2 · 阅读外壳（进行中）
+### 期 2 · 阅读外壳 ✅（宽度拖拽 ⏸ 有意推迟，见段末）
 
 4 个外壳 + 导航。这是主题的骨架，也是 B 级难度最集中的一期。
 
@@ -102,12 +108,15 @@ token → 代码块静默落回 Chroma 自带的 github 灰。Tailwind 的 `@the
 **验收**：四壳均可浏览；scroll-spy 命中到底选末项、不可滚文档高亮首节；
 键盘可达；窄屏/RTL 正常。
 
-### 期 3 · 内容原语（进行中）
+### 期 3 · 内容原语 ✅
 
-29 shortcodes + 18 render hooks。A 级为主，量大但机械。
+原计划 29 shortcodes + 18 render hooks。**交付实测：shortcode 30、hook 15。**
 
-**已完成**（实测文件数）：shortcode 26/29，hook 14/18。剩下的基本就是那五个
-带外部运行时的，加两个输出变体。
+两个数都与原计划不符，都是原计划错了而不是这里欠了。shortcode 多一个，因为
+`book-*` 那组按用途拆成了四个（equations / examples / figures / tables）而计划
+把它们算作一格。hook 少三个，因为计划里有五项是 shortcode 与 hook 重复计数
+（`filetree` `gallery` `checksums` `math` `chem` 只是 hook，不是两者），
+而 `render-table.rss.xml` 这类输出变体计划没单列。下面两段是当时纠正的原文。
 
 **`filetree` `gallery` `checksums` `math` `chem` 不是 shortcode**，五个都是
 `render-codeblock-<lang>.html` hook —— 原先把它们列进 shortcode 那一格是错的。
@@ -296,7 +305,7 @@ Hugo 有没有内建。已交付。
 **验收**：每批建整页快照；Markdown/LLMS 输出不含组件标记；
 print 静态展开。
 
-### 期 4 · Landing
+### 期 4 · Landing ✅（22/22，六条视觉缺陷在改，见 `TODO.md`）
 
 22 个 section。单独成期，因为 `_landing.scss` 是最大单块（2,401 行）。
 
@@ -399,7 +408,10 @@ narrative 字段渲染 Markdown、label 字段纯文本，这个区分要保住�
 tablist 漫游 tabindex 与 Home/End 正确、RTL 下方向键镜像正确；缺索引时搜索
 退化成一条播报而不是坏掉的对话框。
 
-### 期 6 · 输出格式与收尾
+### 期 6 · 输出格式与收尾 ⬅ **当前，也是剩下的唯一一期**
+
+逐项现状与卡点见 `TODO.md` —— 那份是「还剩什么」的权威清单，这里只留计划原文
+与验收标准。
 
 - print 输出（`baseof.print.html` + `print:` variant 全量核对）
 - LLMS / BookManifest / Markdown / RSS

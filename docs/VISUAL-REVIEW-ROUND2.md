@@ -1,5 +1,9 @@
 # Landing 视觉复核 · 第二轮
 
+> **状态：未执行。** 这五条都在 `TODO.md` 的「卡在别人手上的」一节里挂着，
+> 等一个看得见图的评审。第 4 条还卡着 `exampleSite/content/landing/index.md:293`
+> 那次临时 fixture 的回退。
+
 接 `VISUAL-REVIEW-FINDINGS.md`。第一轮的阻塞缺陷（全站图标未渲染）已修，
 `fix(icon)` 提交 `78c99d1`。这一轮范围窄：**重测被那个缺陷挡住的三条 + 补第一轮
 明确留白的两条**，不重复已经过了的部分。
