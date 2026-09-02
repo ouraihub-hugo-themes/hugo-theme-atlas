@@ -18,9 +18,81 @@ hugo server --source exampleSite --themesDir ../.. --port 1319 --renderToMemory
 
 页面：`http://localhost:1319/landing/`
 
-**重要**：Playwright 的 cwd 是 `<参照工作树>`，截图会落在那里。那个仓库
-是只读参照，跑完必须删掉截图并确认 `git -C <参照工作树> status
---porcelain` 是空的。
+### 浏览器：什么都不用装
+
+**`%LOCALAPPDATA%\ms-playwright` 是空的，这不是缺东西。** User 级环境变量
+`PLAYWRIGHT_BROWSERS_PATH` 把它重定向到了下面这个目录（那边残留的 `b` 目录是设
+变量之前的，忽略）：
+
+```
+<浏览器缓存目录>\
+  chromium-1234\chrome-win64\chrome.exe   151.0.7922.34   ← 用这个
+  chromium-1223 / 1228 / 1187                             （更早几份）
+  chromium_headless_shell-1223 / 1228 / 1234
+  webkit-2191 / 2287, ffmpeg-1011, winldd-1007
+```
+
+npm 包在 `<playwright mcp 包>`。
+
+**不要在 `参照仓库` 里跑 `npx playwright install`。** 那个目录没有 `package.json`
+也没有 playwright 依赖，npx 找不到包，只会吐一段「先装依赖」的横幅就退出 ——
+看起来像下载失败，实际是它根本没开始下，而且本来就不需要下。
+
+**也不要 `pnpm add -D playwright` 装进 `hugo-theme-dev`。** 这个主题是
+clone-and-own 分发的，消费方不该为了看图装一个 playwright。
+
+两条路，挑一条：
+
+**A. 你也有 Playwright MCP** —— 直接用，浏览器已就位。
+
+**B. 只有普通 shell** —— 用现成的二进制，不装包：
+
+```powershell
+$env:PLAYWRIGHT_BROWSERS_PATH = "<浏览器缓存目录>"
+$pw = "<.../node_modules/playwright-core>"
+node -e @"
+const {chromium} = require('$pw');
+(async () => {
+  const b = await chromium.launch();
+  const p = await b.newPage();
+  await p.setViewportSize({ width: 1280, height: 900 });
+  await p.goto('http://localhost:1319/landing/', { waitUntil: 'networkidle' });
+  await p.screenshot({ path: '<截图目录>/landing-1280.png', fullPage: true });
+  await b.close();
+})();
+"@
+```
+
+系统 Chrome/Edge 也能驱动（`channel: 'msedge'`），但没必要 —— bundled chromium
+已经在那儿了。
+
+### 截图落哪
+
+放 `<截图目录>\`。**不在任何仓库里**，所以不用清理。
+
+走 MCP 的话它的 cwd 可能锁在 `<参照工作树>`，截图会掉在那里。**那个
+仓库是只读参照，一个字节都不能留下。** 跑完逐条确认：
+
+```sh
+git -C <参照工作树> status --porcelain      # 必须是空的
+```
+
+```powershell
+Test-Path <参照工作树>/resources  # 必须是 False
+```
+
+第二条单独查是因为 `resources/` 在 参照仓库 的 `.gitignore` 里 —— 写进去了
+`git status` 照样是干净的，那次写入不会被第一条发现。
+
+### 量之前先等它稳定
+
+带过渡的属性读到的可能是中间值。我在这上面栽过四次，每次都像是能用的代码出了
+bug：FAQ 箭头读到 `-45deg`（150ms 过渡飞行中，稳定值是 `45deg`）、打印按钮底色
+读到 `rgba(36,95,148,0.97)`（那个小数 alpha 就是过渡没结束的信号，稳定后是
+`rgba(0,0,0,0)`）、滚动区域的 `tabindex` 像是没挂上（`ResizeObserver` 还没触发）。
+
+改视口之后、或者刚触发交互之后，等一下再读。`ResizeObserver` 驱动的东西，直接
+按目标宽度开页比先开后 resize 可靠。
 
 ## 22 节的顺序与配色档
 
@@ -144,6 +216,12 @@ logo 不降饱和度、条形图换描边、窗口外框收起。**要你看的�
 可读，有没有哪一节在纸上变成了一片空白或一团糊。
 
 ## 回报格式
+
+**要文字结论，不是图片路径。** 出这份报告的人得自己看图后下判断 —— 图交回来没用，
+我这侧 Read 一个 PNG 返回的是单个 `.` 字符（实测过：拿仓库自己的
+`exampleSite/content/landing/hero.png` 验的，文件存在、960×540、Playwright 能截出
+46717 字节的 PNG，只是我这侧解码不出来）。所以七处怀疑必须由看得见图的一方判断，
+我拿文字结论去改代码。
 
 七处怀疑逐条给结论，然后逐节问题列表。不用给建议怎么改——说清看到什么就行，
 改法我来定。

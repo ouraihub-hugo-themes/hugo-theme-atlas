@@ -290,9 +290,9 @@ sections:
         style: secondary
 
   - type: testimonials
-    tone: muted
-    title: 引语
-    subtitle: 出处在 `<figcaption>` 里而不是 `<blockquote>` 里 —— 名字不是被引的话的一部分。
+    tone: plain
+    title: 引语（plain 档）
+    subtitle: 出处在 `<figcaption>` 里而不是 `<blockquote>` 里。这一节故意放在 plain 档 —— 卡片底色与页面同色，只靠 1px 边框区分。
     items:
       - quote: |
           它把**决定**写在注释里，而不是写在别处的文档里。半年后回来读还知道当时
