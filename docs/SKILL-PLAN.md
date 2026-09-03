@@ -398,11 +398,11 @@ clone-and-own 分发下他拿的是 `themes/` 里的一份主题）。
 按用户已选的第一步排：
 
 1. ~~**生成器 + `shortcodes.md` + `--check` 门禁**（§7）。~~ **已完成，见 §12。**
-2. `config.md`（§8，材料齐了，翻译工作）。
-3. `commands.md`（§9，先做完 §10 第 1 项）。
-4. `SKILL.md`（导航 + 组件清单，需要 §10 第 2/3/5 项的结论）。
-5. `evals.json`。
-6. `README.md` 加安装说明（§4：拷进消费方 `.claude/skills/`）。
+2. ~~`config.md`~~ **已完成，见 §13。**
+3. ~~`commands.md`~~ **已完成，见 §13。**
+4. ~~`SKILL.md`~~ **已完成，见 §13。**
+5. ~~`evals.json`~~ **已完成，见 §13。**
+6. ~~`README.md` 加安装说明~~ **已完成，见 §13。**
 
 提交纪律照仓库铁律：生成物与源码分开提交。提交前查机器路径与参照信息
 （`atlas-no-reference-mentions` 那条记忆里的 `git grep` 命令）。
@@ -480,3 +480,62 @@ clone-and-own 分发下他拿的是 `themes/` 里的一份主题）。
   没把覆盖范围扩到 `scripts/` —— 那是无关的清理。
 - 围栏语言的属性语法（§10.2 第 2 项）没做。`shortcodes.md` 只覆盖 shortcode，
   9 个围栏语言要等下一份文件。
+
+## 13. 其余四份的执行记录（2026-09-03）
+
+skill 交付完成，五个文件：`SKILL.md`(125) `config.md`(134) `commands.md`(109)
+`shortcodes.md`(319，生成) `evals/evals.json`(12 条)。
+
+### 13.1 §10.2 第 1 项：真建了一个新站
+
+在仓库外 `hugo new site`，拷主题，逐条加配置再量。这一步的产出不是「跑通了」，
+是**五条配置各自漏掉时的确切症状**，全部写进了 `config.md` 与 README：
+
+| 漏掉 | 实测症状 |
+|---|---|
+| `noClasses = false` | 代码块出 `style="color:#66d9ef"` 内联样式；补上后内联色 0 处、类名 7 处 |
+| `unsafe = true` | `<div>` 被换成 `<!-- raw HTML omitted -->` |
+| `wrapStandAloneImageWithinParagraph` | 图仍在 `<p>` 里 |
+| `attribute.block = true` | `{class="x"}` 渲染成正文，引号被转成弯引号；补上后是 `class="td-image x"` |
+| passthrough | `$E = mc^2$` 原样输出；补上后走 katex |
+
+### 13.2 顺手发现的一个真实缺口
+
+**`data/` 是主题运行时的必需目录，而 README 的目录一节没列它。** 我按自己写的
+清单拷主题时漏了它，构建绿，只在日志里留一句
+`icon: unknown name "copy" (see data/icons.json); emitting nothing` —— 整站图标
+静默消失。补进 `commands.md` 与 README，完整清单是五个目录加两个文件。
+
+README 的「站点侧要求」原来只写了 `noClasses` 一条，也一并补齐成五条。
+
+### 13.3 三处凭印象写错、被核实推翻的
+
+- **图标不是「Font Awesome class pair」。** 是 `data/icons.json` 的 key（76 个），
+  渲染成同文档的内联 SVG sprite。这条是从无关上下文带过来的。
+- **`--panicOnWarning` 真能拦参数打错**（实测 exit 0 → exit 1），先前只是推断。
+- **`evals.json` 我说过一次「坏了」，其实是有效的**（12 条齐全），截断只发生在
+  工具回显里。凭印象说文件坏掉，是记忆里明令不许做的事。
+
+### 13.4 用了官方 skill-creator 的校验器
+
+`plugins/skill-creator/scripts/quick_validate.py` 报 `user-invocable` 不在允许字段
+里。**查证后认定是校验器的名单过期，不是写错** —— 官方 frontmatter 参考表里有这个
+字段（用于「只该由模型加载、用户不必手动调用」的背景知识型 skill）。字段保留；
+去掉那一行后校验器输出 `Skill is valid!`。
+
+两个可复用的点：
+
+- 那个脚本 `read_text()` 没指定编码，在本机（ACP 936）遇到非 ASCII 直接崩。
+  要用得加 `PYTHONUTF8=1`。
+- 它明确指出「模型倾向于**不**触发该触发的 skill」，建议 description 写得更主动。
+  据此重写了 description（679 字符，上限 1536）：点名 `themes/hugo-theme-atlas`、
+  `td-` 类名这些可观测线索，以及「即便没点名主题也要用」。`evals.json` 也照它的
+  schema 放在 `evals/` 下。
+
+### 13.5 evals 的取向
+
+12 条里 11 条正向、1 条反向（要求不触发）。**每条针对的都是「构建绿而结果错」的
+失败**，因为「构建成功」在这套主题里不构成证据。例如第 3 条要求模型写 `{.steps}`
+而不是 `{{< steps >}}`，第 5 条要求拷贝清单里必须有 `data/`。
+
+没有跑 eval —— `run_eval.py` 需要 API key，不假装它跑过。

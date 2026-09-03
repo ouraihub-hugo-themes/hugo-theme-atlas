@@ -66,6 +66,7 @@ assets/dist/         编译产物 —— 提交进仓库，用户直接消费
 static/webfonts/     随主题分发的字体，LICENSE 与字体同目录
 layouts/             Hugo 模板
 exampleSite/         开发与验证用站点
+skills/              给 AI 搭站者的 Claude Code skill（拷进消费方站点使用）
 ```
 
 **源在 `src/`、产物在 `assets/dist/`**，这个分离是必须的：两者同名会让
@@ -175,13 +176,43 @@ pnpm check:i18n      # schema 门禁，缺键即红
 
 ## 站点侧要求
 
-`noClasses = false` 必须写在**站点**配置里（主题级 `[markup.highlight]` 不会
-合并进站点配置）：
+**Hugo 忽略主题设置的 `markup`**，所以下面这一段必须整段写进**站点**配置，主题
+给不了默认值。五条各管一件事，漏任何一条都是构建成功、功能悄悄不对：
 
 ```toml
+[markup.goldmark.renderer]
+unsafe = true
+
+[markup.goldmark.parser]
+wrapStandAloneImageWithinParagraph = false
+
+[markup.goldmark.parser.attribute]
+block = true
+
+[markup.goldmark.extensions.passthrough]
+enable = true
+
+[markup.goldmark.extensions.passthrough.delimiters]
+inline = [['$', '$'], ['\(', '\)']]
+block = [['$$', '$$'], ['\[', '\]']]
+
 [markup.highlight]
 noClasses = false
 ```
+
+漏掉时各自的症状（都在全新站点上实测过）：
+
+| 漏掉 | 症状 |
+|---|---|
+| `noClasses = false` | Chroma 输出 `style="color:#…"` 内联样式，切深色后代码块还是浅色。注意 `true` 是 Hugo 默认值 |
+| `unsafe = true` | 正文里的 HTML 被替换成 `<!-- raw HTML omitted -->` |
+| `wrapStandAloneImageWithinParagraph = false` | 独占一段的图仍在 `<p>` 里，`.IsBlock` 恒假，figure 与尺寸覆盖都不生效 |
+| `attribute.block = true` | `{class="x"}` 当正文渲染出来，引号还被转成弯引号 |
+| passthrough | `$E = mc^2$` 原样带美元号。` ```math ` 围栏不受影响 |
+
+**主题目录要完整拷贝**：`layouts/ assets/ static/ data/ i18n/` 加
+`hugo.toml theme.toml`。`data/` 最容易漏 —— 漏了构建照样绿，只在日志里留一句
+`icon: unknown name …`，整站图标静默消失。
 
 搜索需要在 Hugo 之后建索引（期 5 起）：
 
@@ -191,6 +222,25 @@ npx pagefind --site public    # 每次部署都要
 ```
 
 `hugo server` 下搜索不工作，本地预览搜索另开 `pagefind --site public --serve`。
+（`hugo server` 下不是「搜不到结果」而是**索引根本不存在**，所以本地搜索为空是
+预期行为，不是缺陷。）
 这是本主题唯一需要站点侧装 Node 的地方 —— 选它是因为索引分块按需加载，
 千页站点的搜索载荷约 100 KB，整份下载的方案要 1.4 MB。理由见
 `docs/PLAN.md` §搜索选型。
+
+## 用 AI 搭站
+
+`skills/hugo-theme-atlas/` 是一份 Claude Code skill，装进自己的站点后，模型写
+正文与配置时会自动读它：
+
+```sh
+mkdir -p .claude/skills
+cp -r <主题>/skills/hugo-theme-atlas .claude/skills/
+```
+
+它解决的是**这套主题几乎所有错误都不会让构建失败**这件事：参数名打错只 warn、
+站点侧五条配置漏了照样绿、自闭合容器渲染成空容器、缺 `data/` 图标静默消失。
+模型光靠通用 Hugo 知识会交付「看着对」的产物。
+
+`shortcodes.md` 由 `pnpm gen:skill` 从模板生成，`pnpm check` 里的 `check:skill`
+盯着它与模板一致 —— 改了 shortcode 的参数而没重新生成，门禁会红。

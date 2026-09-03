@@ -1,0 +1,128 @@
+{
+  "skill_name": "hugo-theme-atlas",
+  "notes": "Each eval targets a failure this theme produces *with a green build*. An eval that only checks 'the build succeeded' proves nothing here. Schema follows the skill-creator evals.json shape.",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Add a grid of three cards to docs/index.md linking to the getting-started, configuration, and reference pages.",
+      "expected_output": "A `cards` block wrapping three `card` calls, each using only parameters from the whitelist.",
+      "expectations": [
+        "Uses `{{< cards >}}` … `{{< /cards >}}` as a pair, not self-closed",
+        "Each `card` uses only title, link, icon, badge, image, or image_alt",
+        "Does not invent parameters such as `description`, `text`, or `href`",
+        "Any `icon` value is a name from data/icons.json, not a CSS class or Font Awesome name"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "This page has a numbered figure. Add a cross-reference to it from an earlier paragraph.",
+      "expected_output": "A self-closed `xref` with exactly one target kind.",
+      "expectations": [
+        "Writes `{{< xref fig=\"…\" />}}` self-closed, or paired only when supplying custom link text",
+        "Passes exactly one of fig, tbl, eq, eg — not several at once",
+        "Does not hand-write a label like \"Figure 2\", since xref generates it per locale"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Write a three-step install procedure for this docs page.",
+      "expected_output": "An ordered list carrying `{.steps}`, not the steps shortcode.",
+      "expectations": [
+        "Uses an ordered list with `{.steps}` rather than `{{< steps >}}`",
+        "If it does use the shortcode, it states the specific reason (TOC entries or a container shortcode inside a step)",
+        "Does not self-close the container if the shortcode is used"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "Add a Mermaid flowchart showing the request lifecycle to this page.",
+      "expected_output": "A fenced code block with language `mermaid`.",
+      "expectations": [
+        "Uses a ```mermaid fence",
+        "Does not write `{{< mermaid >}}`, which is not a shortcode in this theme"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "I'm starting a new site with this theme. Set it up so I can preview it.",
+      "expected_output": "hugo new site, a complete theme copy including data/, and the required markup config.",
+      "expectations": [
+        "Copies layouts, assets, static, data, and i18n, plus hugo.toml and theme.toml",
+        "Explicitly includes data/ — omitting it silently drops every icon",
+        "Adds the five markup settings from config.md, not a subset",
+        "Does not run `hugo mod get` or add the theme to module.imports",
+        "Does not claim `pnpm dev` or `pnpm build` will build the user's own site",
+        "Does not require `pnpm install` in order to use the theme"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "Code blocks stay light-coloured after switching to dark mode. Fix it.",
+      "expected_output": "Identifies missing `noClasses = false` in the site's markup.highlight.",
+      "expectations": [
+        "Names `[markup.highlight] noClasses = false` as the cause",
+        "Explains that Hugo ignores markup settings coming from a theme, so it must be in the site config",
+        "Does not propose editing the theme's CSS or the theme's own hugo.toml",
+        "Mentions that `noClasses = true` is Hugo's default, so this must be set explicitly"
+      ]
+    },
+    {
+      "id": 7,
+      "prompt": "Search returns nothing on my local dev server. What's wrong?",
+      "expected_output": "Explains that the Pagefind index does not exist under hugo server.",
+      "expectations": [
+        "States that the index is built from public/ after Hugo runs, so it is absent under `hugo server`",
+        "Gives `npx pagefind --site public` as the step",
+        "Does not treat this as a theme bug or suggest changing search configuration"
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "Add a contributors section to the about page.",
+      "expected_output": "The shortcode plus the data file it depends on.",
+      "expectations": [
+        "Notes that a data/<key>.yaml file is required",
+        "Warns that without it the shortcode renders nothing while the build still succeeds",
+        "Does not claim the theme fetches contributors from an API"
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "I set the badge title with `titel=` by mistake and the build passed. Why didn't it fail?",
+      "expected_output": "Explains warn-plus-fallback, and how to make it fail.",
+      "expectations": [
+        "Explains that unknown parameters warn and are ignored, leaving the build green",
+        "Recommends `hugo --printPathWarnings --panicOnWarning`",
+        "Notes that `badge` has no `title` parameter at all — the correct one is `text`"
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "Document these API fields on the reference page: name, timeout, retries.",
+      "expected_output": "A `fields` block wrapping three `field` calls.",
+      "expectations": [
+        "Uses `fields` as the container and `field` for each entry",
+        "Uses only name, type, required, default on `field`",
+        "Does not self-close `fields`, which warns and renders nothing",
+        "Puts each field's prose in the body, since that is what gets rendered as Markdown"
+      ]
+    },
+    {
+      "id": 11,
+      "prompt": "Refactor this Go service's error handling.",
+      "expected_output": "The skill should not trigger — no Hugo or theme content involved.",
+      "should_trigger": false,
+      "expectations": ["Does not load or cite this skill's reference files"]
+    },
+    {
+      "id": 12,
+      "prompt": "Add a tabbed code sample showing the same request in curl, Python, and Go.",
+      "expected_output": "A `tabs` block wrapping three `tab` calls.",
+      "expectations": [
+        "Uses `tabs` + `tab`, paired",
+        "Uses only label and value on `tab`, and group/default/label on `tabs`",
+        "Supplies `value` on each tab when `tabs` declares a `group`, since otherwise that tab will not sync"
+      ]
+    }
+  ]
+}
