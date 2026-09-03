@@ -1,8 +1,7 @@
 # Landing 视觉复核 · 第二轮
 
-> **状态：第 1 条已定，余下四条未执行。** 那四条在 `TODO.md` 的「卡在别人手上
-> 的」一节里挂着，等一个看得见图的评审。第 4 条还卡着
-> `exampleSite/content/landing/index.md:293` 那次临时 fixture 的回退。
+> **状态：已执行（2026-09-03）。** 结果在 `VISUAL-REVIEW-ROUND2-RESULT.md`：
+> 第 1 条换成减号，余下四条全部「过」。临时 fixture 已回退，参照树复核干净。
 
 接 `VISUAL-REVIEW-FINDINGS.md`。第一轮的阻塞缺陷（全站图标未渲染）已修，
 `fix(icon)` 提交 `78c99d1`。这一轮范围窄：**重测被那个缺陷挡住的三条 + 补第一轮
