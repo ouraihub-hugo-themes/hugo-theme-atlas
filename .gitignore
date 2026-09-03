@@ -11,6 +11,14 @@ exampleSite/resources/
 .vscode/
 .idea/
 
+# 浏览器验证的工具产物。Playwright 每次导航都往当前工作树写一份页面快照与
+# 控制台日志，截图默认也落这里 —— 全是一次性的诊断输出，跟主题无关。
+# 之前靠每轮手动清，清干净过但那是运气：漏一次就进提交。
+.playwright-mcp/
+
+# 验证截图。约定是落在仓库外（免得混进提交），这条是万一约定没守住时的兜底。
+shots/
+
 # assets/dist/ 是编译产物，但要提交 —— 用户直接消费，不装 Node。
 # 不参与 diff，见 .gitattributes。
 

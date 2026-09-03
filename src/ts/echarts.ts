@@ -22,6 +22,7 @@
  */
 
 import type { EChartsOption, EChartsType } from "echarts/types/dist/shared";
+import { lazyMount } from "./lazy-mount.js";
 
 type Core = (typeof import("./echarts-core.js"))["echarts"];
 
@@ -212,20 +213,11 @@ export function init(doc: Document = document): void {
   const hosts = [...doc.querySelectorAll<HTMLElement>("[data-td-chart]")];
   if (hosts.length === 0) return;
 
-  const observer = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        observer.unobserve(entry.target);
-        const host = entry.target as HTMLElement;
-        void render(host).then((ok) => {
-          if (ok) watchSize(host);
-        });
-      }
-    },
-    { rootMargin: "400px" },
-  );
-  for (const host of hosts) observer.observe(host);
+  lazyMount(hosts, "400px", (host) => {
+    void render(host).then((ok) => {
+      if (ok) watchSize(host);
+    });
+  });
 
   watchTheme(hosts);
 }

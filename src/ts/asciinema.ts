@@ -11,6 +11,7 @@
  */
 
 import type { Options, Player } from "asciinema-player";
+import { lazyMount } from "./lazy-mount.js";
 
 type CreateFn = (typeof import("asciinema-player"))["create"];
 
@@ -113,15 +114,5 @@ export function init(doc: Document = document): void {
   if (hosts.length === 0) return;
 
   // 提前 200px 就够：录屏不像图，读者要点了才播，看到播放器外框就行。
-  const observer = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        observer.unobserve(entry.target);
-        void mount(entry.target as HTMLElement);
-      }
-    },
-    { rootMargin: "200px" },
-  );
-  for (const host of hosts) observer.observe(host);
+  lazyMount(hosts, "200px", (host) => void mount(host));
 }

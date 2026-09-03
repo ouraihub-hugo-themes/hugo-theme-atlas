@@ -72,21 +72,51 @@ function load(): Promise<Pagefind | null> {
   return loading;
 }
 
+/** `stripToMarks` 要的那点接口。抽成类型是为了让测试能喂一棵手写的树。 */
+export interface MarkStrippable {
+  tagName: string;
+  childNodes: ArrayLike<unknown>;
+  replaceWith(...nodes: unknown[]): void;
+  getAttributeNames(): string[];
+  removeAttribute(name: string): void;
+}
+
+/**
+ * 只留 `<mark>`，且只留它的标签 —— 属性一个不留。
+ *
+ * 两件事分开说，因为第二件曾经漏掉：拆非-mark 元素时属性是**跟着元素一起消失**
+ * 的，是副作用不是处理；活下来的 `<mark>` 原来会原样保留它带来的一切，包括
+ * `onclick`。实测过那种 mark 的处理器真的会触发。
+ *
+ * 用 `getAttributeNames()` 而不是遍历 `attributes`：后者是实时集合，边遍历边删
+ * 会隔一个漏一个。
+ */
+export function stripToMarks(elements: Iterable<MarkStrippable>): void {
+  for (const el of elements) {
+    if (el.tagName !== "MARK") {
+      el.replaceWith(...Array.from(el.childNodes));
+      continue;
+    }
+    for (const name of el.getAttributeNames()) el.removeAttribute(name);
+  }
+}
+
 /**
  * 把 pagefind 的 excerpt 放进一个元素。
  *
- * **excerpt 里有 `<mark>`，而且只可能有 `<mark>`。** pagefind 对正文做了转义，
+ * **excerpt 里有 `<mark>`，而且只可能有 `<mark>`。** pagefind 对正文做了转义
+ * （核实过：建索引后查词，excerpt 里出现的标签只有 mark，正文的 `<` 是 `&lt;`），
  * 高亮标签是它自己加的。所以这里用 `innerHTML` 是安全的 —— 但安全依赖于"只有
- * mark"这个前提，所以过一道 `<template>` 把除 mark 之外的元素拆掉：前提万一
- * 变了（pagefind 换了标记、或者某个站点的正文里真的有未转义的东西），代价是
- * 少一层高亮，不是一个注入点。
+ * mark"这个前提，所以过一道 `<template>`：前提万一变了（pagefind 换了标记、或者
+ * 某个站点的正文里真的有未转义的东西），代价是少一层高亮，不是一个注入点。
+ *
+ * `<template>` 这一层不只是为了拿解析器：它的内容属于一份惰性文档，脚本不执行、
+ * 资源不请求，所以清洗发生在任何副作用之前而不是之后。
  */
 function setExcerpt(target: HTMLElement, excerpt: string): void {
   const tpl = document.createElement("template");
   tpl.innerHTML = excerpt;
-  for (const el of tpl.content.querySelectorAll("*")) {
-    if (el.tagName !== "MARK") el.replaceWith(...el.childNodes);
-  }
+  stripToMarks(tpl.content.querySelectorAll("*"));
   target.replaceChildren(tpl.content);
 }
 

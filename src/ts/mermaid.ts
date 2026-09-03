@@ -11,6 +11,8 @@
  *    渲染成空白的话，读者不知道自己错过了什么。
  */
 
+import { lazyMount } from "./lazy-mount.js";
+
 type MermaidModule = (typeof import("mermaid"))["default"];
 
 let loading: Promise<MermaidModule> | null = null;
@@ -106,17 +108,7 @@ export function init(doc: Document = document): void {
 
   // 提前 400px 开始加载：读者滚到图跟前时它已经画好了，不会看到源码闪一下
   // 再变成图。
-  const observer = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        observer.unobserve(entry.target);
-        void render(entry.target as HTMLElement, hosts.indexOf(entry.target as HTMLElement));
-      }
-    },
-    { rootMargin: "400px" },
-  );
-  for (const host of hosts) observer.observe(host);
+  lazyMount(hosts, "400px", (host) => void render(host, hosts.indexOf(host)));
 
   watchTheme(hosts);
 }

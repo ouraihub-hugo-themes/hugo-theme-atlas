@@ -15,6 +15,7 @@
  */
 
 import type { Markmap } from "markmap-view";
+import { lazyMount } from "./lazy-mount.js";
 
 /**
  * 节点树的类型从 setData 的签名上取，不从 markmap-common 里 import。
@@ -147,15 +148,5 @@ export function init(doc: Document = document): void {
   const hosts = [...doc.querySelectorAll<HTMLElement>("[data-td-mindmap]")];
   if (hosts.length === 0) return;
 
-  const observer = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        observer.unobserve(entry.target);
-        void render(entry.target as HTMLElement);
-      }
-    },
-    { rootMargin: "400px" },
-  );
-  for (const host of hosts) observer.observe(host);
+  lazyMount(hosts, "400px", (host) => void render(host));
 }

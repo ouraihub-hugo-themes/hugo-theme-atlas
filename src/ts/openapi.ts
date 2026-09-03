@@ -9,6 +9,8 @@
  * 只写实际调用到的那一个函数。
  */
 
+import { lazyMount } from "./lazy-mount.js";
+
 /** 已经开始加载的资源，按 URL 记。同一页两个实例只取一次。 */
 const assets = new Map<string, Promise<void>>();
 
@@ -175,15 +177,5 @@ export function init(doc: Document = document): void {
   const hosts = [...doc.querySelectorAll<HTMLElement>("[data-td-openapi]")];
   if (hosts.length === 0) return;
 
-  const observer = new IntersectionObserver(
-    (entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        observer.unobserve(entry.target);
-        void render(entry.target as HTMLElement);
-      }
-    },
-    { rootMargin: "600px" },
-  );
-  for (const host of hosts) observer.observe(host);
+  lazyMount(hosts, "600px", (host) => void render(host));
 }
