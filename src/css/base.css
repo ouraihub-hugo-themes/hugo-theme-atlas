@@ -36,3 +36,59 @@
     font-family: var(--font-mono);
   }
 }
+
+/* 纸张本身。这一块不在 @layer 里：`@page` 不是普通选择器，放进 layer 里
+   浏览器会当作无效规则整块丢掉（实测 Chrome 直接不解析）。
+
+   尺寸不写死 A4 也不写死 Letter：`auto` 让浏览器用打印对话框里选的纸，而
+   写死一种的表现是另一半读者拿到裁掉边或者留一条白的输出。页边距用长度而
+   不是百分比 —— 百分比在 @page 里参照的是纸张尺寸，A4 与 Letter 会得到不同
+   的实际边距。
+
+   `@bottom-center` 的页码是 Paged Media 规范，Chrome 与 Firefox 都还没实现
+   （实测两者都忽略这条），浏览器自己的页眉页脚由用户在打印对话框里控制。
+   留着它是因为 Prince、WeasyPrint 那类真正的排版器认，而对不认的浏览器它是
+   一条被忽略的规则，不是错误。 */
+@page {
+  size: auto;
+  margin: 18mm 16mm 20mm;
+
+  @bottom-center {
+    content: counter(page);
+    font-family: var(--td-font-print);
+    font-size: 9pt;
+  }
+}
+
+/* 标题不留在页底当孤行，段落不被切成一两行。`orphans`/`widows` 只对分页媒体
+   有意义，所以整块只在 print 下声明 —— 屏幕上它们是无操作，但写在外面会让
+   人以为屏幕布局也受影响。 */
+@media print {
+  :root {
+    /* 纸上没有深色模式。强制配色让浏览器不要替换颜色，否则用户的暗色偏好会
+       让 Chrome 反转背景，打出一张满是墨的纸。 */
+    color-scheme: light;
+  }
+
+  body {
+    /* 背景色不上纸：浏览器默认就不印背景，但显式声明白底能挡住站点自己给
+       body 设的底色在 `-webkit-print-color-adjust: exact` 下漏上去。 */
+    background: white;
+  }
+
+  p,
+  li,
+  blockquote {
+    orphans: 3;
+    widows: 3;
+  }
+
+  :is(h1, h2, h3, h4, h5, h6) {
+    /* 标题不落在页尾。`avoid` 而不是 `avoid-page`：这条规则本来就在 @media
+       print 里，纸上两者等价，而 `avoid` 的实现覆盖面更广（Level 3 的值，
+       2019 年起各浏览器都有；`avoid-page` 属于 Level 4 的分页族，实现参差）。
+       不配 page-break-after legacy 别名 —— 其余 14 处 break-inside 都是单写
+       现代属性，多一条已废弃的声明只是让门禁红。 */
+    break-after: avoid;
+  }
+}

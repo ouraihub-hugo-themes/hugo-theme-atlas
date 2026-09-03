@@ -152,6 +152,12 @@
 
   .td-table-scroll :is(thead th, th[scope="row"]) {
     position: static;
+    /* `nowrap` 必须一起撤掉，不只是 position。那两条 nowrap 是给粘连服务的
+       （滚动时表头折行会让列宽跳动），而纸上没有滚动，留着它的表现是表格
+       按最长单元格撑宽、右侧被纸边裁掉 —— 实测 matrix 那一页在 A4 内容宽度
+       673px 下撑到 769px，右边一列印不出来。撤掉之后单元格折行，表格缩进
+       纸宽。 */
+    white-space: normal;
   }
 
   /* 跨页时表头在每页重复 —— 第二页起没有表头的表读不出来。 */
