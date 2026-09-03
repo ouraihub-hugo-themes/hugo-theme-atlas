@@ -538,7 +538,26 @@ README 的「站点侧要求」原来只写了 `noClasses` 一条，也一并补
 失败**，因为「构建成功」在这套主题里不构成证据。例如第 3 条要求模型写 `{.steps}`
 而不是 `{{< steps >}}`，第 5 条要求拷贝清单里必须有 `data/`。
 
-没有跑 eval —— `run_eval.py` 需要 API key，不假装它跑过。
+**跑过了，但结论只有一半可用。**「需要 API key」是我先前写错的理由 —— `run_eval.py`
+不读 key，它 shell 出去调 `claude -p`，继承 `~/.claude/settings.json` 里已有的凭据。
+
+装法：临时拷到 `~/.claude/skills/`，跑完删掉。仓库一个字节不动。
+
+**触发是好的。** 判据：在仓库根直接 `claude -p "Add a grid of three cards to a docs
+page in this Hugo theme."`，读它的 stream-json，第一个工具调用就是
+`Skill:hugo-theme-atlas`。所以 `user-invocable: false` 不妨碍模型自己选中它。
+
+**运行器报的「14 条全 0」是运行器的事，不是 description 的事。** 它在项目
+`.claude/commands/` 下临时造一个 `<name>-skill-<uid>.md`，只检测这个名字有没有被
+引用；真实 skill 以自己的名字触发，它数不到。它测的不是我装的那个。
+
+顺带发现插件自身三处不一致，都以代码为准：`references/schemas.md` 写字段名
+`prompt`，代码读 `query`（已改）；schemas 写顶层是带 `evals` 键的对象，代码直接迭代
+顶层，要裸数组（喂它一份临时的，仓库里那份保持对象形状，因为它带 `skill_name` 和
+`notes`，是给人读的）；`scripts.utils` 要 `PYTHONPATH` 指到 skill 根才 import 得到。
+
+**14 条的期望没有逐条核过** —— 运行器只数触发率，不比对 `expectations`。那些要靠人
+读答案，留到之后。
 
 ## 14. 围栏语言的执行记录（2026-09-03）
 
