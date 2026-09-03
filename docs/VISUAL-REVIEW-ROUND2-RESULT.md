@@ -13,14 +13,14 @@
 4. `plain` 档引语卡片在亮色和暗色下都能通过边框看出卡片轮廓。
 5. 打印整页逐节检查未见整节空白、内容糊成一团或相互叠放。
 
-截图目录：`round2-20260903/`
+截图目录：仓库外的 `round2-20260903/`
 
 临时 fixture 已回退：`exampleSite/content/landing/index.md:293` 的 `tone` 已恢复为 `muted`。
 
 参照树清理确认：
 
-- `git -c safe.directory=<参照工作树> -C <参照工作树> status --porcelain` 输出为空。
-- `Test-Path <参照工作树>/resources` 为 `False`。
+- 参照工作树的 `git status --porcelain` 输出为空。
+- 它的 `resources/` 不存在。
 
 说明：最初的 `round2-print.png` 曾在暗色主题页面上切换打印媒体生成，导致白纸背景配浅色文字；已在全新页面直接进入打印媒体后重新生成并覆盖，当前截图对比度正常。
 

@@ -7,7 +7,7 @@
 对 `docs/VISUAL-REVIEW.md` 的回报。执行于 2026-09-02，Chromium 151.0.7922.34，
 1280×900 与 360×800 两个视口，亮色 / 暗色 / 打印三种媒体，共 55 张截图。
 
-截图在 `<截图目录>\`（仓库外，无需清理）。
+截图落在仓库外，无需清理。
 
 **本文档是纯文字结论，读它不需要看任何图。** 所有视觉判断都已经写成可执行的
 描述（位置、颜色、形状、数值），图只是我得出结论的原始依据。
@@ -357,13 +357,11 @@ hugo 只绑 IPv4（`Get-NetTCPConnection -LocalPort 1319` 显示 `LocalAddress`
 按任务书的 B 方案，不装任何包：
 
 ```js
+// 三个路径按本机实际填
 process.env.PLAYWRIGHT_BROWSERS_PATH = '<浏览器缓存目录>';
-const { chromium } = require(
-  '<.../node_modules/playwright-core>'
-);
+const { chromium } = require('<.../node_modules/playwright-core>');
 const browser = await chromium.launch({
-  executablePath:
-    '<那个目录里的 chrome.exe>',
+  executablePath: '<那个目录里的 chrome.exe>',
 });
 ```
 
@@ -382,10 +380,10 @@ await page.evaluate(() =>
 
 ## 七、残留确认
 
-- 截图全部落在 `<截图目录>\`（55 张，仓库外）。
-- `参照仓库`：`tests/site/resources` 为 `False`；`git status --porcelain` 仅有
+- 截图全部落在仓库外（55 张）。
+- 参照工作树：`resources/` 不存在；`git status --porcelain` 仅有
   `?? .playwright-mcp/` —— **该目录在本次执行开始前就已存在**，非本次产生。
-- `hugo-theme-dev`：执行期间误建的 `nul` 与一个空目录已删除。
+- 本仓库：执行期间误建的 `nul` 与一个空目录已删除。
   剩余 5 个 `M`（`docs/VISUAL-REVIEW.md`、`layouts/_partials/shell/breadcrumb.html`、
   `layouts/_partials/shell/pager.html`、`layouts/baseof.html`、
   `scripts/check-outputs.js`）为执行前既有的改动，未触碰。

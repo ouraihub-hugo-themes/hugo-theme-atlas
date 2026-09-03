@@ -25,20 +25,10 @@ hugo server --source exampleSite --themesDir ../.. --port 1319 --renderToMemory
 ### 浏览器：什么都不用装
 
 **`%LOCALAPPDATA%\ms-playwright` 是空的，这不是缺东西。** User 级环境变量
-`PLAYWRIGHT_BROWSERS_PATH` 把它重定向到了下面这个目录（那边残留的 `b` 目录是设
-变量之前的，忽略）：
+`PLAYWRIGHT_BROWSERS_PATH` 可能把它重定向到别处，先读那个变量再判断有没有浏览器。
+bundled chromium 已经在那儿了，不用下。
 
-```
-<浏览器缓存目录>\
-  chromium-1234\chrome-win64\chrome.exe   151.0.7922.34   ← 用这个
-  chromium-1223 / 1228 / 1187                             （更早几份）
-  chromium_headless_shell-1223 / 1228 / 1234
-  webkit-2191 / 2287, ffmpeg-1011, winldd-1007
-```
-
-npm 包在 `<playwright mcp 包>`。
-
-**不要在 `参照仓库` 里跑 `npx playwright install`。** 那个目录没有 `package.json`
+**不要在参照仓库里跑 `npx playwright install`。** 那种目录一般没有 `package.json`
 也没有 playwright 依赖，npx 找不到包，只会吐一段「先装依赖」的横幅就退出 ——
 看起来像下载失败，实际是它根本没开始下，而且本来就不需要下。
 
@@ -52,6 +42,7 @@ clone-and-own 分发的，消费方不该为了看图装一个 playwright。
 **B. 只有普通 shell** —— 用现成的二进制，不装包：
 
 ```powershell
+# 两个路径按本机实际填：浏览器缓存目录，与某个已装 playwright-core 的位置
 $env:PLAYWRIGHT_BROWSERS_PATH = "<浏览器缓存目录>"
 $pw = "<.../node_modules/playwright-core>"
 node -e @"
@@ -72,21 +63,22 @@ const {chromium} = require('$pw');
 
 ### 截图落哪
 
-放 `<截图目录>\`。**不在任何仓库里**，所以不用清理。
+**落在任何仓库之外**，这样不用清理。本机的具体目录问一下，别往仓库里写。
 
-走 MCP 的话它的 cwd 可能锁在 `<参照工作树>`，截图会掉在那里。**那个
-仓库是只读参照，一个字节都不能留下。** 跑完逐条确认：
+走 MCP 的话它的 cwd 可能锁在**别的工作树**（不一定是你以为的那个），截图会掉在
+那里。如果那是一份只读参照，一个字节都不能留下。跑完逐条确认：
 
 ```sh
-git -C <参照工作树> status --porcelain      # 必须是空的
+git -C <那个工作树> status --porcelain      # 必须是空的
 ```
 
 ```powershell
-Test-Path <参照工作树>/resources  # 必须是 False
+Test-Path <那个工作树>/<它的 resourceDir>   # 必须是 False
 ```
 
-第二条单独查是因为 `resources/` 在 参照仓库 的 `.gitignore` 里 —— 写进去了
-`git status` 照样是干净的，那次写入不会被第一条发现。
+第二条单独查是因为 `resources/` 通常在 `.gitignore` 里 —— 写进去了 `git status`
+照样是干净的，那次写入不会被第一条发现。同理还要查 `.playwright-mcp/`：它每次
+导航都写一份页面快照与控制台日志。
 
 ### 量之前先等它稳定
 
