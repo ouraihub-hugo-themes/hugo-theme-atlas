@@ -1,0 +1,260 @@
+# uk —— schema 与 en.yaml 一致（bin/check-i18n.js 门禁）。
+#
+# 下面这些键的译文与参照主题同名键一致：同一个词在同一个位置，两套措辞
+# 只会让读者在两个页面上看到不同的说法。其余键由 --sync 铺英文兜底并带
+# TODO 标记，翻译时把标记一并删掉。
+callout_note: Note
+callout_tip: Tip
+callout_important: Important
+callout_warning: Warning
+callout_caution: Caution
+callout_success: Success
+callout_danger: Danger
+callout_question: Question
+callout_example: Example
+callout_quote: Quote
+callout_details: Details
+book_figure: Figure
+book_table: Table
+book_equation: Equation
+book_example: Example
+book_toc: Book contents
+feedback_question: Чи була ця сторінка корисною?
+feedback_thanks: Thanks for your feedback.
+feedback_change: Change response
+comments_noscript: JavaScript is required to load comments.
+
+# TODO(i18n): untranslated, copied from en
+skip_to_content: Skip to content
+
+# TODO(i18n): untranslated, copied from en
+main_nav: Main navigation
+
+# TODO(i18n): untranslated, copied from en
+breadcrumb_nav: Breadcrumb
+
+# TODO(i18n): untranslated, copied from en
+pager_nav: Sequential reading
+
+# TODO(i18n): untranslated, copied from en
+pager_prev: Previous
+
+# TODO(i18n): untranslated, copied from en
+pager_next: Next
+
+# TODO(i18n): untranslated, copied from en
+sidebar_nav: Section navigation
+
+# TODO(i18n): untranslated, copied from en
+toggle_theme: Toggle theme
+
+# TODO(i18n): untranslated, copied from en
+section_overview: Overview
+
+# TODO(i18n): untranslated, copied from en
+toc_nav: On this page
+
+# TODO(i18n): untranslated, copied from en
+open_sidebar: Open navigation
+
+# TODO(i18n): untranslated, copied from en
+close_sidebar: Close navigation
+
+# TODO(i18n): untranslated, copied from en
+heading_anchor: Link to this section
+
+# TODO(i18n): untranslated, copied from en
+scroll_region: Scrollable region
+
+# TODO(i18n): untranslated, copied from en
+code_copy: Copy code
+
+# TODO(i18n): untranslated, copied from en
+code_copied: Copied
+
+# TODO(i18n): untranslated, copied from en
+code_collapse: Collapse
+
+# TODO(i18n): untranslated, copied from en
+code_expand:
+  one: Show all {{ .Count }} line
+  other: Show all {{ .Count }} lines
+
+# TODO(i18n): untranslated, copied from en
+tabs_label: Tabs
+
+# TODO(i18n): untranslated, copied from en
+kbd_with: with
+
+# TODO(i18n): untranslated, copied from en
+book_fig_list: List of figures
+
+# TODO(i18n): untranslated, copied from en
+book_tbl_list: List of tables
+
+# TODO(i18n): untranslated, copied from en
+book_eq_list: List of equations
+
+# TODO(i18n): untranslated, copied from en
+book_eg_list: List of examples
+
+# TODO(i18n): untranslated, copied from en
+field_required: required
+
+# TODO(i18n): untranslated, copied from en
+field_default: default
+
+# TODO(i18n): untranslated, copied from en
+field_self_link: Link to this field
+
+# TODO(i18n): untranslated, copied from en
+contributors_count:
+  one: contributor
+  other: contributors
+
+# TODO(i18n): untranslated, copied from en
+assets_download: Download
+
+# TODO(i18n): untranslated, copied from en
+assets_file: File
+
+# TODO(i18n): untranslated, copied from en
+assets_checksum: Checksum
+
+# TODO(i18n): untranslated, copied from en
+assets_copy: Copy checksum
+
+# TODO(i18n): untranslated, copied from en
+assets_copy_all: Copy all
+
+# TODO(i18n): untranslated, copied from en
+assets_copied: Copied
+
+# TODO(i18n): untranslated, copied from en
+release_view: View release
+
+# TODO(i18n): untranslated, copied from en
+release_source: Source
+
+# TODO(i18n): untranslated, copied from en
+release_released: Released
+
+# TODO(i18n): untranslated, copied from en
+release_links: Release links
+
+# TODO(i18n): untranslated, copied from en
+download_channels: Download channels
+
+# TODO(i18n): untranslated, copied from en
+download_unpublished: Not published yet
+
+# TODO(i18n): untranslated, copied from en
+cast_download: Download the terminal recording
+
+# TODO(i18n): untranslated, copied from en
+capability_yes: Supported
+
+# TODO(i18n): untranslated, copied from en
+capability_partial: Partial
+
+# TODO(i18n): untranslated, copied from en
+capability_no: Not supported
+
+# TODO(i18n): untranslated, copied from en
+pricing_included: Included
+
+# TODO(i18n): untranslated, copied from en
+pricing_excluded: Not included
+
+# TODO(i18n): untranslated, copied from en
+openapi_spec_link: Open the OpenAPI specification
+
+# TODO(i18n): untranslated, copied from en
+search_open: Search
+
+# TODO(i18n): untranslated, copied from en
+search_close: Close
+
+# TODO(i18n): untranslated, copied from en
+search_label: Search this site
+
+# TODO(i18n): untranslated, copied from en
+search_placeholder: Search…
+
+# TODO(i18n): untranslated, copied from en
+search_results: "{{ .Count }} results"
+
+# TODO(i18n): untranslated, copied from en
+search_one_result: 1 result
+
+# TODO(i18n): untranslated, copied from en
+search_no_results: No results
+
+# TODO(i18n): untranslated, copied from en
+search_unavailable: Search index not found. Run pagefind after building.
+
+# TODO(i18n): untranslated, copied from en
+share_label: Share this page
+
+# TODO(i18n): untranslated, copied from en
+share_email: Email
+
+# TODO(i18n): untranslated, copied from en
+share_copy: Copy link
+
+# TODO(i18n): untranslated, copied from en
+share_copied: Link copied
+
+# TODO(i18n): untranslated, copied from en
+share_ai_prompt: "Read {{ .URL }}"
+
+# TODO(i18n): untranslated, copied from en
+edit_page: Edit this page
+
+# TODO(i18n): untranslated, copied from en
+feedback_yes: "Yes"
+
+# TODO(i18n): untranslated, copied from en
+feedback_no: "No"
+
+# TODO(i18n): untranslated, copied from en
+feedback_issue: Tell us what was missing
+
+# TODO(i18n): untranslated, copied from en
+feedback_issue_title: "Docs feedback: {{ .Title }}"
+
+# TODO(i18n): untranslated, copied from en
+feedback_issue_body: "Page: {{ .URL }}\n\nWhat was missing or wrong?\n"
+
+# TODO(i18n): untranslated, copied from en
+comments_label: Comments
+
+# TODO(i18n): untranslated, copied from en
+palette_label: Commands
+
+# TODO(i18n): untranslated, copied from en
+palette_placeholder: Type a command…
+
+# TODO(i18n): untranslated, copied from en
+palette_none: No matching command
+
+# TODO(i18n): untranslated, copied from en
+palette_theme: Toggle light and dark
+
+# TODO(i18n): untranslated, copied from en
+palette_copy_link: Copy link to this page
+
+# TODO(i18n): untranslated, copied from en
+palette_print: Print this page
+
+# TODO(i18n): untranslated, copied from en
+palette_repo: Open the repository
+
+# TODO(i18n): untranslated, copied from en
+palette_chatgpt: Open this page in ChatGPT
+
+# TODO(i18n): untranslated, copied from en
+palette_claude: Open this page in Claude
+
+# TODO(i18n): untranslated, copied from en
+palette_search: Search this site…
