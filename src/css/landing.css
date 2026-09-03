@@ -16,7 +16,6 @@
     padding-block: 4rem;
   }
 
-
   .td-landing-inner {
     margin-inline: auto;
     max-inline-size: 72rem;
@@ -32,6 +31,21 @@
   .td-landing-section--accent {
     background-color: var(--color-accent);
     color: var(--color-canvas);
+  }
+
+  /* 暗色下把这块整幅底色压暗到与亮色同样的跳变量级。
+     `--td-accent` 是链接色，它在暗色下翻成浅蓝（L=0.42）是对的 —— 但它被调
+     的用途是薄的：14% 选中态、7% hover、1px 边框。铺满一节是另一个量级，
+     照搬就成了近黑页面里的一块亮板：实测亮度跳变 8.16，而亮色下同一节是
+     6.06（亮色下 accent 是深蓝铺在浅底上，方向相反）。
+     85% 混 canvas 后跳变 6.02，与亮色的 6.06 对齐；文字仍是 canvas 色，
+     标题对比 6.02、副标题（82% 混底色那档）4.77，两者都过 AA。
+     用 color-mix 派生而不是新加 `--color-accent-surface` 令牌：theme_color
+     只改 `--td-accent` 与 hover 两个值，派生式跟着自动走；而整幅 accent 底
+     色目前只有这一处，另外四处用 accent 的都是小面积（按钮、8px 圆点、徽章、
+     条形填充），它们本来就该按原亮度跳出来。 */
+  [data-td-theme="dark"] .td-landing-section--accent {
+    background-color: color-mix(in oklab, var(--color-accent) 85%, var(--color-canvas));
   }
 
   /* 两个同档的节挨在一起时，加一道细线做分界。
