@@ -16,6 +16,7 @@
     padding-block: 4rem;
   }
 
+
   .td-landing-inner {
     margin-inline: auto;
     max-inline-size: 72rem;
@@ -31,6 +32,21 @@
   .td-landing-section--accent {
     background-color: var(--color-accent);
     color: var(--color-canvas);
+  }
+
+  /* 两个同档的节挨在一起时，加一道细线做分界。
+     只靠留白不够：相邻两节的 4rem + 4rem 与节内元素间距在同一量级，读下来像是
+     同一节的下一段而不是新的一节 —— 背景色本来是唯一的分节信号，同档相邻时那个
+     信号消失了。加留白解不了（量级问题不是数值问题，且页面白拉长）。
+     实测这份 fixture 的 22 节里有 6 处同档相邻，全是 plain/plain。
+     枚举三档而不写 `:has()`：tone 是三值枚举且模板对每一档都发显式 class
+     （`--plain` 也发），枚举是精确的，读起来也直说了意图。
+     放在三档定义之后而不是之前 —— 相邻选择器的特异性更高，写在前面会被
+     no-descending-specificity 拦下，而那条规则拦的是真隐患。 */
+  .td-landing-section--plain + .td-landing-section--plain,
+  .td-landing-section--muted + .td-landing-section--muted,
+  .td-landing-section--accent + .td-landing-section--accent {
+    border-block-start: 1px solid var(--color-border);
   }
 
   /* accent 档里的标题与副标题跟着反色。继承不够用：它们各自有自己的颜色。 */
