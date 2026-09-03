@@ -27,7 +27,26 @@
     {{- $body = printf `<pre class="td-math-source"><code>%s</code></pre>` (htmlEscape $expr) | safeHTML -}}
   {{- end -}}
 
-  {{- if not $hasNum -}}
+  {{- $plain := partial "content/plain.html" .Page -}}
+  {{- if $plain -}}
+{{- /* 纯文本输出：`$$ … $$` 包着原样的 LaTeX。
+
+       不给 MathML —— 那是浏览器要的形态，而 `$$` 是 Markdown 世界里公式的通用
+       写法（示例站的 passthrough 配置收的就是这一对定界符）。抓取方拿到 LaTeX
+       能自己决定怎么排；拿到一段 MathML 就只能当标记处理，而那正是这一期在
+       清掉的东西。
+
+       编号目标带 num 时在后面缀一行标签，理由与 fig 相同：xref 说的是「式 3」，
+       正文里得有那个称呼。 */ -}}
+$$
+{{ safeHTML $expr }}
+$$
+{{- if $hasNum -}}
+{{- $h := partial "book/target-head.html" (dict "shortcode" . "kind" "eq") }}
+
+{{ printf "*%s%s*" (partial "book/label.html" (dict "kind" "eq" "num" $h.num)) (cond (ne $h.caption "") (printf " — %s" $h.caption) "") | safeHTML }}
+{{ end -}}
+  {{- else if not $hasNum -}}
     {{- if .IsNamedParams -}}
       {{- range $name := slice "id" "caption" "class" -}}
         {{- if isset $.Params $name -}}

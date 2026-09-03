@@ -88,6 +88,16 @@
     {{- $fence := strings.Repeat $len "`" -}}
     {{- $body = printf "%s%s\n%s\n%s" $fence $lang $body $fence -}}
   {{- end -}}
+  {{- if partial "content/plain.html" .Page -}}
+{{- /* 纯文本输出：原样给出去。`$body` 此刻已经是 Markdown —— code=true 的那支
+       上面刚把它包成围栏，code=false 的那支本来就是 Markdown 文件的正文。
+
+       这一条尤其不该渲染：引入的文件常常整份都是带围栏的 Markdown，渲染一遍
+       会把它变成一片 Chroma 的 span（实测 include 那页 74 处标记，大半来自
+       这里）。 */ -}}
+{{ safeHTML $body }}
+  {{- else -}}
   {{- partial "content/render-block.html" (dict
     "page" .Page "scope" (printf "include%d" .Ordinal) "content" $body) -}}
+  {{- end -}}
 {{- end -}}

@@ -102,6 +102,7 @@
   {{- with $entries -}}
     {{- /* 页面级能力标记：foot/js.html 在正文渲染之后读它。 */ -}}
     {{- $.Page.Store.Set "hasAssetList" true -}}
-    {{- partial "release/assets-table.html" (dict "entries" . "grouped" $grouped) -}}
+    {{- partial "release/assets-table.html" (dict "entries" . "grouped" $grouped
+      "plain" (partial "content/plain.html" $.Page)) -}}
   {{- end -}}
 {{- end -}}

@@ -3,4 +3,19 @@
      列数不做参数：网格按可用宽度 auto-fit，侧栏拖窄、进平板、进手机都自己
      收敛。给一个 cols=3 只会让作者在窄屏上手动改回来。 */ -}}
 {{- partial "validate-shortcode.html" (dict "shortcode" . "form" "none") -}}
+{{- if partial "content/plain.html" .Page -}}
+{{- /* 纯文本输出里网格没有意义 —— 卡片自己会变成一段小标题。容器只剩内容。
+
+       `.Inner` 要 TrimSpace：作者在 `{{< cards >}}` 与第一张卡之间留的缩进会
+       原样带出来，而 Markdown 里行首四个空格是代码块 —— 那一段标题会变成
+       预格式化文本（实测：卡片前面挂着两个空格）。
+
+       **TrimSpace 之后必须重新 safeHTML。** `.Inner` 是 HTML 类型，管道一过就
+       降成普通字符串，而这个文件是 `.html` 模板、走 html/template 的转义器 ——
+       卡片正文里写在反引号里的 `<strong>` 会印成 `&lt;strong&gt;`。定位这个花了
+       几轮：`.md` 模板本身不转义（实测 `{{ "<em>" }}` 原样输出），
+       `card-markup.html` 也不转义，转义就发生在这一行的管道上。 */ -}}
+{{ safeHTML (strings.TrimSpace .Inner) }}
+{{- else -}}
 <div class="td-cards">{{ .Inner }}</div>
+{{- end -}}

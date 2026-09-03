@@ -6,6 +6,16 @@ theme = "hugo-theme-atlas"
 # 期 0 不做分类法。启用时连同 taxonomy/term 模板一起加。
 disableKinds = ["taxonomy", "term"]
 
+# 输出格式。主题只定义不启用，这里是启用的样子 —— 也是示例站要演示的东西之一。
+#
+# LLMS 只给首页：它是一份**全站**索引，每一页各出一份完全一样的内容没有意义。
+# markdown 给 page 与 section：抓取方要的是某一页的正文，而 section 那一份带
+# 子页清单，是从索引走到正文的中间一跳。
+[outputs]
+home = ["HTML", "LLMS", "RSS"]
+section = ["HTML", "markdown", "RSS"]
+page = ["HTML", "markdown"]
+
 [params]
 description = "Documentation theme. TypeScript + Tailwind CSS, compiled to plain assets."
 

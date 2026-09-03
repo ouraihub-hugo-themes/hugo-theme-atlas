@@ -24,6 +24,14 @@
 
 {{- if not $keys -}}
   {{- warnf "shortcode %q needs at least one key at %s; rendering nothing" .Name .Position -}}
+{{- else if partial "content/plain.html" .Page -}}
+{{- /* 纯文本输出：`` `Ctrl`+`Shift`+`P` ``。用行内代码而不是纯文字，因为
+       Markdown 里没有 <kbd> 的对应写法，而按键名要与周围散文区分开。
+       `+` 直接写出来 —— 那段 sr-only 的 "with" 是给朗读器的，纯文本里
+       重复它只是噪声。 */ -}}
+{{- $parts := slice -}}
+{{- range $keys }}{{ $parts = $parts | append (printf "`%s`" .) }}{{ end -}}
+{{- delimit $parts "+" | safeHTML -}}
 {{- else -}}
 <span class="td-kbd">
   {{- range $index, $key := $keys -}}

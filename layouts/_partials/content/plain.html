@@ -1,0 +1,21 @@
+{{- /* 「当前是不是纯文本输出」的唯一取法。
+
+     返回 true 表示这一趟输出不该带组件标记（markdown / llms）。调用方：
+
+       {{- if partial "content/plain.html" .Page }}…纯文本…{{ else }}…HTML…{{ end -}}
+
+     参数是页面本身，不是 shortcode / hook 的上下文：shortcode 上下文没有
+     `.PageInner`（那是 hook 独有的），写 `.PageInner | default .Page` 会在
+     shortcode 里直接报 `can't evaluate field PageInner`。所以调用方自己决定
+     传哪个页面 —— hook 传 `.PageInner | default .Page`，shortcode 传 `.Page`。
+
+     **为什么要这个 partial，而不是每处 `.Page.Store.Get "tdOutputFormat"`。**
+     三十个 shortcode 各写一遍的话，判定条件（哪些格式算纯文本）散在三十处；
+     加一种输出格式要改三十个文件，而漏掉的那些不会报错，只会静默输出 HTML
+     标记 —— 正是这一期在修的那类缺陷。
+
+     print 不在纯文本里：它是 HTML，走的是同一套模板加一份 CSS。RSS 目前也不
+     在 —— RSS 是 HTML 片段，只是不能带脚本与交互，那由各自的 `.rss.xml`
+     变体负责，不是这个开关。 */ -}}
+{{- $format := lower (.Store.Get "tdOutputFormat" | default "html") -}}
+{{- return in (slice "markdown" "llms") $format -}}

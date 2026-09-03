@@ -5,8 +5,8 @@
      墙的标记只有这一个调用方，直接写在这里；规范化那段有四类校验和去重，
      单独成 partial。
 
-     markdown / rss 输出分支等 期 6 的输出格式落地再加 —— 现在没有 tdOutputFormat
-     这个 Store 键，凭空写一条读它的分支等于留一段跑不到的代码。 */ -}}
+     纯文本输出（markdown / llms）的分支在 wall.html 里 —— landing 的
+     contributors section 出同一面墙，判定写在共用的那一份才不会只修好一边。 */ -}}
 {{- partial "validate-shortcode.html" (dict "shortcode" . "allowed" (slice "data" "class")) -}}
 
 {{- /* 数据文件名会进 hugo.Data 的索引，限成标识符：`../secrets` 那类值到不了
@@ -44,5 +44,6 @@
   {{- /* 标记走 contributors/wall.html：landing 的 contributors section 出同一
          面墙，两套标记意味着 `.td-contributors` 的样式改一次要动两处。 */ -}}
   {{- partial "contributors/wall.html" (dict
-    "items" . "id" (printf "contributors-%d" $.Ordinal) "class" $class) -}}
+    "items" . "id" (printf "contributors-%d" $.Ordinal) "class" $class
+    "plain" (partial "content/plain.html" $.Page)) -}}
 {{- end -}}

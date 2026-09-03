@@ -41,6 +41,47 @@ date: 2026-01-01
 {.matrix}
 `;
 
+// markdown 输出用例。每个组件都要在这里出现一次 —— 这份检查判的是「纯文本
+// 输出里没有组件标记」，而没被这一页用到的 shortcode 就没有断言覆盖。
+//
+// 反引号里的 `<strong>` 不是装饰：HTML 类型的值一过管道（`.Inner |
+// strings.TrimSpace`）就降成普通字符串，`.html` 模板的转义器随后把它印成
+// `&lt;strong&gt;`。实测绕了三层才定位到 —— `.md` 模板本身不转义，被调的
+// partial 也不转义，转义只发生在那一条管道上。所以这里同时断言实体不出现。
+const MD_PAGE = `---
+title: md
+date: 2026-01-01
+---
+
+{{< cards >}}
+{{< card title="one" link="/docs/" badge="new" icon="rocket" >}}
+body with **bold**, \`<strong>\` and \`alt=""\`.
+{{< /card >}}
+{{< card title="two" >}}plain body.{{< /card >}}
+{{< /cards >}}
+
+{{< steps >}}
+1. first
+2. second
+{{< /steps >}}
+
+{{< tabs >}}
+{{< tab title="sh" >}}\`\`\`sh
+echo hi
+\`\`\`{{< /tab >}}
+{{< tab title="ps" >}}use pwsh.{{< /tab >}}
+{{< /tabs >}}
+
+Press {{< kbd "ctrl+c" >}} to stop. Status: {{< badge "beta" >}}.
+
+> [!NOTE]
+> a callout in markdown output.
+
+| a | b |
+| - | - |
+| 1 | 2 |
+`;
+
 const site = mkdtempSync(join(tmpdir(), "atlas-out-"));
 const failures = [];
 
@@ -72,6 +113,8 @@ try {
     "---\ntitle: landing\nlayout: landing\nsections:\n  - type: cta\n    title: go\n---\n",
   );
   writeFileSync(join(site, "content", "plain.md"), "---\ntitle: plain\n---\n\nno shell here.\n");
+  mkdirSync(join(site, "content", "md"), { recursive: true });
+  writeFileSync(join(site, "content", "md", "components.md"), MD_PAGE);
   writeFileSync(
     join(site, "hugo.toml"),
     [
@@ -79,6 +122,12 @@ try {
       'title = "outputs"',
       'theme = "hugo-theme-atlas"',
       'disableKinds = ["taxonomy", "term", "sitemap"]',
+      // markdown 与 LLMS 输出。主题只定义 LLMS，启用是站点的事 —— 这里就是
+      // 「站点启用之后」那一侧，也是下面那批断言的前提。
+      "[outputs]",
+      'home = ["HTML", "LLMS", "RSS"]',
+      'section = ["HTML", "RSS"]',
+      'page = ["HTML", "markdown"]',
       // 开搜索，下面那条 `hidden` 断言才有东西可断。默认关着。
       "[params.ui]",
       "search = true",
@@ -193,6 +242,63 @@ try {
   } else if (!/\shidden[\s>]/.test(btn[0])) {
     failures.push("search button is not hidden in HTML; without JS it is a dead control");
   }
+
+  // ── markdown 输出 ────────────────────────────────────────────────────────
+  //
+  // 契约是「Markdown 进、Markdown 出」：抓取方拿到的应该是作者写的正文，而不是
+  // 一份剥了 CSS 的组件标记。漏一个 shortcode 的纯文本分支时构建全绿、HTML 一切
+  // 正常，只有去读 index.md 才看得见 —— 所以这条断言只能建站点读产物。
+  const md = readFileSync(join(site, "public", "md", "components", "index.md"), "utf8");
+
+  // 组件标记一个都不许有。列的是**主题自己**产出的元素与类，不是通用 HTML：
+  // 作者在正文里手写 <kbd> 是合法的，那不是这条规则要抓的东西。
+  for (const markup of [
+    "<div",
+    "<article",
+    "<svg",
+    "<button",
+    "<details",
+    "<summary",
+    "td-cards",
+    "td-card",
+    "td-steps",
+    "td-tabs",
+    "td-callout",
+    "data-td-",
+  ]) {
+    if (md.includes(markup)) {
+      failures.push(`markdown output carries ${JSON.stringify(markup)}; that shortcode has no plain-text branch`);
+    }
+  }
+
+  // 转义只许发生一次 —— 也就是不发生。这两条各自对应一层：`&lt;` 是一次，
+  // `&amp;lt;` 是两次（渲染成 HTML 又被输出转义器过了一遍）。
+  for (const entity of ["&lt;", "&gt;", "&amp;", "&#34;", "&#39;"]) {
+    if (md.includes(entity)) {
+      failures.push(`markdown output has the entity ${entity}; an HTML-typed value lost its type in a pipeline`);
+    }
+  }
+
+  // 作者的 Markdown 必须原样活着。丢了的表现是纯文本分支把正文渲染成 HTML
+  // 再剥标签 —— 那趟往返里 `**bold**` 会变成 `bold`。
+  for (const kept of ["**bold**", "`<strong>`", "#### ", "one", "two"]) {
+    if (!md.includes(kept)) failures.push(`markdown output lost ${JSON.stringify(kept)}`);
+  }
+  // 空跑防护：这一页确实经过了纯文本分支。
+  if (!/^#### /m.test(md)) failures.push("markdown output has no card heading; the plain branch did not run");
+
+  // llms.txt 是索引，不含正文。带上正文的表现是几百 KB 的响应里大部分是抓取方
+  // 不需要的东西，而它要的那一页还得自己切出来。
+  const llms = readFileSync(join(site, "public", "llms.txt"), "utf8");
+  if (llms.includes("**bold**") || llms.includes("<div")) {
+    failures.push("llms.txt carries page bodies; it is an index, not a bundle");
+  }
+  // 一行一条。少一个换行就会挤成一整行（实测过一次）。
+  const entries = llms.split("\n").filter((l) => l.startsWith("- ["));
+  if (entries.length < 6) failures.push(`llms.txt has ${entries.length} entries; the fixture has more pages than that`);
+  for (const line of entries) {
+    if ((line.match(/\]\(/g) ?? []).length > 1) failures.push(`llms.txt merged entries onto one line: ${line.slice(0, 70)}`);
+  }
 } finally {
   rmSync(site, { recursive: true, force: true });
 }
@@ -213,3 +319,5 @@ console.log("ok  RSS table output keeps semantics and drops theme-only markup");
 console.log("ok  every page class carries data-pagefind-body; navigation is excluded");
 console.log("ok  icon <use> references resolve in-document and inline exactly what the page uses");
 console.log("ok  the search button ships hidden and is revealed by the runtime");
+console.log("ok  markdown output is Markdown: no component markup, no double escaping, author source intact");
+console.log("ok  llms.txt is an index: one entry per line, no page bodies");

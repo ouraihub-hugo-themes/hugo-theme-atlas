@@ -15,8 +15,16 @@
     "num" $head.num "id" $head.id "caption" $head.caption
     "position" .Position "ordinal" .Ordinal) -}}
   {{- $label := partial "book/label.html" (dict "kind" "tbl" "num" $head.num) -}}
+  {{- if partial "content/plain.html" .Page -}}
+{{- /* 纯文本输出：Markdown 表格原样，题注跟一行。表格正文本来就是 Markdown，
+       渲染成 HTML 再剥回来会连滚动包裹、粘连表头的类一起带出去。 */ -}}
+{{ safeHTML $inner }}
+
+{{ printf "*%s%s*" $label (cond (ne $head.caption "") (printf " — %s" $head.caption) "") | safeHTML }}
+{{ else -}}
 <figure{{ with $head.id }} id="{{ . }}"{{ end }} class="td-book-figure td-book-figure--tbl{{ with $head.class }} {{ . }}{{ end }}" data-td-book-kind="tbl" data-td-book-num="{{ $head.num }}">
   <div class="td-book-figure-body">{{ partial "content/render-block.html" (dict "page" .Page "scope" (printf "tbl%d" .Ordinal) "content" $inner) }}</div>
   <figcaption><span class="td-book-figure-label">{{ $label }}</span>{{ with $head.caption }} <span class="td-book-figure-caption">{{ . }}</span>{{ end }}</figcaption>
 </figure>
+  {{- end -}}
 {{- end -}}

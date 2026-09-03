@@ -44,6 +44,29 @@
   {{- warnf "shortcode %q requires at least one field child at %s; rendering nothing" .Name $at -}}
 {{- else -}}
   {{- $labelID := printf "td-fields-%s-%d-label" (md5 .Page.RelPermalink) .Ordinal -}}
+  {{- if partial "content/plain.html" .Page -}}
+{{- /* 纯文本输出：定义列表变成每项一段 —— 名字那一行带类型、必填、默认值，
+       说明跟在下面一段。
+
+       不写成 Markdown 表格：说明是块级内容（可以有列表、围栏、多段），塞进
+       表格单元格要把换行压成 `<br>`，那又是标记。分段写法既保住了「名字 →
+       说明」的配对，也不限制说明能有多长。
+
+       `field_required` / `field_default` 走同一套本地化字串，与 HTML 那侧
+       一致 —— 抓取方读到的措辞不该跟读者看到的不一样。 */ -}}
+{{- with $label }}
+**{{ . }}**
+{{ end }}
+{{- range $key, $entry := $entries -}}
+{{- $meta := slice -}}
+{{- with $entry.type }}{{ $meta = $meta | append (printf "`%s`" .) }}{{ end -}}
+{{- if $entry.required }}{{ $meta = $meta | append (i18n "field_required") }}{{ end -}}
+{{- if $entry.hasDefault }}{{ $meta = $meta | append (printf "%s `%s`" (i18n "field_default") $entry.default) }}{{ end }}
+- `{{ $entry.name }}`{{ with $meta }} — {{ delimit . ", " }}{{ end }}
+
+{{ safeHTML (strings.TrimSpace $entry.description) }}
+{{ end -}}
+  {{- else -}}
 <div class="td-fields{{ with $class }} {{ . }}{{ end }}"{{ with $id }} id="{{ . }}"{{ end }}>
   {{- with $label }}
   <p class="td-fields-label" id="{{ $labelID }}">{{ . }}</p>
@@ -65,4 +88,5 @@
     {{- end }}
   </dl>
 </div>
+  {{- end -}}
 {{- end -}}

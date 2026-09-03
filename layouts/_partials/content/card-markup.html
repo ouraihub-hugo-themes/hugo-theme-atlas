@@ -8,8 +8,26 @@
      已经校验过的值。
 
      入参 dict：title（必需）、body（已渲染的 HTML）、href、external、icon
-               （已渲染的 svg）、badge、image（image-resolve 的返回或 false） */ -}}
+               （已渲染的 svg）、badge、image（image-resolve 的返回或 false）、
+               plain（可选，纯文本输出）
+
+     `plain` 由调用方给而不是这里查 Store：landing 的 cards section 只在
+     `landing.html` 这个 layout 里跑，而 markdown 输出走的是 `all.md` 加
+     `.RenderShortcodes` —— 那条路径根本不经过 landing section，所以那一侧
+     没有页面上下文可查，也不需要查。 */ -}}
 {{- $image := .image -}}
+{{- if .plain -}}
+  {{- /* 纯文本卡片 = 一个小标题加描述。标题带链接就写成 Markdown 链接，图标、
+         徽章、配图都丢掉：图标是装饰，徽章的信息在标题旁边一句话里说不清，而
+         抓取方要的是"这张卡说了什么"。 */ -}}
+  {{- $t := .title -}}
+  {{- with .href }}{{ $t = printf "[%s](%s)" $.title . }}{{ end -}}
+  {{- with .badge }}{{ $t = printf "%s (%s)" $t . }}{{ end }}
+#### {{ $t }}
+{{ with .body }}
+{{ safeHTML (strings.TrimSpace .) }}
+{{ end -}}
+{{- else -}}
 {{- /* 末尾不留换行（下面 </article> 后没有空行）：partial 的返回值原样进输出，
        多一个换行就是多一个输出字节。 */ -}}
 <article class="td-card">
@@ -35,3 +53,4 @@
     {{- end }}
   </div>
 </article>
+{{- end -}}

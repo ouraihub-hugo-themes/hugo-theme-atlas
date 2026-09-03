@@ -96,6 +96,7 @@
   ) -}}
   {{- if $entries -}}
     {{- $page.Store.Set "hasAssetList" true -}}
-    {{- partial "release/assets-table.html" (dict "entries" $entries "grouped" $grouped) -}}
+    {{- partial "release/assets-table.html" (dict "entries" $entries "grouped" $grouped
+      "plain" (partial "content/plain.html" $page)) -}}
   {{- end -}}
 {{- end -}}

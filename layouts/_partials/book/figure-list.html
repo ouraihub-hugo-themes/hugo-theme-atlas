@@ -44,6 +44,17 @@
 
 {{- if not $entries -}}
   {{- warnf "shortcode %q found no %s targets on %s at %s; rendering nothing" $sc.Name $kind $target.Path $at -}}
+{{- else if partial "content/plain.html" $page -}}
+{{- /* 纯文本输出：Markdown 有序列表。锚点链接留着 —— 那些 id 在 HTML 输出里
+       真实存在，抓取方顺着能跳到具体那张图。 */ -}}
+{{- with $title }}
+**{{ . }}**
+{{ end }}
+{{- range $entries -}}
+{{- $href := printf "#%s" .id -}}
+{{- if ne $target $page }}{{ $href = printf "%s#%s" $target.RelPermalink .id }}{{ end -}}
+1. [{{ partial "book/label.html" (dict "kind" .kind "num" .num) }}]({{ $href }}){{ with .caption }} — {{ . }}{{ end }}
+{{ end -}}
 {{- else -}}
   {{- /* nav 要有可访问名字：一页上可能同时有图表目录与表格目录，屏幕阅读器
          的地标列表里两个都叫 "navigation" 就没法选。 */ -}}

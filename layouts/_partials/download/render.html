@@ -13,6 +13,7 @@
      入参 dict：page、data */ -}}
 {{- $page := .page -}}
 {{- $data := .data -}}
+{{- $plain := partial "content/plain.html" $page -}}
 
 {{- /* 资产表的基址。pinned 渠道有校验和时 repo 一定存在（channels.html 保证
        了这一点），所以这里不必再判一次。 */ -}}
@@ -21,6 +22,47 @@
   {{- $base = printf "https://github.com/%s/releases/download/%s" . (urls.PathEscape $data.tag) -}}
 {{- end -}}
 
+{{- if $plain -}}
+{{- /* 纯文本输出：每个渠道一节标题，说明、动作链接、步骤命令、校验和表依次
+       排下来。
+
+       渠道锚点那排链接不出：纯文本里没有"跳到本页某处"这种便利，而那排链接
+       的每一项下面紧接着就是它指向的那一节。
+
+       步骤命令原样给围栏 —— 那本来就是围栏，渲染一遍会变成 Chroma 的 span 汤。
+       未发布的 pinned 渠道仍然出，带上「未发布」那句：抓取方要知道这个渠道
+       存在且当前拿不到，而不是以为它不存在。 */ -}}
+{{- range $channel := $data.channels }}
+{{- $disabled := and (eq $channel.kind "pinned") (not $data.published) }}
+## {{ $channel.title }}{{ if $disabled }} — {{ i18n "download_unpublished" }}{{ end }}
+{{ with $channel.note }}
+{{ safeHTML (strings.TrimSpace .) }}
+{{ end }}
+{{- if and $channel.url (not $disabled) }}
+[{{ $channel.title }}]({{ $channel.url }})
+{{ end }}
+{{- if not $disabled -}}
+{{- range $step := $channel.steps }}
+{{- with $step.title }}
+**{{ . }}**
+{{ end }}
+{{- $len := 3 -}}
+{{- range findRE "`+" $step.code }}{{ if ge (len .) $len }}{{ $len = add (len .) 1 }}{{ end }}{{ end -}}
+{{- $fence := strings.Repeat $len "`" }}
+{{ printf "%s%s\n%s\n%s" $fence $step.lang $step.code $fence | safeHTML }}
+{{ end -}}
+{{- end -}}
+{{- with $channel.checksums -}}
+  {{- $entries := partial "release/assets-parse.html" (dict
+    "content" . "position" (printf "%s channel %q checksums" $page.Path $channel.id)
+    "base" $base) -}}
+  {{- with $entries -}}
+    {{- partial "release/assets-table.html" (dict
+      "entries" . "grouped" false "disabled" $disabled "plain" true) -}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}
+{{- else -}}
 <div class="td-download" data-td-download-key="{{ $data.key }}">
   {{- /* 渠道多于一个才画这排链接：只有一个渠道时它是一个指向自己的链接。 */ -}}
   {{- if gt (len $data.channels) 1 }}
@@ -87,9 +129,10 @@
              文件的校验和没有意义。 */ -}}
       {{- if not $disabled }}{{ $page.Store.Set "hasAssetList" true }}{{ end -}}
       {{- partial "release/assets-table.html" (dict
-        "entries" . "grouped" false "disabled" $disabled) -}}
+        "entries" . "grouped" false "disabled" $disabled "plain" false) -}}
     {{- end -}}
     {{- end }}
   </section>
   {{- end }}
 </div>
+{{- end -}}

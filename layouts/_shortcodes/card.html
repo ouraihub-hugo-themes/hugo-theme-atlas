@@ -66,10 +66,19 @@
   {{- /* 标记走 content/card-markup.html：landing 的 cards section 出同一份卡片，
          两套标记意味着 .td-card 的样式改一次要动两处，而漏改的表现是同一个
          组件在两个地方长得不一样，构建照常绿。 */ -}}
+  {{- $plain := partial "content/plain.html" .Page -}}
   {{- $body := "" -}}
   {{- with strings.TrimSpace .InnerDeindent -}}
-    {{- $body = partial "content/render-block.html" (dict
-      "page" $.Page "scope" (printf "card%d" $.Ordinal) "content" .) -}}
+    {{- if $plain -}}
+      {{- /* 纯文本输出不渲染，原样给出去。卡片描述本来就是 Markdown，
+             「渲染成 HTML 再把标签剥掉」是一趟有损空转：作者写的
+             `` `<strong>` `` 会被 Goldmark 转成实体，剥标签剥不掉实体，
+             还原实体又要跟输出转义器打架（实测绕了两层才发现根本不该渲染）。 */ -}}
+      {{- $body = . -}}
+    {{- else -}}
+      {{- $body = partial "content/render-block.html" (dict
+        "page" $.Page "scope" (printf "card%d" $.Ordinal) "content" .) -}}
+    {{- end -}}
   {{- end -}}
   {{- $icon := "" -}}
   {{- with .Get "icon" -}}
@@ -77,5 +86,6 @@
   {{- end -}}
   {{- partial "content/card-markup.html" (dict
     "title" $title "body" $body "href" $href "external" $external
-    "icon" $icon "badge" (.Get "badge" | default "") "image" $image) -}}
+    "icon" $icon "badge" (.Get "badge" | default "") "image" $image
+    "plain" $plain) -}}
 {{- end -}}

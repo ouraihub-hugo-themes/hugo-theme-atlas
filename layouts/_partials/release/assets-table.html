@@ -7,10 +7,11 @@
 
      打印与无 JS 时铺开完整值：纸上没有复制按钮，截断的校验和就成了废字。
 
-     入参 dict：entries、grouped、disabled（未发布时置灰） */ -}}
+     入参 dict：entries、grouped、disabled（未发布时置灰）、plain（纯文本输出） */ -}}
 {{- $entries := .entries -}}
 {{- $grouped := .grouped | default false -}}
 {{- $disabled := .disabled | default false -}}
+{{- $plain := .plain | default false -}}
 
 {{- /* 分组顺序由主题定：包格式（装了就能用）在前，压缩包（要自己解）在后，
        认不出的归 `*` 收尾。 */ -}}
@@ -19,6 +20,29 @@
   {{- $groups = slice ".rpm" ".deb" ".apk" ".tar.gz" ".zip" ".exe / .msi" ".dmg / .pkg" "*" -}}
 {{- end -}}
 
+{{- if $plain -}}
+{{- /* 纯文本输出：Markdown 表格。这里可以用表格（而 fields 不能）—— 三列的值
+       都是单个词：文件名、算法、校验和，没有块级内容要塞进单元格。
+
+       校验和给完整值，不截断：截断是屏幕上的排版让步，配着复制按钮才成立。
+       抓取方要的正是那 128 个字符，给它 `abc123…7f9d` 等于什么都没给。
+
+       复制按钮那一列不出：它是运行时控件。置灰的表（未发布）文件名不带链接，
+       与 HTML 那侧同一条规则。 */ -}}
+{{- range $group := $groups -}}
+  {{- $rows := $entries -}}
+  {{- if $grouped }}{{ $rows = where $entries "group" $group }}{{ end -}}
+  {{- if not $rows }}{{ continue }}{{ end }}
+{{ if $grouped }}
+### `{{ $group }}`
+{{ end }}
+| {{ i18n "assets_file" }} | {{ i18n "assets_checksum" }} |
+| --- | --- |
+{{ range $rows -}}
+| {{ if $disabled }}`{{ .name }}`{{ else }}[`{{ .name }}`]({{ .url }}){{ end }}{{ with .os }} · {{ . }}{{ end }}{{ with .arch }} · {{ . }}{{ end }} | `{{ .algorithm }}:{{ .hash }}` |
+{{ end -}}
+{{- end -}}
+{{- else -}}
 <div class="td-assets" data-td-assets>
   {{- /* 整段复制按钮由运行时摘掉 hidden：没有 JS 时一个点不动的按钮比没有
          按钮更糟。播报区是必需的 —— 按钮变色屏幕阅读器读不到。 */ -}}
@@ -96,3 +120,4 @@
   </div>
   {{- end }}
 </div>
+{{- end -}}

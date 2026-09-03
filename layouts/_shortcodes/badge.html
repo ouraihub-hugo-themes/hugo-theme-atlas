@@ -46,7 +46,12 @@
   {{- $external = $url.external -}}
 {{- end -}}
 
-{{- if $ok -}}
+{{- if and $ok (partial "content/plain.html" .Page) -}}
+{{- /* 纯文本输出：`**Beta**`。tone 与 icon 都丢掉 —— 徽章的语气靠颜色传达，
+       纯文本里没有颜色，而把它写成 `[info]` 那样的前缀等于替作者加了一个词。
+       加粗保住「这是一小块标签而不是正文」这一点。 */ -}}
+{{- if $href }}{{ printf "[**%s**](%s)" $text $href | safeHTML }}{{ else }}{{ printf "**%s**" $text | safeHTML }}{{ end -}}
+{{- else if $ok -}}
 {{- $icon := "" -}}
 {{- with .Get "icon" }}{{ $icon = partial "content/icon.html" (dict "name" . "class" "td-badge-icon") }}{{ end -}}
 {{- if $href -}}

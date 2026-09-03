@@ -90,6 +90,21 @@
   {{- $prefix = cond (eq $nth 1) $group (printf "%s-%d" $group $nth) -}}
 {{- end -}}
 
+{{- if partial "content/plain.html" .Page -}}
+{{- /* 纯文本输出：每个标签变成一段小标题加它的内容，全部摊开。
+
+       摊开而不是只留默认那一个：标签页的内容互为替代（同一件事的 sh / ps 两种
+       写法），只留一个等于替抓取方选了平台，而它要索引的是全部。标签名必须留着
+       —— 不然两段内容首尾相接，读者不知道哪段是哪个平台的。
+
+       body 不渲染，原样给出去：那本来就是 Markdown。围栏代码块尤其明显 ——
+       渲染一遍会变成一整块 Chroma 的 span 汤（实测那一段有 40 行）。 */ -}}
+{{- range $tabs }}
+##### {{ .label }}
+
+{{ safeHTML (strings.TrimSpace .body) }}
+{{ end -}}
+{{- else -}}
 {{- .Page.Store.Set "hasTabs" true -}}
 <div class="td-tabs" data-td-tabs
   {{- with $group }} data-td-tabs-group="{{ . }}"{{ end }} data-td-tabs-default="{{ $default }}">
@@ -116,4 +131,5 @@
   </div>
   {{- end }}
 </div>
+{{- end -}}
 {{- end -}}

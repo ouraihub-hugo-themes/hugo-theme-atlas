@@ -40,6 +40,20 @@
 
 {{- if not $inner -}}
   {{- warnf "shortcode %q requires a nested list as its body at %s; rendering nothing" .Name $at -}}
+{{- else if partial "content/plain.html" .Page -}}
+{{- /* 纯文本输出：把作者写的嵌套列表原样交出去。
+
+       这一条几乎不用取舍 —— 这个 shortcode 的 body 本来就是 Markdown 嵌套列表，
+       「无 JS 时列表本身读得通」是它的设计前提，而纯文本输出正是无 JS 的极端
+       情形。导图是那份层级的一种画法，不是它的内容。
+
+       编号（fig N）不注册也不输出：交叉引用要 HTML 那侧的锚点才有意义，
+       而 `.RenderShortcodes` 这条路径上 xref 与它不在同一次遍历里。 */ -}}
+{{ safeHTML $inner }}
+{{- with $head.caption }}
+
+{{ printf "*%s*" . | safeHTML }}
+{{ end -}}
 {{- else -}}
   {{- $rendered := partial "content/render-block.html" (dict
     "page" .Page "scope" (printf "mindmap%d" .Ordinal) "content" $inner) -}}

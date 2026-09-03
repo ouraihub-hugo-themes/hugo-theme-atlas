@@ -6,7 +6,19 @@
      地方长得不一样，构建照常绿。
 
      入参 dict：items（已规范化的项）、id（计数那行的 id，用于 aria-labelledby）、
-     class（可选，附加类） */ -}}
+     class（可选，附加类）、plain（可选，纯文本输出） */ -}}
+{{- if .plain -}}
+{{- /* 纯文本输出：一行计数加一串链接。头像全部丢掉 —— 那是一张张 48px 的图，
+       在纯文本里既没有位置也没有信息（alt 本来就是空的，名字在链接文字上）。
+
+       每人一条列表项而不是拼成一行：角色是可选的，拼行时有角色和没角色的人
+       混在一起读不出边界。 */ -}}
+{{ i18n "contributors_count" (dict "Count" (len .items)) }}
+
+{{ range .items }}
+- [{{ .github }}]({{ .url }}){{ if ne .name .github }} — {{ .name }}{{ end }}{{ with .role }} · {{ . }}{{ end }}
+{{- end }}
+{{ else -}}
 {{- $id := .id -}}
 {{- /* aria-labelledby 指向计数那一行，屏幕阅读器进这个区域时先听到"12 位贡献
        者"，而不是一串没有上下文的链接。 */ -}}
@@ -38,3 +50,4 @@
     {{- end }}
   </ul>
 </section>
+{{- end -}}

@@ -17,6 +17,15 @@
   (dict "label" (printf "%s · zip" (i18n "release_source")) "url" $meta.sourceZipURL "icon" "file-zipper")
   (dict "label" $meta.repo "url" $meta.repoURL "icon" "code-branch")
 -}}
+{{- if partial "content/plain.html" .Page -}}
+{{- /* 纯文本输出：版本号与日期一行，四个链接一个列表。链接必须留着 ——
+       这张卡片的全部内容就是那四个地址，去掉之后只剩一个版本号。 */ -}}
+**{{ $meta.tag }}** — {{ i18n "release_released" }} {{ $meta.date.Format "2006-01-02" }}
+
+{{ range $links }}
+- [{{ .label }}]({{ .url }})
+{{- end }}
+{{ else -}}
 {{- /* aside 而不是 div：这是正文旁边的补充信息，屏幕阅读器会把它报成一个
        可跳过的区域。里面那组链接是导航，单独一层 nav —— 它们指向站外的四个
        地方，不是正文的一部分。 */ -}}
@@ -38,4 +47,5 @@
     {{- end }}
   </nav>
 </aside>
+{{- end -}}
 {{- end -}}

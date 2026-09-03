@@ -74,6 +74,18 @@
     "num" $head.num "id" $head.id "caption" $head.caption
     "position" $at "ordinal" .Ordinal) -}}
   {{- $label := partial "book/label.html" (dict "kind" "fig" "num" $head.num) -}}
+  {{- if partial "content/plain.html" .Page -}}
+{{- /* 纯文本输出：图片写成 Markdown 图片语法，块级内容原样给出去，题注跟在
+       后面成一行 `*图 1 — 说明*`。
+
+       编号必须留着：交叉引用（xref）指的是「图 1」这个称呼，抓取方读到的正文
+       里如果只有一张无名的图，那些引用就落空了。链接包装丢掉 —— Markdown 的
+       `[![alt](src)](href)` 嵌套在抓取方那边常被解析成两层，而"点图看大图"是
+       浏览器里的便利，不是内容。 */ -}}
+{{ if $src }}{{ printf "![%s](%s)" $alt $image.src | safeHTML }}{{ else }}{{ safeHTML $inner }}{{ end }}
+
+{{ printf "*%s%s*" $label (cond (ne $head.caption "") (printf " — %s" $head.caption) "") | safeHTML }}
+{{ else -}}
 <figure{{ with $head.id }} id="{{ . }}"{{ end }} class="td-book-figure td-book-figure--fig{{ with $head.class }} {{ . }}{{ end }}" data-td-book-kind="fig" data-td-book-num="{{ $head.num }}">
   {{- if $src }}
   <div class="td-book-figure-body">
@@ -88,4 +100,5 @@
   {{- end }}
   <figcaption><span class="td-book-figure-label">{{ $label }}</span>{{ with $head.caption }} <span class="td-book-figure-caption">{{ . }}</span>{{ end }}</figcaption>
 </figure>
+  {{- end -}}
 {{- end -}}

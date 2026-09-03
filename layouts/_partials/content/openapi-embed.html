@@ -54,7 +54,17 @@
 {{- /* 单出口：Hugo 的 partial 只允许一个 return，两个是模板解析错误。spec 不
        合法时它是空串 —— 上面已经 warn 过，页面上不留半个容器。 */ -}}
 {{- $markup := "" -}}
-{{- if $spec -}}
+{{- if and $spec (partial "content/plain.html" $sc.Page) -}}
+  {{- /* 纯文本输出：一条指向 spec 的链接，与「没配 runtime」时的回落同一形状。
+
+         这个 shortcode 本来就把渲染器当成装饰 —— 回落那段注释写着「OpenAPI 文档
+         本身是 JSON 或 YAML，对读者有用；渲染器只是让它好看」。纯文本输出正是
+         没有渲染器的极端情形，所以这里不是新决定，是同一条决定的延伸。
+
+         runtime 标记不设：那两个 Store 键是给 foot/js.html 决定注入哪个脚本用的，
+         而纯文本输出没有 <head>。 */ -}}
+  {{- $markup = printf "[%s](%s)" (i18n "openapi_spec_link") $spec -}}
+{{- else if $spec -}}
   {{- $runtime := partial "content/openapi-runtime.html" (dict "renderer" $renderer "position" $at) -}}
   {{- if $runtime.configured -}}
     {{- /* 标记按渲染器分开存：一页可以同时有 swagger 与 redoc，各自要各自的

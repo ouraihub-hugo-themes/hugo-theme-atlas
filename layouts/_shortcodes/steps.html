@@ -8,8 +8,15 @@
      Inner 两侧的空行是必需的：Goldmark 要看到块的边界才会把内容当块级
      Markdown 解析，紧贴着写会得到一段行内文本。 */ -}}
 {{- partial "validate-shortcode.html" (dict "shortcode" . "form" "none") -}}
+{{- if partial "content/plain.html" .Page -}}
+{{- /* 纯文本输出：容器去掉，内容原样。步骤的编号与顺序本来就在作者写的有序
+       列表或标题里，`.td-steps` 只画竖轨与圆点 —— 那两样在纸和纯文本里都没有
+       对应物。 */ -}}
+{{ safeHTML (strings.TrimSpace .Inner) }}
+{{- else -}}
 <div class="td-steps">
 
 {{ .Inner }}
 
 </div>
+{{- end -}}

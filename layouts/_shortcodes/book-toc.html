@@ -32,6 +32,10 @@
 {{- $root := .Page.FirstSection -}}
 {{- if not $root.Pages -}}
   {{- warnf "shortcode %q found no pages under %s at %s; rendering nothing" .Name $root.Path $at -}}
+{{- else if partial "content/plain.html" .Page -}}
+{{- /* 纯文本输出：嵌套有序列表，`nav` 容器去掉。缩进由 toc-tree 自己按层级给
+       —— 那份树本来就是列表，只有外层的地标语义在纯文本里没有对应物。 */ -}}
+{{ partial "book/toc-tree.html" (dict "page" $root "depth" $depth "level" 1 "plain" true) }}
 {{- else -}}
 <nav class="td-book-toc" aria-label="{{ i18n "book_toc" }}">
   {{- partial "book/toc-tree.html" (dict "page" $root "depth" $depth "level" 1) -}}

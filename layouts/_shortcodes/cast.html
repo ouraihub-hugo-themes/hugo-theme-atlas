@@ -80,6 +80,13 @@
 {{- if isset $params "caption" }}{{ $caption = strings.TrimSpace (printf "%v" (.Get "caption")) }}{{ end -}}
 
 {{- with $src -}}
+{{- if partial "content/plain.html" $.Page -}}
+{{- /* 纯文本输出：一条指向录屏文件的链接。播放器是浏览器运行时，纯文本里没有
+       对应物，而 `.cast` 文件本身是 JSON —— 抓取方能拿到它，但不该由这里替它
+       内联进正文。有 caption 就用 caption 作链接文字，否则用「下载录屏」那条
+       本地化字串。 */ -}}
+{{ printf "[%s](%s)" ($caption | default (i18n "cast_download")) . | safeHTML }}
+{{- else -}}
   {{- $.Page.Store.Set "hasCast" true -}}
 {{- /* 属性名要写死，不能从循环里拼出来：Go 的模板转义按上下文工作，属性名是
        动态的它就判不出这个位置是什么，于是把值换成 ZgotmplZ —— `poster` 上正
@@ -100,4 +107,5 @@
   <figcaption>{{ . }}</figcaption>
   {{- end }}
 </figure>
+{{- end -}}
 {{- end -}}

@@ -8,6 +8,23 @@ disableKinds = ["taxonomy", "term"]
 [params]
 description = "Documentation theme. TypeScript + Tailwind CSS."
 
+# 自定义输出格式。**这里只定义，不启用** —— 启用是站点的事，因为每一种都有
+# 构建代价，而代价该由决定要它的人付。站点在自己的 hugo.toml 里写：
+#
+#   [outputs]
+#   home = ["HTML", "LLMS"]
+#   page = ["HTML", "markdown"]
+#
+# markdown 是 Hugo 内建格式（text/markdown、index.md），不需要在这里定义，
+# 模板在 layouts/all.md。
+[outputFormats.LLMS]
+baseName = "llms"
+mediaType = "text/plain"
+isPlainText = true
+# 不进 <head> 的 rel=alternate：那个位置是给同一内容的其他呈现用的，而
+# llms.txt 是一份索引，不是这一页的另一种形态。
+notAlternative = true
+
 [markup.goldmark.renderer]
 unsafe = true
 

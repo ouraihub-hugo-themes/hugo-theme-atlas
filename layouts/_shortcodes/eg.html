@@ -18,8 +18,16 @@
     "num" $head.num "id" $head.id "caption" $head.caption
     "position" .Position "ordinal" .Ordinal) -}}
   {{- $label := partial "book/label.html" (dict "kind" "eg" "num" $head.num) -}}
+  {{- if partial "content/plain.html" .Page -}}
+{{- /* 纯文本输出：题注在前，与 HTML 那侧同序 —— 示例是「先说要演示什么，
+       再看代码」。 */ -}}
+{{ printf "*%s%s*" $label (cond (ne $head.caption "") (printf " — %s" $head.caption) "") | safeHTML }}
+
+{{ safeHTML $inner }}
+{{ else -}}
 <figure{{ with $head.id }} id="{{ . }}"{{ end }} class="td-book-figure td-book-figure--eg{{ with $head.class }} {{ . }}{{ end }}" data-td-book-kind="eg" data-td-book-num="{{ $head.num }}">
   <figcaption><span class="td-book-figure-label">{{ $label }}</span>{{ with $head.caption }} <span class="td-book-figure-caption">{{ . }}</span>{{ end }}</figcaption>
   <div class="td-book-figure-body">{{ partial "content/render-block.html" (dict "page" .Page "scope" (printf "eg%d" .Ordinal) "content" $inner) }}</div>
 </figure>
+  {{- end -}}
 {{- end -}}

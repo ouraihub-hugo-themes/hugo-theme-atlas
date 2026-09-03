@@ -1,0 +1,87 @@
+{{- /* llms.txt —— 给读这个站的模型一份索引。
+
+     **只有索引，不含正文。** 这一份的作用是让抓取方知道「有哪些页、各自讲
+     什么、正文去哪取」，而不是替它把整站正文塞进一个文件。正文有 markdown
+     输出格式负责，那里一页一份、可以按需取。把全站正文拼进这一个文件的表现
+     是：一个几百 KB 的响应，其中大部分内容抓取方并不需要，而它想要的那一页
+     还得自己从里面切出来。
+
+     因此这个模板不调 `.Content`、不调 `.RenderShortcodes` —— 只遍历元数据。
+     构建代价基本为零，可以对所有站点默认开着。
+
+     链接优先给 markdown 输出的地址：抓取方要的是不带导航壳的正文。站点没开
+     markdown 输出时回落到 HTML 地址 —— 那时候壳去不掉，但地址仍然是对的。
+
+     走内容树，不走 menu。menu 是导航意图，里面有仓库、社区那类外站链接，
+     顺着爬会爬出站；而它同时又漏掉没进导航的页。内容树两头都对。 */ -}}
+
+{{- /* 一页的一行。整行用 printf 拼好再一次输出：这个模板的正确性几乎全在
+       空白上（少一个换行，整份索引会挤成一行 —— 实测过），把换行收敛到
+       末尾一处 `println` 就不必逐个动作去数减号。
+
+       `with .Permalink` 挡住渲染不出页面的条目（`build.render: never`、纯占
+       位的分隔项）—— 那些没有地址，写进索引就是一条死链。 */ -}}
+{{- define "_partials/llms-line.html" -}}
+  {{- $page := .page -}}
+  {{- with $page.Permalink -}}
+    {{- $url := . -}}
+    {{- with $page.OutputFormats.Get "markdown" -}}{{ $url = .Permalink }}{{- end -}}
+    {{- $desc := $page.Description | default "" -}}
+    {{- if not $desc }}{{ $desc = $page.Summary | plainify | truncate 160 }}{{ end -}}
+    {{- $line := printf "- [%s](%s)" $page.LinkTitle $url -}}
+    {{- /* 描述里的换行要压成空格。`chomp` 只去尾部空白，管不了中间的 ——
+           而 .Summary 取的是正文头几句，跨行是常态（实测 landing 那页的摘要
+           带一个换行，整份索引在那里断成两行，一行一条的约定就废了）。 */ -}}
+    {{- with $desc }}{{ $line = printf "%s: %s" $line (. | plainify | replaceRE `\s+` " " | chomp) }}{{ end -}}
+    {{- println $line -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* 一个 section 及其子树。递归写成 define 是因为 Hugo 的模板没有循环内
+       递归 —— 层级深度未知，展开成固定几层会在更深的站点上静默截断。 */ -}}
+{{- define "_partials/llms-branch.html" -}}
+  {{- range .pages -}}
+    {{- partial "llms-line.html" (dict "page" .) -}}
+    {{- with .Pages -}}
+      {{- partial "llms-branch.html" (dict "pages" (.ByWeight)) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- println (printf "# %s" site.Title) -}}
+{{- with site.Params.description }}{{ println "" }}{{ println (printf "> %s" (. | plainify | chomp)) }}{{ end -}}
+{{ println "" }}{{ println "## Pages" }}{{ println "" -}}
+{{- partial "llms-line.html" (dict "page" site.Home) -}}
+{{- /* 根一级的散页（`content/about.md` 那种）。它们不属于任何 section，
+       只走 site.Sections 会漏掉。 */ -}}
+{{- range where site.Home.Pages "Kind" "page" -}}
+  {{- partial "llms-line.html" (dict "page" .) -}}
+{{- end -}}
+
+{{- range site.Sections.ByWeight -}}
+  {{- $sec := . -}}
+  {{- /* 空 section 不出标题：一个只有标题没有条目的小节对抓取方是噪声。
+         注意这里必须用 $sec 而不是 $ —— `$` 在模板里恒指最外层上下文（首页），
+         range 里写 $.LinkTitle 拿到的是「Home」，四个 section 会顶着四个
+         一样的标题（实测过）。 */ -}}
+  {{- with .Pages -}}
+    {{- println "" -}}
+    {{- println (printf "## %s" $sec.LinkTitle) -}}
+    {{- println "" -}}
+    {{- with $sec.Description -}}
+      {{- println (. | plainify | chomp) -}}
+      {{- println "" -}}
+    {{- end -}}
+    {{- partial "llms-branch.html" (dict "pages" (.ByWeight)) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- with hugo.Sites -}}
+  {{- if gt (len .) 1 -}}
+    {{- println "" -}}
+    {{- println "## Languages" -}}
+    {{- println "" -}}
+    {{- range . -}}
+      {{- println (printf "- [%s](%s)" (.Language.LanguageName | default .Language.Lang) .Home.Permalink) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
