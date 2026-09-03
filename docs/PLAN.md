@@ -6,7 +6,7 @@
 
 前置阅读 `HANDOFF.md`（环境与陷阱）。
 
-**进度**：期 0–5 ✅，期 6 是剩下的唯一一期。
+**进度**：期 0–6 ✅，路线图走完。剩下的是视觉判断，见 `TODO.md`。
 
 ## 铁律
 
@@ -289,8 +289,9 @@ Hugo 有没有内建。已交付。
 
    **`render-table.print` 不做，它没有可挂的输出格式。** print 目前是纯
    `@media print` CSS（滚动展开、粘连解除、`thead` 跨页重复都在
-   `table.css` 里），实测建一个 `render-table.print.html` 产出为零。期 6
-   引入 `baseof.print.html` 之后再判断它是否有事可做。
+   `table.css` 里），实测建一个 `render-table.print.html` 产出为零。
+   期 6 判过了：**仍然不做，前提没变** —— `baseof.print.html` 最终没建，
+   print 依旧不是输出格式，没有东西可以挂 `.print` 变体。
 
    **RSS 变体不是可选的优化：Hugo 的表格 hook 按输出格式查找，`.html` 那份
    不回落。** 缺这个文件时 Goldmark 用自己的默认渲染，把作者属性原样吐到
@@ -408,13 +409,36 @@ narrative 字段渲染 Markdown、label 字段纯文本，这个区分要保住�
 tablist 漫游 tabindex 与 Home/End 正确、RTL 下方向键镜像正确；缺索引时搜索
 退化成一条播报而不是坏掉的对话框。
 
-### 期 6 · 输出格式与收尾 ⬅ **当前，也是剩下的唯一一期**
+### 期 6 · 输出格式与收尾 ✅
 
-逐项现状与卡点见 `TODO.md` —— 那份是「还剩什么」的权威清单，这里只留计划原文
-与验收标准。
-
-- print 输出（`baseof.print.html` + `print:` variant 全量核对）
-- LLMS / BookManifest / Markdown / RSS
+- print 输出（`baseof.print.html` + `print:` variant 全量核对）—— 做完了，
+  **没有建 `baseof.print.html`**。逐项量过之后那个模板买不到东西：chrome 已经
+  全部 `display:none`（navbar/侧栏/TOC/footer/pager 实测都是），折叠块已经摊开，
+  `break-inside: avoid` 在 10 个文件里。缺的只是 `@page`（纸张、页边距、页码）
+  与 `orphans`/`widows`，都是纯 CSS，已加进 `base.css`。**一个独立 baseof 是
+  整体替换而非继承**（`baseof.html:12` 记着这条），为一份 `@page` 复制整个外壳
+  换来的是每次外壳改动要改两处。
+  顺带修掉一个真缺陷：matrix 表的粘连 `white-space: nowrap` 在纸上没被撤掉，
+  A4 内容宽 673px 下表格撑到 769px，右边一列印不出来。撤掉后 626px。
+  **全站 38 页在纸宽下逐页量过**：零溢出、零空白节。
+- LLMS / Markdown / RSS —— `layouts/all.md` 与 `layouts/index.llms.txt`。
+  一个新 partial `content/plain.html` 是唯一的格式判据，30 个 shortcode 与
+  hook 都问它。**格式身份只能走 Page Store**：`.Page.OutputFormat` 不存在
+  （实测 `can't evaluate field OutputFormat in type page.Page`），而 shortcode
+  在每种输出格式下各求值一次（实测同页两个探针，一个 `UNSET` 一个 `markdown`），
+  所以 `all.md` 取完正文要把标志复位 —— Store 是页级的，Hugo 不保证格式的渲染
+  顺序。
+  正文用 `.RenderShortcodes`：`.Content` 出的是 HTML，`.RawContent` 里 shortcode
+  没展开。**先渲成 HTML 再剥标签是错的**：`**bold**` 会变成 `bold`，实体活过
+  剥标签，围栏代码变成一团 Chroma span。实测结果是泄漏的组件标记从 148/135/91/74/36
+  （前五页）降到 **0** —— 剩下的每个标签都与源文件里的计数一一对上。
+- **BookManifest 不做。** 它要为整本书出一份机器可读清单（页序、层级、图表
+  索引），而清单里的每一项都要先渲染那一页才知道 —— 也就是把全站 HTML 渲一遍，
+  只为收 Store 里的副作用，然后把 HTML 丢掉。这个代价只有在下游真有一个打包器
+  （出 EPUB/PDF）时才回本，而这个主题不带打包器，也没有消费方要求过。
+  `llms.txt` 已经覆盖了「给机器一份全站结构」这个需求，且它只读元数据，代价
+  基本为零。**等有人真的要打包再做**，届时清单的字段该由那个打包器的输入定义，
+  现在猜出来的 schema 大概率是错的。
 - 32 locales 全量导入 + schema 对齐检查
 - ✅ VENDOR.json + license/version/checksum。提前做了，因为**仓库里一个
   LICENSE 文件都没有** —— 主题自己声明 Apache-2.0（`theme.toml` 与
@@ -436,11 +460,26 @@ tablist 漫游 tabindex 与 Home/End 正确、RTL 下方向键镜像正确；缺
   两处手查不如脚本：`khroma` 不写 `license` 字段只放文件（回落读文件正文
   认 SPDX，认不出就写 `see <file>`，不猜）；`es-toolkit` 是 MIT 却带
   NOTICE —— 我按许可类型筛着手查时漏了它。
-- 无效配置的 warn + fallback 全量核对（禁止 `errorf`）
-- 文档：`README` + 定制入口说明（**明写 `@theme` 替代 Sass 覆盖**）
+- 无效配置的 warn + fallback 全量核对（禁止 `errorf`）—— `check-fallbacks.js`
+  要求每条 `warnf` 的字面量消息里出现一个处置短语，并禁掉 `errorf`。
+  为什么是这一半：`check-warnings.js` 的 24 个夹具证明「特定非法输入确实出声」，
+  而「出声之后说清楚接下来做什么」没人盯 —— 少这半句不会让构建失败，只会让作者
+  盯着一条正确的警告不知道改哪里。处置短语表是从现有 316 条消息里已经写出来的
+  动词收上来的，不是先定表再改消息（首跑 34 条假失败，错的是表不是消息）。
+  实测 315 条字面量消息全部指名回落，0 处 `errorf`。
+- 文档：`README` + 定制入口说明（**明写 `@theme` 替代 Sass 覆盖**）—— README
+  加了定制 / 输出格式 / 界面文案三节与六个检查器的表。
+  自己那份草稿里编过五个不存在的 token 名（`--color-td-accent`、
+  `--font-td-display`、`--spacing-*`、`@theme static` 的用法、"29 个 shortcode"
+  而实际 30 个），逐个对着源码查掉了 —— 文档里的名字必须能被 grep 到。
 
-**验收**：`--panicOnWarning` 通过；四态输出（HTML/print/md/RSS）快照齐；
-32 locale schema 一致。
+**验收结果**：`--panicOnWarning` 在四种输出格式全开下通过；四态输出
+（HTML/print/markdown/RSS）齐，markdown 侧零组件标记泄漏；32 份 locale schema
+一致（97 键，620 条真译文 + 2387 条带 `TODO(i18n)` 标记的英文兜底）。
+另补了 `.github/workflows/ci.yml` —— 九个检查器在这之前只在一台机器上跑过，
+而产物提交进仓库意味着「源码改了但产物没重建」是能推上来的，`dist` job 重建后
+要求 `git diff --quiet -- assets/dist`。兼容下限 0.160.1 与开发版 0.165.0 都在
+矩阵里：声明一个没人验过的下限等于没声明。
 
 ## 工作量重估（2026-08-31，基于实测）
 
@@ -458,16 +497,16 @@ tablist 漫游 tabindex 与 Home/End 正确、RTL 下方向键镜像正确；缺
 **单位是"批"，约 45 分钟**：一个组件的模板 + CSS + 可选 runtime + 单测 +
 非法输入夹具 + 浏览器验证 + 提交。
 
-剩余（实测计数，非估计）：shortcode 3 个、hook 7 个、locale 31 份、
-landing 22 个 section、runtime 4 个已有。
+**下面这张表是历史记录，不是待办 —— 期 3 到期 6 都已交付。**留着是因为它下面
+那几段讲的是「计数纠正与范围变动怎么区分」，那个方法还用得上。
 
-| 阶段 | 批数 | 估时 |
-|---|---|---|
-| 期 3 余下（6 个运行时 + 2 个输出变体） | ~8 | 7–8h |
-| 期 4 Landing | ~8 | 6h |
-| 期 5 搜索 / 面板 / 分享 | ~6 | 5h |
-| 期 6 输出 / 32 语言 / 审计 | ~7 | 5h |
-| **合计** | **~29** | **23–24h** |
+| 阶段 | 批数 | 估时 | 实际 |
+|---|---|---|---|
+| 期 3 余下（6 个运行时 + 2 个输出变体） | ~8 | 7–8h | ✅ |
+| 期 4 Landing | ~8 | 6h | ✅ 22/22 section |
+| 期 5 搜索 / 面板 / 分享 | ~6 | 5h | ✅ |
+| 期 6 输出 / 32 语言 / 审计 | ~7 | 5h | ✅ 四提交 |
+| **合计** | **~29** | **23–24h** | |
 
 期 3 那一行改过两次。第一次 ~14 → ~17：交叉引用体系原按 1 批预算，设计过后
 至少 3 批（登记器 + 四个目标 + `xref` + 五个列表），`field`/`fields` 另占 1 批。
@@ -491,8 +530,12 @@ landing 22 个 section、runtime 4 个已有。
 **偏保守的地方**：32 个 locale 是机械活，靠 sync 工具铺英文兜底，占不满一批。
 另外「先查有没有更省的路」这条已经生效三次：`math` 与 `goat` 是 Hugo 内建，
 `plantuml` 不需要任何运行时。别按"这类功能一般要装个库"预判。
+这一条后来验证了：locale 那一步确实机械（脚本铺 2387 条兜底），但**它咬了一次**
+—— sync 工具首跑把 31 份文件全写坏了：`contributors_count` 是 CLDR 复数映射，
+而工具当成纯字符串搬。机械活的风险不在量上，在形状假设上，所以工具里加了形状
+守卫而不是靠人眼复查 31 份。
 
-结论：**23–24h，重量在期 3 的尾巴上，不在数量上。**
+结论：**23–24h，重量在期 3 的尾巴上，不在数量上。** 事后看这个判断成立。
 
 ## 依赖关系
 

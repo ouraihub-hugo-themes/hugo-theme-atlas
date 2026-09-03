@@ -25,14 +25,12 @@ sections、4 阅读外壳、32 locales。
 
 ## 2. 当前状态
 
-**期 0–5 已完成（期 2 的宽度拖拽有意推迟）。期 6「输出格式与收尾」是剩下的
-唯一一期。**
+**期 0–6 的路线图已走完（期 2 的宽度拖拽有意推迟）。剩下的是视觉判断。**
 
 **还剩什么看 `TODO.md`** —— 那份是权威清单。每期的完成定义、已过的验收项、
 有意简化之处在 `PLAN.md` 对应小节。这三处各管一件事，别互相复制。
-工作量重估见 `PLAN.md` §工作量重估。
 
-已交付的东西（截至 2026-09-02，下表是实测计数；数字容易过期，**不确定时以
+已交付的东西（截至 2026-09-03，下表是实测计数；数字容易过期，**不确定时以
 `ls | wc -l` 为准而不是这张表**）：
 
 | 目录 | 内容 |
@@ -40,10 +38,11 @@ sections、4 阅读外壳、32 locales。
 | `src/css/` | 39 个文件：`main.css` 入口、`theme.css` token，外壳 4 份，其余按组件一份 |
 | `src/css/vendor/` | `fonts.css`（18 个 @font-face）、`chroma-{light,dark}.css`（生成） |
 | `src/ts/` | 25 个模块 + `entries/` 10 个 esbuild 入口 |
-| `layouts/` | 152 个文件：101 个 partial、16 个 render hook（含输出变体）、30 个 shortcode，其余是 baseof 与页面模板 |
+| `layouts/` | 155 个文件：102 个 partial、15 个 render hook（含输出变体）、30 个 shortcode，其余是 baseof、页面模板与 `all.md` / `index.llms.txt` |
+| `i18n/` | 32 份 locale，每份 97 键，schema 完全一致 |
 | `static/webfonts/` | `inter/` 与 `brand/` 两组，共 18 个 woff2 + LICENSE |
 | `tests/` | 16 个 `*.test.ts`，103 个用例 + `tests/invalid/` 非法输入夹具 24 份 |
-| `scripts/` | `build-ts` `gen-chroma` `build-icons` `gen-vendor` `check-templates` `check-warnings` `check-outputs` `make-fixture-image` |
+| `scripts/` | `build-ts` `gen-chroma` `build-icons` `gen-vendor` `check-templates` `check-warnings` `check-outputs` `check-i18n` `check-fallbacks` `make-fixture-image` |
 | `assets/dist/` | 编译产物，**提交进仓库**（`.map` 除外，见 `.gitignore`） |
 
 分支 `main`，remote `origin` 是 `ouraihub-hugo-themes/hugo-theme-atlas`。
@@ -360,28 +359,33 @@ hugo --source exampleSite --themesDir ../.. --printPathWarnings --panicOnWarning
 **reduced-motion**：确认三个 duration token 被归零。归零 token 而不是维护一份
 逐选择器的名单 —— 名单会漏，而新加的动效默认就该跟着 token 走。
 
-## 9. 还剩多少
+## 9. 公开面已经齐了
 
-目标公开面：
+实测计数（2026-09-03）：
 
 | | 数量 |
 |---|---|
-| shortcodes | 29 |
-| render hooks | 18 |
-| landing sections | 22 |
-| locales | 32 |
+| shortcodes | 30 |
+| render hooks | 15 |
+| landing sections | 22/22 |
+| locales | 32/32 |
 | 阅读外壳 | 4 |
 
-已完成（2026-09-01）：shortcode 26/29、hook 11/18、locale 1/32、landing 0/22。
-分期、子批次、依赖关系、验收标准都在 `PLAN.md`。
+shortcode 与 hook 的数字跟早先的目标数（29 / 18）对不上，**两侧都是实测数**。
+hook 那一侧的差是有据的：目标数把每个输出变体各算了一份，而若干变体判过之后
+不做（`render-table.print` 没有可挂的输出格式，理由在 `PLAN.md`）—— 现在
+`_markup/` 下是 15 个 `.html` 加 1 个 `render-table.rss.xml`。shortcode 多出的
+一个没去追是哪一个，目标数本身是早期估的。**核对以 `ls` 为准，不以这张表为准。**
 
 **关于工作量估算**：期 0/1 的实际成本超出估算，主要花在「发现并绕开静默失败」
 上（Hugo 版本硬错误、Chroma 配置、token 引用不校验），不是写代码。这个判断在
 期 3 得到确认：Tailwind 层序、嵌套 `.Position`、nil `.Params` 三条各自吃掉了
 可观时间，写代码本身都是几分钟。**估工作量要按「有几处静默失败要踩」算，不是
-按行数算。**
+按行数算。** 期 6 又验了一次：这一期的时间几乎全花在三处静默陷阱上 ——
+`.md` 模板不转义而 `.html` 模板转义、管一次 `.Inner` 就把 HTML 类型剥掉、
+Store 是页级而格式渲染顺序不保证。
 
-当前估算见 `PLAN.md` §工作量重估：剩余约 31 批 / 25–26 小时。
+路线图走完，`PLAN.md` §工作量重估不再有「剩余」一栏可填。
 
 ## 10. 已定的四项
 
