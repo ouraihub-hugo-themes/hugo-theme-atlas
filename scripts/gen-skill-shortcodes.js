@@ -1,0 +1,500 @@
+// 从 shortcode 模板生成 skill 的参数参考页，兼门禁。
+//
+// 用法：node scripts/gen-skill-shortcodes.js [--check]
+//   --check 只比对不写：模板改了而生成物没跟着更新时以非零退出。
+//
+// 为什么生成而不是手写：30 个 shortcode 的公开面已经在模板里机器可读了 ——
+// `validate-shortcode.html` 要靠它 warn 未知参数，所以每个模板都声明了自己的
+// 参数白名单与调用形式。手写一份等于把同一事实抄第二遍，而抄本会漂移，且漂移
+// 的表现是模型照着写出静默失效的参数名（Hugo 静默忽略认不出的参数）。
+//
+// 抽不出来的那部分明确留给手写，见 DESCRIPTIONS：模板头注释是中文，而 skill
+// 是英文，翻译不能机械做。**注释里的调用示例不要照搬** —— `xref` 的注释写着
+// `{{< xref fig="2.3" >}}`，而它读 `.InnerDeindent`，那样调用是硬错。生成的
+// 事实（读不读 Inner）比注释可靠。
+
+import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
+import { join } from "node:path";
+
+const DIR = "layouts/_shortcodes";
+const OUT = "skills/hugo-theme-atlas/shortcodes.md";
+
+// 把校验委托给别的 partial 的模板：在那份 partial 里找 allowed。
+// 只有 OpenAPI 这一组这么做（两个渲染器共用一套参数契约）。
+const DELEGATES = {
+  redoc: "layouts/_partials/content/openapi-embed.html",
+  swagger: "layouts/_partials/content/openapi-embed.html",
+};
+
+/**
+ * 光有正确的调用还不够的那几个：还需要站点侧的文件或 front matter。
+ *
+ * 这一类抽不出来（依赖藏在 `hugo.Data` 索引与 `release/meta.html` 里），而漏掉
+ * 它的后果最难查：调用完全正确、构建绿、页面上什么都没有 —— 因为事实缺席时
+ * 模板有意什么都不渲染（渲染半个死链比不渲染更糟，见 release-card 的注释）。
+ * 只有 4 条，手写，靠下面的断言看住它们仍然存在。
+ */
+const NEEDS = {
+  contributors: "a `data/<key>.yaml` file in the site; the `data` parameter is that filename",
+  download:
+    "a `data/download/<key>.yaml` file in the site; the positional argument is that filename",
+  "release-card": "`release_url` in the page front matter",
+  "release-assets": "`release_url` in the page front matter, plus `sha*sum` output as the body",
+};
+
+/**
+ * 位置参数的语义。**手写** —— `"form" "positional"` 只说明它不收具名参数，
+ * 参数是什么、能有几个，只写在模板的文档注释里（中文）。
+ */
+const POSITIONAL = {
+  kbd: { shape: "Ctrl Shift P", note: "One argument per key, in order. Any number of keys." },
+  param: {
+    shape: "version",
+    note: "Exactly one: the parameter name. Scalars only — maps and slices print nothing.",
+  },
+  download: { shape: "atlas", note: "Exactly one: the data filename without its extension." },
+};
+
+/**
+ * 容器与它要求的子元素。
+ *
+ * 为什么必须单列：Hugo 只管「读了 Inner 就允许自闭合」，而容器自闭合是**语义
+ * 上的错** —— `{{< cards />}}` 构建通过，渲染出一个空网格。`fields` 更明确，
+ * 它 warn「requires at least one field child; rendering nothing」。模型看到
+ * 「或者可以自闭合」就真会那么写，然后页面上什么都没有。
+ *
+ * 反过来 `fig` / `eq` 那种读 Inner 的不是容器：body 是任意内容，自闭合（只给
+ * `src`）是正当用法。所以这张表不能靠「读不读 Inner」推。
+ */
+const CONTAINERS = {
+  cards: "card",
+  fields: "field",
+  tabs: "tab",
+  // body 同样是必需的，只是内容是 Markdown 而不是子 shortcode。自闭合一样得到
+  // 一个空容器，所以它属于这一类；`child` 为 null 表示没有固定的子 shortcode。
+  steps: null,
+};
+
+/** 子元素反查父容器，用来生成「必须被 X 包住」那句。 */
+const CHILD_OF = { card: "cards", field: "fields", tab: "tabs" };
+
+/**
+ * 示例里显示哪些参数。默认取白名单前两个，对参数互斥的条目会教出错误用法。
+ *
+ * `xref` 的 `fig` / `tbl` / `eq` / `eg` 四选一，同时给两个会 warn 并只用第一个
+ * （判据：`xref.html:22`）。只有这一个条目需要覆写。
+ */
+const SHOW = { xref: ["fig"] };
+
+/**
+ * 每个条目一条额外的、只能手写的事实。
+ *
+ * 判据是「模型读了上面那些机器生成的行仍然会做错的事」。目前两条：
+ *
+ * - `comment` 的 body 有意不渲染，`.Inner` 写在 `{{ if false }}` 里。不写这条
+ *   的话，模型会以为注释掉的内容仍会被求值 —— 反过来，真去求值 Inner 的话，
+ *   被注释掉的 `{{< fig >}}` 会照样占掉一个图号。
+ * - `xref` 的常规用法是自闭合，成对只为自定义链接文字。模板的头注释示例写的是
+ *   不成对形式，照抄会硬错（判据：exampleSite 里全是 `{{< xref fig="1" />}}`）。
+ */
+const NOTES = {
+  comment:
+    "The body is intentionally never rendered — shortcodes inside a comment do not run, so a " +
+    "commented-out `fig` does not consume a figure number. Self-closing it is legal but pointless.",
+  xref:
+    'Normally self-closed: `{{< xref fig="1" />}}`. Pair it only to supply custom link text, ' +
+    'as in `{{< xref fig="2" >}}see the figure above{{< /xref >}}`. ' +
+    "`fig`, `tbl`, `eq`, and `eg` are mutually exclusive — pass exactly one, or use `anchor` " +
+    "for an arbitrary fragment. `page` adds a cross-page target.",
+};
+
+/**
+ * 有更该用的写法的 shortcode。目前只有一条，所以不建通用机制。
+ *
+ * `steps` 的主路径是给有序列表标 `{.steps}` —— 那是真 `<ol>`，屏幕阅读器报
+ * 「列表，N 项」，编号来自列表本身。`exampleSite` 里 `{{< steps >}}` 一次调用
+ * 都没有，全走标记类。不写这一条，模型会默认用 shortcode 并交付一份可访问性
+ * 更差的产物，而那种差别在渲染结果上看不出来。
+ */
+const PREFER = {
+  steps: {
+    instead:
+      "Add `{.steps}` to an ordered list instead. That produces a real `<ol>`, so screen readers " +
+      'announce "list, N items" and the numbering comes from the list itself.',
+    when:
+      "Use this shortcode only when a list cannot do the job: the step titles need to appear in " +
+      "the table of contents, or a step has to contain a `%`-delimited container shortcode " +
+      "(list indentation swallows those).",
+  },
+};
+
+/** NEEDS 的判据，各自一个能在模板里查到的标记。 */
+const NEEDS_PROOF = {
+  contributors: "hugo.Data",
+  download: "download/",
+  "release-card": "release_url",
+  "release-assets": "release_url",
+};
+
+/**
+ * 去掉 Hugo 模板注释块，再做任何文本匹配。
+ *
+ * 必需：`comment.html` 的头注释里就写着 `.Inner` 在解释它为什么要留一句
+ * `{{ if false }}{{ .Inner }}{{ end }}`。不剥注释的话，凡是注释里提到某个
+ * 标记的模板都会被误判。这里恰好两种判法结论相同，但那是巧合。
+ */
+function strip(text) {
+  return text.replaceAll(/\{\{-?\s*\/\*[\s\S]*?\*\/\s*-?\}\}/g, "");
+}
+
+/**
+ * `"allowed" (slice "a" "b" …)` → ["a", "b"]。
+ *
+ * slice 可以跨行（`card.html` 就是），所以先抓 `(slice` 到配对右括号之间的
+ * 整段再取字符串字面量。不用通用模板解析器：这是一个已知形状，为它引一个
+ * 未知的失败面不值得。形状变了就抽不到，而抽不到会在下面以非零退出报出来。
+ */
+function allowed(text) {
+  const at = text.indexOf('"allowed"');
+  if (at < 0) return null;
+  const open = text.indexOf("(slice", at);
+  if (open < 0) return null;
+  let depth = 0;
+  let end = -1;
+  for (let i = open; i < text.length; i += 1) {
+    if (text[i] === "(") depth += 1;
+    else if (text[i] === ")") {
+      depth -= 1;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  if (end < 0) return null;
+  return [...text.slice(open, end).matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+}
+
+/** `"form" "positional"` → "positional"。没写就是 named（模板里的默认）。 */
+function form(text) {
+  const m = /"form"\s+"([a-z]+)"/.exec(text);
+  return m ? m[1] : "named";
+}
+
+/** 读 Inner 决定调用形式：读了必须成对或自闭合，没读则不能带闭合标签。 */
+function inner(text) {
+  if (/\.InnerDeindent\b/.test(text)) return "InnerDeindent";
+  if (/\.Inner\b/.test(text)) return "Inner";
+  return null;
+}
+
+/**
+ * 空 body 时模板是否明确警告并放弃渲染。
+ *
+ * 四个容器分两种：`fields` / `tabs` 有 "rendering nothing" 那条 warn，
+ * `cards` / `steps` 没有，静默产出一个空容器。两种都是错的用法，但症状不同 ——
+ * 前者能在构建日志里看到，后者只能在页面上看到。这个差别抽得出来，就不手写。
+ */
+function warnsWhenEmpty(text) {
+  return /warnf[^}]*rendering nothing/.test(text);
+}
+
+/** `validate-enum` 的 allowed + fallback，只有 badge 用到。 */
+function enums(text) {
+  const out = [];
+  for (const m of text.matchAll(
+    /partial\s+"validate-enum\.html"\s+\(dict([\s\S]{0,400}?)\)\s*-?\}\}/g,
+  )) {
+    const body = m[1];
+    const key = /"key"\s+"([^"]+)"/.exec(body);
+    const values = allowed(body);
+    if (key && values) out.push({ key: key[1], values });
+  }
+  return out;
+}
+
+/**
+ * 一句话英文说明。**手写，不是翻译产物。**
+ *
+ * 模板头注释是中文，skill 是英文，机械搬不过来。也不要照搬注释里的调用示例 ——
+ * `xref` 的注释写着 `{{< xref fig="2.3" >}}`，而它读 Inner，那样调用是硬错。
+ *
+ * 少一条就非零退出（见下），所以加 shortcode 的人必须在这里写一句。
+ */
+const DESCRIPTIONS = {
+  badge: "Inline status badge.",
+  "book-equations": "List of every numbered equation on the page, in source order.",
+  "book-examples": "List of every numbered example on the page, in source order.",
+  "book-figures": "List of every numbered figure on the page, in source order.",
+  "book-tables": "List of every numbered table on the page, in source order.",
+  "book-toc": "Table of contents for the current section.",
+  card: "One card in a grid. Must be wrapped in `cards`.",
+  cards: "Grid container for `card`. Takes no parameters of its own.",
+  cast: "Terminal session recording from an asciicast file.",
+  comment: "Author note kept in the source and dropped from the output.",
+  contributors: "Contributor avatar wall built from a local data file. Makes no network requests.",
+  download: "Download section with per-channel install instructions, built from a data file.",
+  eg: "Numbered example. Caption on top, body is usually one or more code fences.",
+  eq: "Numbered equation. Body is LaTeX.",
+  field: "One field definition. Must be wrapped in `fields`.",
+  fields: "Definition list of `field` children.",
+  fig: "Numbered figure. Either `src` for an image, or a body for arbitrary block content.",
+  include: "Pull in another file: a page resource, an assets mount, or another content file.",
+  kbd: "Key sequence, rendered with separators and a screen-reader-only reading.",
+  mindmap: "Mind map drawn in the browser from a nested Markdown list body.",
+  param: "Print a page parameter, falling back to site config. Scalars only.",
+  redoc: "Render an OpenAPI document with Redoc (three-column, read-only).",
+  "release-assets": "Turn `sha*sum` output into a table of download links and checksums.",
+  "release-card": "Release card: version, date, and four links derived from `release_url`.",
+  steps: "Numbered steps driven by headings in the body.",
+  swagger: 'Render an OpenAPI document with Swagger UI (includes the "try it" panel).',
+  tab: "One tab inside `tabs`.",
+  tabs: "Tab group.",
+  tbl: "Numbered table. Body is a Markdown table.",
+  xref: "Cross-reference to a numbered target or an anchor, with a language-correct label.",
+};
+
+const names = readdirSync(DIR)
+  .filter((f) => f.endsWith(".html"))
+  .map((f) => f.slice(0, -".html".length))
+  .sort();
+
+const specs = [];
+const unknown = [];
+
+for (const name of names) {
+  const raw = readFileSync(join(DIR, name + ".html"), "utf8");
+  const body = strip(raw);
+  let params = allowed(body);
+  let via = null;
+
+  if (params === null && DELEGATES[name]) {
+    via = DELEGATES[name];
+    params = allowed(strip(readFileSync(via, "utf8")));
+  }
+
+  const spec = {
+    name,
+    form: form(body),
+    params,
+    via,
+    inner: inner(body),
+    enums: enums(body),
+    needs: NEEDS[name] ?? null,
+    warnsWhenEmpty: warnsWhenEmpty(body),
+  };
+
+  // NEEDS 是手写的，所以要证明它说的那个依赖还在。模板改成不读数据了而这里
+  // 还在要求作者建文件，是一条会让人白忙的假指令。
+  const proof = NEEDS_PROOF[name];
+  if (proof && !raw.includes(proof))
+    unknown.push(`${name}: NEEDS says it reads ${proof}, template no longer mentions it`);
+
+  // 归不到任何一类的才是漏抽。具名参数必须有白名单；positional / none 本来
+  // 就没有。这条是这个生成器唯一的失败模式，所以它必须响 —— 不会失败的检查
+  // 不算检查。
+  if (spec.form === "named" && spec.params === null) {
+    unknown.push(`${name}: named params but no "allowed" whitelist found`);
+  }
+  if (!DESCRIPTIONS[name]) {
+    unknown.push(`${name}: no English description; add one to DESCRIPTIONS in this script`);
+  }
+  if (spec.form === "positional" && !POSITIONAL[name]) {
+    unknown.push(
+      `${name}: positional form but no argument shape; add one to POSITIONAL in this script`,
+    );
+  }
+  // 容器必须读 Inner。反了就是这张手写表跟模板脱节了 —— 而它一脱节，生成的
+  // 「Always paired」那句就在教一个会硬错的用法。
+  if (CONTAINERS[name] && !spec.inner) {
+    unknown.push(`${name}: CONTAINERS lists it, but the template does not read the body`);
+  }
+  // SHOW 里写错一个名字，生成的示例就会教一个不存在的参数 —— 正是这份文件存在
+  // 的理由所要防的那件事。
+  for (const p of SHOW[name] ?? []) {
+    if (!(spec.params ?? []).includes(p)) {
+      unknown.push(`${name}: SHOW names "${p}", which is not in the template's allowed list`);
+    }
+  }
+  specs.push(spec);
+}
+
+// 反向：手写的三张表里有模板已经不存在的条目。删 shortcode 时这里会响。
+for (const [label, table] of [
+  ["DESCRIPTIONS", DESCRIPTIONS],
+  ["POSITIONAL", POSITIONAL],
+  ["NEEDS", NEEDS],
+  ["CONTAINERS", CONTAINERS],
+  ["CHILD_OF", CHILD_OF],
+  ["PREFER", PREFER],
+  ["NOTES", NOTES],
+  ["SHOW", SHOW],
+]) {
+  for (const name of Object.keys(table)) {
+    if (!names.includes(name))
+      unknown.push(`${label} has "${name}" but ${DIR}/${name}.html does not exist`);
+  }
+}
+
+if (unknown.length > 0) {
+  for (const n of unknown) console.error(`FAIL  ${n}`);
+  console.error(
+    "\n抽取失败，不是模板的错就是这个脚本的模式过窄。两种都要改代码，" +
+      "不要靠让它静默产出一张短表混过去 —— 短表会让模型以为那些参数不存在。",
+  );
+  process.exit(1);
+}
+
+/**
+ * 调用形式一行说清。这是整份表里最要紧的一列 —— 混用是硬构建错误，而模型没有
+ * 别的办法知道某个 shortcode 读不读 Inner。
+ */
+function callForm(s) {
+  // 用真实参数名当占位，不写 `key="value"`：模型会照着抄，抄一个不存在的名字
+  // 出来的正是本文件要防的那种静默失效。取前两个，够看出形状。
+  // 取前两个参数当占位对大多数条目都对，但对参数互斥的不对。只有 xref 这一个，
+  // 所以给一张覆写表而不是建通用的互斥声明机制。
+  const shown = SHOW[s.name] ?? (s.params ?? []).slice(0, 2);
+  const attrs =
+    s.form === "named" && shown.length > 0
+      ? " " + shown.map((p) => `${p}="…"`).join(" ")
+      : s.form === "positional"
+        ? " " + POSITIONAL[s.name].shape
+        : "";
+  if (s.inner) {
+    const paired = `\`{{< ${s.name}${attrs} >}}\` … \`{{< /${s.name} >}}\``;
+    // `in` 而不是取值判真：steps 的值是 null（没有固定子 shortcode），但它同样
+    // 必须成对。
+    if (s.name in CONTAINERS) {
+      const child = CONTAINERS[s.name];
+      const empty = s.warnsWhenEmpty
+        ? "an empty body warns and renders nothing"
+        : "an empty body renders an empty container and says nothing";
+      const wraps = child ? `, wrapping one or more \`${child}\`` : "";
+      return [`${paired}${wraps}.`, `Always paired — ${empty}.`].join(" ");
+    }
+    return [
+      `${paired} — **or** self-closed \`{{< ${s.name}${attrs} />}}\`.`,
+      "Every call in a page must be closed or self-closed; a bare opening tag is a build error.",
+    ].join(" ");
+  }
+  return `\`{{< ${s.name}${attrs} >}}\` — never closed. Adding \`{{< /${s.name} >}}\` is a build error.`;
+}
+
+const lines = [];
+lines.push("# Shortcode reference");
+lines.push("");
+lines.push(
+  "Generated from the templates by `scripts/gen-skill-shortcodes.js`. Do not edit by hand — " +
+    "`node scripts/gen-skill-shortcodes.js --check` fails if this file drifts from them.",
+);
+lines.push("");
+lines.push("Two rules cause most build failures, and neither is guessable from a call site:");
+lines.push("");
+lines.push(
+  "1. **A misspelled parameter does not fail the build.** The theme warns and names the allowed " +
+    "parameters, then ignores the value — so `titel=` for `title=` leaves the build green and the " +
+    "title simply absent. Build with `--panicOnWarning` to turn that into a failure. " +
+    "Only the names listed below exist.",
+);
+lines.push(
+  "2. **Paired vs unpaired is fixed per shortcode, and getting it wrong fails the build.** " +
+    "Each entry below states which form it takes. Two exact errors, both verified:",
+);
+lines.push("");
+lines.push(
+  "   - Closing one that takes no body: " +
+    '`shortcode "badge" does not evaluate .Inner or .InnerDeindent, yet a closing tag was provided`',
+);
+lines.push(
+  "   - Leaving one that takes a body unclosed: " +
+    '`shortcode "card" must be closed or self-closed`',
+);
+lines.push("");
+lines.push(
+  "A third failure is silent: self-closing a container. `{{< cards />}}` builds with no warning at " +
+    'all and renders `<div class="td-cards"></div>` — an empty grid.',
+);
+lines.push("");
+lines.push("## Contents");
+lines.push("");
+for (const s of specs) lines.push(`- [${s.name}](#${s.name}) — ${DESCRIPTIONS[s.name]}`);
+lines.push("");
+
+for (const s of specs) {
+  lines.push(`## ${s.name}`);
+  lines.push("");
+  lines.push(DESCRIPTIONS[s.name]);
+  lines.push("");
+  lines.push(callForm(s));
+  lines.push("");
+
+  if (s.form === "named" && s.params && s.params.length > 0) {
+    lines.push(`Parameters: ${s.params.map((p) => `\`${p}\``).join(", ")}`);
+    if (s.via) lines.push(`(validated in \`${s.via}\`, shared with the other OpenAPI renderer)`);
+    lines.push("");
+  } else if (s.form === "positional") {
+    lines.push(`Positional, not named. ${POSITIONAL[s.name].note}`);
+    lines.push("Named parameters are rejected and warned about, not rendered.");
+    lines.push("");
+  } else if (s.form === "none") {
+    lines.push("Takes no parameters.");
+    lines.push("");
+  }
+
+  for (const e of s.enums) {
+    lines.push(`\`${e.key}\` must be one of ${e.values.map((v) => `\`${v}\``).join(", ")}.`);
+    lines.push("");
+  }
+
+  if (NOTES[s.name]) {
+    lines.push(NOTES[s.name]);
+    lines.push("");
+  }
+
+  if (PREFER[s.name]) {
+    lines.push(`**Not the primary path.** ${PREFER[s.name].instead}`);
+    lines.push("");
+    lines.push(PREFER[s.name].when);
+    lines.push("");
+  }
+
+  if (CHILD_OF[s.name]) {
+    lines.push(
+      `Only valid inside \`${CHILD_OF[s.name]}\`. On its own it renders outside the layout it needs.`,
+    );
+    lines.push("");
+  }
+
+  if (s.needs) {
+    lines.push(`**Also requires:** ${s.needs}`);
+    lines.push("Without it the shortcode renders nothing at all — the build still succeeds.");
+    lines.push("");
+  }
+}
+
+const out =
+  lines
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trimEnd() + "\n";
+
+if (process.argv.includes("--check")) {
+  // 行尾统一成 LF 再比。磁盘上是 LF（.gitattributes），拼出来的也是 LF，但读回
+  // 来的那份在 CRLF 检出下会带 \r —— 不归一化的话只在作者机器上绿。
+  const disk = existsSync(OUT) ? readFileSync(OUT, "utf8").replaceAll("\r\n", "\n") : "";
+  if (disk !== out) {
+    console.error(`FAIL  ${OUT} does not match the shortcode templates`);
+    console.error("run: node scripts/gen-skill-shortcodes.js");
+    process.exit(1);
+  }
+  console.log(`ok  ${OUT} matches ${specs.length} shortcode templates`);
+} else {
+  writeFileSync(OUT, out);
+  const inners = specs.filter((s) => s.inner).length;
+  console.log(
+    `wrote ${OUT}  ${specs.length} shortcodes: ` +
+      `${inners} take a body, ${specs.length - inners} do not; ` +
+      `${specs.filter((s) => s.needs).length} need site-side data`,
+  );
+}

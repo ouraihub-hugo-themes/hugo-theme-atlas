@@ -270,7 +270,7 @@ skills/hugo-theme-atlas/
 | 参数白名单 | `validate-shortcode.html` 调用里的 `"allowed" (slice …)` | 参数表主体；防打错名 |
 | 调用形式 | 同一调用里的 `"form"` 键：`named`（默认）/ `none` / `positional` | 防写成 `{{< kbd "x" >}}` 而它要 `key="x"` |
 | 成对还是自闭合 | 模板里是否出现 `.Inner` / `.InnerDeindent` | 防混用（那是硬错，§0 问题 2） |
-| 枚举取值 | `validate-enum` 调用的取值列表 | `tone="infoo"` 这类值错 |
+| 枚举取值 | `validate-enum` 调用的取值列表 | `tone="infoo"` 这类值错。**但 shortcode 里只有 1 处**（§10.1 第 2 项），收益远小于预期 |
 
 **`--check` 门禁怎么做**（照 `scripts/check-i18n.js` 的模式）：重新生成到内存，
 与磁盘上的 `shortcodes.md` 比对，不一致就非零退出并打印 diff。挂进 `pnpm check`。
@@ -349,27 +349,55 @@ clone-and-own 分发下他拿的是 `themes/` 里的一份主题）。
 
 ## 10. 动笔前要先验的事
 
-**§5、§8、§9.1 已经验过，判据都在上面。** 下面是还没验的，写之前逐条落地：
+**§5、§8、§9.1 已经验过，判据都在上面。**
+
+### 10.1 已补验的六项（2026-09-03）
+
+1. **`filetree` 是围栏语言，不是 shortcode。** `layouts/_markup/render-codeblock-filetree.html`。
+   连它一共 **9 个围栏语言**：`checksums` `chem` `echarts` `filetree` `gallery`
+   `goat` `math` `mermaid` `plantuml`（判据：`ls layouts/_markup/render-codeblock-*.html`）。
+   `mermaid` / `echarts` 两个名字确认存在，先前是推断。
+2. **`validate-enum` 在 shortcode 里只有 1 处**（`badge.html:31`，
+   `neutral|info|success|warning|danger`）。另外 7 处都在 landing / shell partial
+   里。所以 §7 把「枚举取值」列为可抽是**过头了** —— 抽出来只有一条。
+3. **3 个位置参数的语义已读到**：`kbd` 收若干按键名（有序序列）；`param` 收一个
+   页面参数名；`download` 收一个 `data/download/<key>.yaml` 的文件名。
+4. **30/30 模板的头注释首行都是「一句话 + 调用示例」**，但**是中文**。skill 是
+   英文（§4），所以描述这一列**不能机械搬**，要照注释手写英文。
+5. **`.Inner` 分类实测**：15 个读（`InnerDeindent` 11 + `Inner` 4），15 个不读。
+   `comment.html` 那个是 `{{ if false }}{{ .Inner }}{{ end }}` —— 故意写成永不执行
+   的形式，只为让 Hugo 的静态扫描认定它可成对。**生成器按文本 grep 会把它算进
+   「读」，而这一次结论恰好正确**（它确实允许成对）。但这说明抽取必须**跳过注释块**，
+   否则别处的注释里提到 `.Inner` 就会误判。
+6. **头注释的示例本身可能是错的。** `xref` 的注释写 `{{< xref fig="2.3" >}}`，而它
+   读 `.InnerDeindent`，实际调用必须是 `{{< xref fig="1" />}}`（判据：
+   `exampleSite/content/docs/components/book.md:66`）。**模型照注释抄会硬错。**
+   → 生成的事实（读不读 `.Inner`）比注释可靠，冲突时以生成的为准，并且**注释里的
+   示例不要原样搬进 skill**。
+
+### 10.2 还没验的
+
+下面这些写之前逐条落地：
 
 | # | 要验什么 | 怎么验 | 为什么不能靠推断 |
 |---|---|---|---|
 | 1 | 从零建一个新站的最小步骤 | 在仓库外 `hugo new site`，拷主题，贴 §8 的配置，`hugo server` 打开 | §9.1 已证明 `pnpm dev` 不是这条路；最小配置集要靠真建一次才敢写 |
-| 2 | `filetree` 是什么 | 读 `layouts/` 与 `exampleSite/content/docs/components/filetree.md` | 有文档页但**不在那 30 个 shortcode 里**，语法未知（可能是围栏语言，也可能是类名标记）——**这是推断，不要当事实** |
-| 3 | ` ```mermaid ` / ` ```echarts ` 两个围栏名 | 读对应 render hook | 这两个名字是我推的，没读过 |
-| 4 | 3 个位置参数 shortcode 的参数语义 | 读 `kbd` `param` `download` 的文档注释 | §7 已证明抽不出来，必须手写 |
-| 5 | `validate-enum` 的调用点与取值 | `grep -rn validate-enum layouts/` | §7 那张表把它列为可抽，但**没核过写法**，可能跟 `allowed` 一样有委托的情况 |
-| 6 | 组件清单表里每个条目名与实际文件名一致 | 对 `layouts/_shortcodes/` 做 `ls` | `HANDOFF.md` §9 明确「核对以 `ls` 为准，不以表为准」 |
+| 2 | 9 个围栏语言各自的属性语法 | 读 `render-codeblock-*.html` | 只确认了名字；`{num="1" caption="…"}` 这类块属性的允许键没核 |
+| 3 | 22 个 landing section 的字段 | 读 `layouts/_partials/landing/section/*.html` | skill 要不要覆盖 landing 还没定；覆盖的话字段量比 shortcode 还大 |
 
-第 2、3 项是同一类问题：**组件不止 shortcode 一种形态**（还有围栏语言、类名标记
-如 `.steps` / `.cards`）。清单表要是只列 shortcode，模型就会以为 `filetree` 得写成
-`{{< filetree >}}`。这个错误的形态是「构建绿、页面上什么都没有」。
+**组件不止 shortcode 一种形态** —— 还有 9 个围栏语言、类名标记（`.steps`
+`.cards`）、22 个 landing section。清单表只列 shortcode 的话，模型会以为
+`filetree` 得写成 `{{< filetree >}}`。这个错误的形态是「构建绿、页面上什么都没有」。
+
+**范围决定（现在定）：第一版覆盖 30 个 shortcode + 9 个围栏语言，不覆盖 landing。**
+理由：landing 是整页布局，作者是在写 `content/landing/index.md` 的 front matter，
+那是另一类任务，值得单独一份附属文件；先把正文创作这条路做完整。
 
 ## 11. 交付顺序
 
 按用户已选的第一步排：
 
-1. **生成器 + `shortcodes.md` + `--check` 门禁**（§7）。先做这个，因为它是唯一
-   有漂移风险的一份，且体量最大。
+1. ~~**生成器 + `shortcodes.md` + `--check` 门禁**（§7）。~~ **已完成，见 §12。**
 2. `config.md`（§8，材料齐了，翻译工作）。
 3. `commands.md`（§9，先做完 §10 第 1 项）。
 4. `SKILL.md`（导航 + 组件清单，需要 §10 第 2/3/5 项的结论）。
@@ -378,3 +406,77 @@ clone-and-own 分发下他拿的是 `themes/` 里的一份主题）。
 
 提交纪律照仓库铁律：生成物与源码分开提交。提交前查机器路径与参照信息
 （`atlas-no-reference-mentions` 那条记忆里的 `git grep` 命令）。
+
+## 12. 第一步的执行记录（2026-09-03）
+
+`scripts/gen-skill-shortcodes.js`（500 行）→ `skills/hugo-theme-atlas/shortcodes.md`
+（319 行，30 个条目）。挂进 `pnpm check` 末位，另有 `pnpm gen:skill`。
+
+### 12.1 抽取出来的事实
+
+| 事实 | 怎么抽 | 覆盖 |
+|---|---|---|
+| 参数白名单 | `"allowed" (slice …)`，跨行按配对括号取 | 23 个（含 2 个走 `DELEGATES` 到 `openapi-embed.html`） |
+| 调用形式 | `"form"` 键 | 3 个 positional、4 个 none、其余 named |
+| 成对/自闭合 | 剥掉注释块后查 `.Inner` / `.InnerDeindent` | 15 个读 body，15 个不读 |
+| 空 body 是否出声 | `warnf … rendering nothing` | `fields` `tabs` 出声，`cards` `steps` 静默 |
+| 枚举取值 | `validate-enum` 的 allowed | 1 个（`badge.tone`） |
+
+### 12.2 手写的六张小表，各自带断言
+
+生成不出来的都收在脚本顶部的常量里，**每一张都有一条能让门禁非零退出的断言** ——
+手写表最容易变成没人维护的假事实，所以它们不能只是注释。
+
+| 表 | 装什么 | 断言 |
+|---|---|---|
+| `DESCRIPTIONS` | 30 句英文说明 | 少一条就非零；有模板已删的条目也非零 |
+| `POSITIONAL` | 3 个位置参数的形状与语义 | `form` 是 positional 而表里没有就非零 |
+| `CONTAINERS` | 4 个容器要求的子元素 | 列了它但模板不读 body 就非零 |
+| `CHILD_OF` | 3 个子元素反查父容器 | 同上的存在性检查 |
+| `NEEDS` + `NEEDS_PROOF` | 4 个还需要站点侧文件的 | 模板里查不到对应标记就非零 |
+| `SHOW` | 1 个参数互斥的示例覆写 | 写了不在白名单里的参数名就非零 |
+| `PREFER` | 1 个有更该用写法的（`steps`） | 存在性检查 |
+
+### 12.3 七种失败模式，全部实测响过
+
+判据都是临时改一处再跑，改回后确认恢复绿：
+
+1. 生成物被改一个字 → `--check` 非零
+2. 模板参数变了而生成物没跟 → `--check` 非零
+3. 新增模板但没写描述 → 非零
+4. `NEEDS` 说读某个东西而模板已不读 → 非零
+5. `SHOW` 写了不存在的参数名 → 非零
+6. `CONTAINERS` 与模板脱节 → 非零（代码路径同 4，未单独触发）
+7. 手写表里有已删模板的条目 → 非零（代码路径同 3）
+
+### 12.4 生成物里的四条断言，用真构建验过
+
+**门禁只证明文件与模板一致，不证明文件里的说法是对的。** 所以另建了一个临时夹具
+（`exampleSite/content/docs/zzverify/`，验完已删）真构建：
+
+| 断言 | 实测结果 |
+|---|---|
+| 不读 body 的带闭合标签 → 硬错 | `shortcode "badge" does not evaluate .Inner or .InnerDeindent, yet a closing tag was provided` |
+| 读 body 的不成对 → 硬错 | `shortcode "card" must be closed or self-closed` |
+| 自闭合容器 → 构建绿、渲染空 | `cards` 无警告，产出 `<div class="td-cards"></div>`；`fields` warn 后什么都不出 |
+| 参数名打错 → 构建绿 | warn 里带上了允许的参数名，值被忽略，`--panicOnWarning` 才拦 |
+
+前两条的错误原文已经嵌进生成物的开头 —— 模型见过原文，撞上时能对号。
+
+### 12.5 顺手纠正的三处
+
+- **`steps` 不是主路径。** 主路径是给有序列表标 `{.steps}`（真 `<ol>`，屏幕阅读器
+  报「列表，N 项」）。`exampleSite` 里 `{{< steps >}}` 一次调用都没有。不写这条，
+  模型会默认用 shortcode 并交付可访问性更差的产物，而那个差别在渲染结果上看不出来。
+- **`xref` 的四个 kind 互斥**（`xref.html:22` warn「accepts only one of」），所以
+  示例不能并列两个。
+- **示例用真实参数名而不是 `key="value"`。** 模型会照抄占位符，抄出来的正是这份
+  文件要防的那种静默失效。
+
+### 12.6 已知未做
+
+- `scripts/` 目录本来不在 `lint` / `format:check` 覆盖范围内（`lint` 只看
+  `src/ts`，10 个 script 里 4 个不是 prettier 格式）。新脚本跑了 prettier，但
+  没把覆盖范围扩到 `scripts/` —— 那是无关的清理。
+- 围栏语言的属性语法（§10.2 第 2 项）没做。`shortcodes.md` 只覆盖 shortcode，
+  9 个围栏语言要等下一份文件。
