@@ -16,93 +16,53 @@
 
 ## 摘要
 
-**一个阻塞级缺陷压过了任务书里的全部七处怀疑：全站 40 个 sprite 图标一个都没
-渲染出来。** 它同时是好几节"看起来不对"的根因，也使第 3 条怀疑（partial 档图标
-的语义）暂时无法回答。
+七处怀疑里，**三处不过**（相邻同色节的分界、logo 墙的灰度与定位、暗色 CTA 偏亮），
+**四处过**（3.2% 的条、capabilities 的 partial 图标、timeline 收尾、暗色下的 featured
+边框与窗口圆点），**一处这次的 fixture 覆盖不到**（plain 档下的卡片边界）。
 
-其余六处怀疑里，两处不过（相邻同色节的分界、logo 墙的灰度与定位），三处过
-（3.2% 的条、timeline 收尾、暗色下的 featured 边框与窗口圆点），一处这次的
-fixture 覆盖不到（plain 档下的卡片边界）。
+逐节另有三处布局问题（`#metrics-1` 基线不齐、`#capabilities-17` 右侧留白、
+`#logo-wall-20` 偏右）。
+
+没有阻塞级缺陷。
 
 ---
 
-## 一、阻塞：sprite 图标全站未渲染
+## 一、一条先前的错报，已排除
 
-### 现象
+本文档的第一版报了一个阻塞级缺陷：“全站 40 个 sprite 图标全部未渲染，
+`<use>` 的 `getBBox()` 全为 0”。**那是错的，已删。**
 
-页面上看不到任何图标。受影响的至少有：
+原因：启动 hugo server 的命令超时后，有一个早先的残留进程仍占着 1319 端口，
+测量连到的是**修复前的旧产物**。仓库在 `78c99d1 fix(icon): sprite symbols are
+inlined so the browser resolves them` 已经修好，该提交就在 HEAD 里。
 
-| 位置 | 本该显示 |
-| --- | --- |
-| 导航栏 | 书本 logo |
-| `#hero-0` | 按钮内的 `book` |
-| `#cards-2` | `rocket` / `gear` / `book` |
-| `#principles-4` | `book` / `lock` / `scale-balanced` |
-| `#pricing-7` | 9 个套餐 `check` |
-| `#pricing-compare-8` | `check` / `close`（整两行空白） |
-| `#code-plate-9`、`#command-box-10` | 复制按钮 `copy` |
-| `#download-14` | `box` / `file-zipper` / `code-branch` |
-| `#capabilities-17` | `check` / `angle-down` / `close` |
+用当前产物重测的结果：
 
-### 为什么量化检查没抓到
-
-这是这个 bug 最值得注意的地方 —— **所有可断言的指标都是正常的**：
-
-- `/dist/icons.svg` 返回 **200**，25633 字节
-- sprite 里 `id="check"`、`id="angle-down"` 都在，且各自带正确的 `viewBox`
-  （如 `<symbol id="check" viewBox="0 0 448 512">`）
-- 页面无任何失败请求（监听 `response` >= 400 与 `requestfailed`，结果为 none）
-- 外层 `<svg>` 有 16×16 的 `getBoundingClientRect()`
-- `fill` 计算值正确（`rgb(36,95,148)` / `rgb(61,78,97)`，随 `data-td-status` 变化）
-- DOM 结构完全符合预期
-
-唯一露馅的指标是 **`<use>` 元素的 `getBBox().width` 全部为 0**。
-
-### 定位过程
-
-对全页 40 个 `svg.td-icon` 逐个测 `use.getBBox()`，**无一例外全是 0 宽**，
-说明不是 capabilities 或某个 symbol 的问题，是引用机制本身。
-
-然后做了一次对照实验 —— 把 sprite 文本 fetch 下来内联进 DOM，再把一个图标的
-`href` 从 `/dist/icons.svg#check` 改成 `#check`：
-
-```js
-const txt = await (await fetch('/dist/icons.svg')).text();
-const holder = document.createElement('div');
-holder.innerHTML = txt;
-document.body.insertBefore(holder, document.body.firstChild);
-
-const u = document.querySelector('#capabilities-17 svg.td-icon use');
-u.setAttribute('href', '#check');
-// 等两帧后
-u.getBBox();   // { w: 14, h: 13 }   ← 从 0×0 变成有几何
+```
+INLINED_SYMBOLS=12   EXTERNAL_USE=0
+=== ICONS ===  total: 42,  zeroWidth: 0
+#td-i-book  hero-0  bboxW=13
+#td-i-rocket  cards-2  bboxW=15
+#td-i-gear  cards-2  bboxW=16
 ```
 
-`bbox` 由 `0×0` 变为 `14×13`。
+42 个图标全部正常渲染，`href` 均为同文档的 `#td-i-*`，零个跳文件引用。
 
-视觉上同步确认：对 `#capabilities-17` 第一个 `<li>`（内容为「四种阅读外壳」）
-截了改动前后两张图。
+### 值得留下的两件事
 
-- **改动前**：整行只有「四种阅读外壳」四个字，文字左侧是空白，没有任何图形。
-- **改动后**：同一行文字左侧出现一个深蓝色的勾（✓），字号与文字相当。
+**1. 那个 bug 本身的知识已在仓库里。**
+`layouts/_partials/content/icon.html` 的注释完整记录了它：跳文件 `<use>` 只有
+Firefox 实现过、SVG 2 已从规范里去掉，实测 `getBBox().width` 从 0 变 13.125；
+以及它为何静默（sprite 200、symbol 与 viewBox 都在、外层 svg 有盒子、fill 正确，
+唯一露馅的是 `<use>` 自己的 `getBBox()`）。
 
-两张图除这个勾之外完全一致 —— 文字位置、缩进、行高都没变，所以变化只来自
-图标本身开始绘制。
+**下一个执行者先读那份注释，能省下整轮排查。**
 
-### 结论
-
-**跨文件 `<use href="/dist/icons.svg#id">` 没有解析。** symbol 定义本身没问题，
-换成同文档内的 `#id` 立刻就好。
-
-未继续深挖根因。怀疑方向：`layouts/baseof.html` 中 sprite 的引入方式
-（该文件在本次执行时处于已修改未提交状态），或 sprite 根元素上的
-`style="display:none"` 与外部引用的交互。**根因排查留给下一步。**
-
-### 连带影响（都不是独立问题）
-
-- `#pricing-compare-8`「私有仓库」「合规审计」两整行空白
-- `#command-box-10` 代码块顶部约 40px 的无意义空白灰条
-- `#capabilities-17` 四项之间只剩空格分隔，读起来是散的
+**2. 方法学教训：量之前先确认连的是哪个进程。**
+任务书 §“量之前先等它稳定”列了四次读到中间值的经历。这是第五类，且更隘：
+数据完全自洽，只是来源错了。启动前先 `Get-Process hugo | Stop-Process -Force`，
+并用一条能区分新旧产物的断言把它卡住（例如上面那条
+`INLINED_SYMBOLS` / `EXTERNAL_USE`）。
 
 ---
 
@@ -128,11 +88,32 @@ plain 档的卡片来看。
 
 不需要加最小宽度。
 
-### 3. capabilities 的 partial 档图标 —— 无法回答
+### 3. capabilities 的 partial 档图标 —— 过（但依赖上下文）
 
-图标没渲染出来（见第一节），`angle-down` 到底像不像"部分支持"，这次看不到。
+三档实际渲染出来的形状：
 
-**修好图标后需要重新判断这一条。**
+| 状态 | 图标 | 视觉 |
+| --- | --- | --- |
+| `yes`（四种阅读外壳、打印样式） | `check` | 蓝色勾 ✓ |
+| `partial`（32 种语言） | `angle-down` | 灰色向下尖角 ∨ |
+| `no`（联网功能） | `close` | 灰色叉 ✕ |
+
+**结论：在这个三者并列的语境里，向下尖角能读作“介于两者之间”。**
+
+理由不是它本身像“部分”，而是三个形状构成了一组可区分的梯度：勾是完成、
+叉是否定、尖角既不是勾也不是叉。加上颜色差异（勾是蓝色，后两者是灰色），
+三档一眼能分开。
+
+**两个保留意见：**
+
+1. **脉冲不强。** 向下尖角单独看仍然更像“展开”（它在 FAQ 里就是这个含义）。
+   现在能读对，靠的是旁边有 ✓ 和 ✕ 做对照。如果哪一页只有 partial 一种状态，
+   读者拿不到那组梯度，就会误读。
+2. **灰色把 partial 和 no 推到了同一档。** 两者颜色相同（`rgb(61,78,97)`），
+   只靠形状区分；而 yes 另外有颜色加持。如果希望 partial 读起来“比 no 好”，
+   现在的配色没体现这一层。
+
+不需要换图标。如果要动，改颜色比换字形更直接。
 
 ### 4. logo 墙的灰度 + 半透明 —— 不过（两个问题）
 
@@ -190,10 +171,8 @@ plain 档的卡片来看。
 | 节 | 问题 |
 | --- | --- |
 | `#metrics-1` | 四项基线不齐。四个大数字（29 / 22 / 32 / 0.1.0）顶部对齐，但只有第二项在标签「landing section」下多了一行副标题「这一批四个」，把那一列撑高约一行，四列下沿因此参差。 |
-| `#capabilities-17` | 四项排成 3 列 + 第四项独占第二行，第二行右侧空两个格位。且三列宽度不等（按内容自然宽度排），第一项 x≈130、第二项 x≈600、第三项 x≈1060，间距很大。叠加图标缺失后，四项之间只靠空白分隔，读起来是散的。 |
+| `#capabilities-17` | 四项排成 3 列 + 第四项独占第二行，第二行右侧空两个格位。三列宽度不等（按内容自然宽度排），第一项 x≈130、第二项 x≈600、第三项 x≈1060，间距很大，整节右下方空一大块。 |
 | `#logo-wall-20` | 三个 logo 集中在 x≈620～945，而节标题在 x=96；既未左对齐也未真居中，左侧空出约半个节宽。 |
-| `#command-box-10` | 代码块顶部有一条约 40px 高、横贯整个块宽的浅灰色空白带（复制按钮所在），带内无任何可见内容，与下方代码区有一条分界线。图标问题的连带。 |
-| `#pricing-compare-8` | 「私有仓库」「合规审计」两行的三个数据列全空（只有行背景色），而同表「shortcode 数量」行的 29 和「响应时间」行的文字都正常显示 —— 差别就在前两行靠图标表达。图标问题的连带。 |
 
 ### 360×800
 
@@ -205,10 +184,11 @@ plain 档的卡片来看。
 ## 四、未覆盖 / 存疑
 
 - **打印媒体**：`shots/print-full.png` 已生成，但整页过长，**未逐节细看**。
-  任务书里"整页打印是否可读、有没有哪节变成空白或一团糊"这个问题**没有回答**。
+  任务书里“整页打印是否可读、有没有哪节变成空白或一团糊”这个问题**没有回答**。
+  （注：那批截图出自旧产物，重看前应先重截。）
 - **悬停过渡**：logo 墙恢复彩色的过渡效果，静态截图无法验证。
 - **plain 档卡片**：见怀疑 1，需要专门造 fixture。
-- **图标 bug 的根因**：只定位到"跨文件 use 不解析"，未找到为什么。
+- **图标 bug 的根因**：不存在这个问题 —— 已由 `78c99d1` 修复，本文档第一版的报告为误报。
 
 ---
 
@@ -222,6 +202,17 @@ header 下面。`.td-navbar` 是 `position: sticky`、高 50px、`z-index: 100`�
 
 （顺带：`#pricing-7` 的 `scroll-margin-top` 是 `0px`。锚点跳转会不会被 header
 遮住是另一个问题，本次未验证。）
+
+**2026-09-03 验掉了：不是缺陷，是量错了属性。** `scroll-margin-top` 为 0 说明
+不了什么 —— 挡住遮挡的是滚动容器上的 `scroll-padding-top`，而
+`base.css:6` 给 `html` 写的是 `calc(var(--td-shell-nav-h) + 1rem)`，实测
+computed 值 66px，navbar 50px。这条在滚动容器上，所以对**所有**锚点一起生效，
+不必逐个元素写 `scroll-margin`。
+
+实测：landing 页 25 个 `section[id]` 逐个跳过去，等滚动稳定后量顶边与
+navbar 底边（50px）的关系 —— **零个被遮挡**。`#pricing-7` 顶边落在 66px，
+标题 130px。已滚到文档底部的节要排除，那种情况顶边在 navbar 上方是因为文档
+不够长，不是遮挡。
 
 ---
 
