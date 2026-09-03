@@ -16,6 +16,7 @@ sections, and 4 reading shells.
 |---|---|
 | `shortcodes.md` | Writing or fixing any `{{< … >}}` call. Generated from the templates — it is the authority on parameter names and call form. |
 | `config.md` | Setting up or debugging `hugo.toml`. Five `markup` settings the theme cannot default. |
+| `fences.md` | Adding a diagram, chart, equation, file tree, image grid, or checksum table. Also generated — it is the authority on fence attributes. |
 | `commands.md` | Starting a site, building, previewing, or wiring up search. |
 
 Do not guess a shortcode's parameters. `shortcodes.md` lists every accepted name for
@@ -85,14 +86,11 @@ Several components are **fence languages, not shortcodes** — write them as a f
 code block with that language:
 
 `mermaid`, `echarts`, `plantuml`, `math`, `chem`, `goat` (ASCII diagrams),
-`filetree`, `gallery`, `checksums`.
+`filetree`, `gallery`, `checksums`. See `fences.md` for each one's body format and
+attributes.
 
-```mermaid
-graph LR
-  A --> B
-```
-
-Writing `{{< mermaid >}}` does not work; there is no such shortcode.
+Writing `{{< mermaid >}}` fails the build with `template for shortcode "mermaid" not
+found` — one of the few loud failures in this theme.
 
 ## Authoring rules
 
@@ -119,7 +117,9 @@ Work down this list — it is ordered by how often each is the cause and how sil
 3. Does the shortcode need site-side data (`data/*.yaml`, `release_url` in front
    matter)? Those render nothing when it is absent.
 4. Is the relevant `markup` setting present? See `config.md`.
-5. Was it a fence language written as a shortcode, or the reverse?
+5. For a fence: is the brace-attribute line rendering as text? That means
+   `attribute.block = true` is missing. Is a diagram showing its source instead? For
+   `plantuml` that means `params.ui.plantuml.server` is unset.
 6. Is it an icon name missing from `data/icons.json`?
 
 Then rebuild with `--panicOnWarning` and read the warnings.

@@ -29,8 +29,8 @@
     "check:fallbacks": "node scripts/check-fallbacks.js",
     "i18n:sync": "node scripts/check-i18n.js --sync",
     "check:vendor": "node scripts/gen-vendor.js --check",
-    "check:skill": "node scripts/gen-skill-shortcodes.js --check",
-    "gen:skill": "node scripts/gen-skill-shortcodes.js",
+    "check:skill": "node scripts/gen-skill-shortcodes.js --check && node scripts/gen-skill-fences.js --check",
+    "gen:skill": "node scripts/gen-skill-shortcodes.js && node scripts/gen-skill-fences.js",
     "vendor": "node scripts/gen-vendor.js",
     "fixture:image": "node scripts/make-fixture-image.js"
   },

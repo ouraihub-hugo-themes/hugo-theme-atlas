@@ -382,7 +382,7 @@ clone-and-own 分发下他拿的是 `themes/` 里的一份主题）。
 | # | 要验什么 | 怎么验 | 为什么不能靠推断 |
 |---|---|---|---|
 | 1 | 从零建一个新站的最小步骤 | 在仓库外 `hugo new site`，拷主题，贴 §8 的配置，`hugo server` 打开 | §9.1 已证明 `pnpm dev` 不是这条路；最小配置集要靠真建一次才敢写 |
-| 2 | 9 个围栏语言各自的属性语法 | 读 `render-codeblock-*.html` | 只确认了名字；`{num="1" caption="…"}` 这类块属性的允许键没核 |
+| 2 | ~~9 个围栏语言各自的属性语法~~ | 读 `render-codeblock-*.html` | 只确认了名字；`{num="1" caption="…"}` 这类块属性的允许键没核 → **已做，见 §14** |
 | 3 | 22 个 landing section 的字段 | 读 `layouts/_partials/landing/section/*.html` | skill 要不要覆盖 landing 还没定；覆盖的话字段量比 shortcode 还大 |
 
 **组件不止 shortcode 一种形态** —— 还有 9 个围栏语言、类名标记（`.steps`
@@ -539,3 +539,66 @@ README 的「站点侧要求」原来只写了 `noClasses` 一条，也一并补
 而不是 `{{< steps >}}`，第 5 条要求拷贝清单里必须有 `data/`。
 
 没有跑 eval —— `run_eval.py` 需要 API key，不假装它跑过。
+
+## 14. 围栏语言的执行记录（2026-09-03）
+
+补 §10.2 第 2 项。这是 `SKILL.md` 自己开的口子：它告诉模型那 9 个围栏语言存在，
+却没给属性语法，模型只能猜。
+
+### 14.1 为什么单独一个生成器
+
+`scripts/gen-skill-fences.js`，不合进 `gen-skill-shortcodes.js`。源目录不同
+（`_markup/` 而不是 `_shortcodes/`），事实的形状也不同 —— 围栏没有「成对还是自闭合」
+这件事，换成「body 是什么格式」。合成一个脚本会得到两套互不相干的分支。
+
+`package.json` 的 `check:skill` / `gen:skill` 各串两个脚本，`check:skill` 已在
+`check` 链尾。
+
+### 14.2 抽出来的和手写的
+
+**抽取**：`"allowed"` 后面那个 `slice` 的字符串字面量。9 个 hook 里 8 个写成
+`(slice "a" "b")`，`gallery` 写的是不带括号的空 `slice`（它不吃围栏属性，图的说明
+写在每一行上）。只认前一种会把它当成抽取失败，所以 `allowed()` 两种都认。
+
+普通代码围栏的属性另取，来自 `layouts/_markup/render-codeblock.html:13`：
+`id filename copy collapse wrap`。
+
+**手写**：一句话说明 + body 格式。body 格式抽不出来 —— 每个 hook 自己解析，形状只
+写在中文文档注释里。而这恰恰是模型最需要的：属性名猜错只是少一个题注，body 格式
+猜错整块不出东西。每条的 body 照 `exampleSite` 的实际写法抄，不照注释里的示例抄
+（§10.1 第 6 项：注释里的示例本身可能是错的）。
+
+**只有 `plantuml` 读站点配置**（`params.ui.plantuml.server`）。判据：它是唯一引用
+`params.ui.*` 的 hook。没配时降级成普通代码块 —— 构建绿、页面上是源码。
+
+### 14.3 门禁验过的四种失效
+
+逐个临时改坏输入，确认非零退出：
+
+1. 生成物与 hook 漂移（改 hook 的 `allowed` 不重新生成）。
+2. 新增 hook 而 `FENCES` 没描述它 —— 否则新围栏会静默缺席。
+3. `NEEDS_CONFIG` 过期（hook 不再读那个 key）。
+4. `attributes.html` 的共享属性策略变了（三个标记：`"data-"`、`"aria-"`、
+   `class, data-*, aria-*`）。
+
+外加一条**反向检查**：某个 hook 开始读 `params.ui.*` 而 `NEEDS_CONFIG` 没记。
+漏掉的后果是 skill 不告诉作者要配什么，而没配时那一块静默降级。
+
+### 14.4 两处被实测纠正
+
+- 我先前说未知 shortcode 静默失败。**实测是硬错**：`{{< mermaid >}}` 停构建，
+  `template for shortcode "mermaid" not found`。这比我说的**更好**，是这套主题里少数
+  几个响亮的失败，写进了生成物。
+- 属性不是「各围栏一张表」那么简单。**每个围栏在自己那张表之外一律还接受 `class`、
+  `data-*`、`aria-*`**，判据是那条 warn 的措辞把三样和各自的 allowed 拼在一起报出来
+  （`allowed: caption, num, id, class, data-*, aria-*`），且未知属性只丢弃不阻断，
+  图照样出。不写进生成物的话，模型会以为 `class=` 要另找地方加。
+
+### 14.5 连带改动
+
+`SKILL.md` 的路由表加 `fences.md` 一行，诊断清单加一条围栏专属步骤（花括号属性
+行渲染成正文 = 缺 `attribute.block`；图显示成源码 = `plantuml` 缺 server）。
+
+`evals.json` 从 12 条加到 14 条：第 13 条 `plantuml` 要配 server，第 14 条
+`filetree` 是围栏不是 shortcode（它有文档页，最容易被写成 `{{< filetree >}}`）。
+第 4 条的期望改成引用那条硬错和属性上限。仍然没跑 —— 需要 API key。

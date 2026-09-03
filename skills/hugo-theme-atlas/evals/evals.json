@@ -39,7 +39,29 @@
       "expected_output": "A fenced code block with language `mermaid`.",
       "expectations": [
         "Uses a ```mermaid fence",
-        "Does not write `{{< mermaid >}}`, which is not a shortcode in this theme"
+        "Does not write `{{< mermaid >}}`, which fails the build with 'template for shortcode not found'",
+        "Any fence attributes are limited to caption, num, id, plus class/data-*/aria-*"
+      ]
+    },
+    {
+      "id": 13,
+      "prompt": "Add a PlantUML sequence diagram to this page.",
+      "expected_output": "A plantuml fence plus the server config it needs.",
+      "expectations": [
+        "Uses a ```plantuml fence, not a shortcode",
+        "States that `params.ui.plantuml.server` must be configured or the fence renders only its source",
+        "Does not silently assume a default public server exists"
+      ]
+    },
+    {
+      "id": 14,
+      "prompt": "Show the project's directory layout on this page.",
+      "expected_output": "A filetree fence with box-drawing characters.",
+      "expectations": [
+        "Uses a ```filetree fence",
+        "Does not write `{{< filetree >}}` — it is not a shortcode despite having a docs page",
+        "Uses box-drawing characters for the tree and `#` for trailing comments",
+        "Any attribute is `title`, the only one this fence accepts"
       ]
     },
     {
