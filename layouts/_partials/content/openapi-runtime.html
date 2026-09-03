@@ -56,7 +56,11 @@
   {{- end -}}
 {{- end -}}
 {{- if and $js $external (not $integrity) -}}
-  {{- warnf "%s: params.ui.openapi.%s.js is cross-origin without integrity at %s; a compromised host would run arbitrary code — add params.ui.openapi.%s.integrity" $renderer $renderer $position $renderer -}}
+  {{- /* 这一条要说出「照样加载」。它是全篇唯一一条警告了却不改变行为的 ——
+         上面那段注释写着不强制（自托管同源的情况不该被拦），于是脚本这一刻
+         正在无保护地发出去。不写明的话作者读完只知道有风险，不知道风险是
+         "现在就在发生"还是"我已经被拦下了"。 */ -}}
+  {{- warnf "%s: params.ui.openapi.%s.js is cross-origin without integrity at %s; loading it anyway, so a compromised host would run arbitrary code — add params.ui.openapi.%s.integrity" $renderer $renderer $position $renderer -}}
 {{- end -}}
 
 {{- with $cfg.css_integrity -}}

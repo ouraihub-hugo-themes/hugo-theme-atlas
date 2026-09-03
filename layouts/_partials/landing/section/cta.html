@@ -23,5 +23,5 @@
   </div>
 </section>
 {{- else -}}
-  {{- warnf "%s: cta has nothing to render (needs title, subtitle, eyebrow, or actions)" $c.at -}}
+  {{- warnf "%s: cta has nothing to render (needs title, subtitle, eyebrow, or actions); skipping this section" $c.at -}}
 {{- end -}}

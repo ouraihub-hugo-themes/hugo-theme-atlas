@@ -1,0 +1,80 @@
+# 主题的全套门禁。
+#
+# 这份的存在理由：九个检查器在这之前只在一台机器上跑过。产物提交进仓库
+# （assets/dist/ 是消费方直接引用的），所以「源码改了但产物没重建」是能推上来的
+# —— 而它的表现是消费方拿到的是旧样式，仓库里看起来一切正常。
+#
+# 两个 job 分开：
+#
+#   check  跑 pnpm check（格式、类型、lint、单测，加六个检查器）。它自己建站点，
+#          所以要 hugo。
+#   dist   证明产物与源码同步：重建一遍，然后要求 git 树干净。这条在 check 里
+#          做不了 —— check 只读产物，不会发现它是旧的。
+#
+# 兼容下限 0.160.1 与开发版 0.165.0 都跑：README 对消费方声明了下限，而声明一个
+# 没人验过的下限等于没声明 —— 开发机上只有 0.165.0，下限成不成立这里是唯一的
+# 判据。两版都在矩阵里，红了就知道是哪一版。
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # 下限在前：它更容易红，先失败省掉另一版的等待。
+        hugo: ["0.160.1", "0.165.0"]
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: peaceiris/actions-hugo@v3
+        with:
+          hugo-version: ${{ matrix.hugo }}
+          extended: true
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm check
+
+  dist:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: rebuild the shipped assets
+        run: pnpm css:build && pnpm ts:build
+
+      # 产物必须与源码一致。不一致说明有人改了 src/ 却没跑构建 ——
+      # 而消费方拿到的是仓库里那一份。
+      - name: assets/dist is up to date
+        run: |
+          if ! git diff --quiet -- assets/dist; then
+            echo "assets/dist is stale; run 'pnpm css:build && pnpm ts:build' and commit the result" >&2
+            git --no-pager diff --stat -- assets/dist >&2
+            exit 1
+          fi
