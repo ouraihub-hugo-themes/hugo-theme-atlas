@@ -16,10 +16,15 @@
 {{- partial "landing/keys.html" (dict "section" $raw "at" $c.at "allowed" (slice "items")) -}}
 
 {{- /* 三档各自的图标与朗读文本。放在一个 dict 里而不是模板里三个分支：加一档
-       时只改这里，而三个分支要记得三处都改。 */ -}}
+       时只改这里，而三个分支要记得三处都改。
+
+       partial 用减号：它要既不是勾也不是叉，且不额外表意 —— 换过的向下箭头
+       会读成"展开"或"下载"，锤子读成"在建设中"，警示三角比实际情况严重。
+       减号在形状上处于勾与叉之间，语义上是空的，这一档要的正是这个。
+       三档不靠形状单独承载差异：no 那档还有标题划线（见 landing.css）。 */ -}}
 {{- $marks := dict
   "yes" (dict "icon" "check" "label" "capability_yes")
-  "partial" (dict "icon" "angle-down" "label" "capability_partial")
+  "partial" (dict "icon" "minus" "label" "capability_partial")
   "no" (dict "icon" "close" "label" "capability_no") -}}
 
 {{- $items := slice -}}
