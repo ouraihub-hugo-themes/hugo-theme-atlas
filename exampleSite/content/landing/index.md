@@ -263,7 +263,7 @@ sections:
       - title: 四种阅读外壳
       - title: 32 种语言
         status: partial
-        note: 当前只有 en，其余在期 6
+        note: schema 齐，多数是英文兜底
       - title: 联网功能默认开启
         status: no
         note: 完整配置之前一律关着

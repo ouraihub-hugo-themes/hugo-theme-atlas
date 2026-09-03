@@ -214,7 +214,13 @@
   }
 
   /* 每项包一层 div 是 HTML 规范给 dl 定的分组方式，不是排版凑的 —— 视觉上
-     值在上、标签在下（dd 先于 dt），而分组让读屏软件仍能把两者关联。 */
+     值在上、标签在下（dd 先于 dt），而分组让读屏软件仍能把两者关联。
+
+     用 flex 而不是 subgrid 排这三行。试过 subgrid（列间共享行网格，想让只有
+     一项写了 note 时四列仍然齐），实测它买不到东西：note 是最后一个子元素，
+     它下面没有东西可以对齐，所以有 note 的那列墨迹仍然多出 25px —— 与 flex
+     完全相同 —— 而空的第三行照样吃掉一份 row gap，四列白白高 4px。
+     四个容器本来就等高（grid 拉伸），值与标签的基线本来就跨列对齐。 */
   .td-landing-metric {
     display: flex;
     flex-direction: column;
@@ -657,7 +663,12 @@
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    justify-content: center;
+    /* 跟着节标题左对齐，不居中。居中时 logo 少的站点会看到标题贴左、logo 悬在
+       中间：实测三个 logo 落在 499–766 而标题在 73，同一节里两套对齐。
+       21 个 section 里只有 command-box 与 cta 是整节居中（它们的标题本身也是
+       center），其余都左对齐 —— 这一节的标题是左对齐的，内容跟着它。
+       左对齐同时让换行后的末行从左边起排，而不是孤零零居中。 */
+    justify-content: start;
     gap: 2rem 3rem;
   }
 
@@ -669,18 +680,22 @@
     inline-size: auto;
     max-inline-size: 10rem;
     /* 彩色 logo 并排会打架，降饱和度让它们退到背景里；悬停恢复。
-       这不是隐藏信息：alt 文本与形状都在。 */
+       这不是隐藏信息：alt 文本与形状都在。
+
+       **只降饱和度，不再叠 opacity。** 原先还有 `opacity: 0.7`，两层压暗叠起来
+       砍掉 30–60% 的对比度（亮色底 rgb(241,244,248) 上实测：深海军蓝
+       13.36 → 5.28，纯黑 19.04 → 8.15，Tailwind 青 2.23 → 1.71）。而
+       "退到背景里"这件事 grayscale 一层已经做到了 —— 第二层买的不是层次，
+       是让浅色品牌色的字标糊进背景。
+       WCAG 明文豁免 logotype 的对比度要求，所以这不是合规问题，是能不能认出
+       是哪家的问题。 */
     filter: grayscale(1);
-    opacity: 0.7;
-    transition:
-      filter 150ms var(--ease-color),
-      opacity 150ms var(--ease-color);
+    transition: filter 150ms var(--ease-color);
   }
 
   .td-landing-logo:hover .td-landing-logo-image,
   .td-landing-logo a:focus-visible .td-landing-logo-image {
     filter: none;
-    opacity: 1;
   }
 
   /* --- testimonials --- */
@@ -746,7 +761,17 @@
     padding: 0;
     margin: 0;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+    /* 16rem 而不是 18rem。这个数字决定的是"note 跟标题同行还是换行"：
+       最宽一项的内容行内需要 295px（≈18.4rem），18rem 排出的 352px 列刚好够
+       它不折行，16rem 排出的 256px 列则让 note 落到标题下面。
+       选换行 —— note 是标题的附注，放在下面比挤在同一行末尾更好读，而
+       `.td-landing-capability` 本来就写了 `flex-wrap: wrap` 等这件事发生。
+       列数因此不再受"最长那条注解有多长"支配，而那本来是作者的文案长度，
+       不该决定版面。
+       顺带解掉一处评审报的松散：1120px 下 18rem 排 3 列，4 项就空出 2 个格位；
+       16rem 排 4 列刚好排满，整体还矮 5px。但**没有哪个 min 能对所有条目数都
+       排满**（16rem 下 5 项同样空 1 格），所以这不是选它的理由，只是附带结果。 */
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
     gap: 0.75rem 2rem;
   }
 
@@ -966,11 +991,10 @@
     border: 1px solid #999;
   }
 
-  /* logo 在纸上不降饱和度：灰度加半透明打印出来是一片看不清的浅灰，而
-     单色打印机本来就会把它们变成灰的。 */
+  /* logo 在纸上不降饱和度：单色打印机本来就会把它们变成灰的，再叠一层等于
+     印出一片看不清的浅灰。 */
   .td-landing-logo-image {
     filter: none;
-    opacity: 1;
   }
 
   /* 条形图的条在纸上换成描边加浅填充：实心色块费墨，而长度才是信息。 */
@@ -1067,9 +1091,8 @@
     color: CanvasText;
   }
 
-  /* logo 的降饱和度在强制配色下没有意义，而 opacity 会让它更难看清。 */
+  /* 强制配色下降饱和度没有意义：用户已经指定了配色方案，再压一层只会更难认。 */
   .td-landing-logo-image {
     filter: none;
-    opacity: 1;
   }
 }
