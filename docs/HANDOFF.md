@@ -225,7 +225,7 @@ hugo --source exampleSite --themesDir ../.. --printPathWarnings --panicOnWarning
   到临时目录。而 `resources/` 通常在 `.gitignore` 里，所以 `git status` 一直
   干净，写进去了也看不出来。
 
-### 5.5 浏览器验证的四个坑（期 2 各花了时间才定位）
+### 5.5 浏览器验证的八个坑（期 2 起陆续踩到）
 
 这几条都是"代码没问题，验证方法有问题"，排查顺序不对会在正确的代码上
 浪费很多时间。
@@ -237,6 +237,14 @@ hugo --source exampleSite --themesDir ../.. --printPathWarnings --panicOnWarning
    ```
    要把 CSS 逻辑与产帧问题干净隔离，临时 `el.style.transition = 'none'`
    再读计算值 —— 无插值，计算值即目标值。
+
+   **切主题也会触发过渡，这一条比交互更容易漏。** 改 `data-td-theme` 之后同步
+   读 `getComputedStyle` 拿到的是起始值，因为令牌变了而 `background-color` /
+   `filter` 上挂着 150ms 过渡。期 6 在这上面栽了两次：读 logo 滤镜得到
+   `grayscale(0.967)`、读按钮背景得到亮色的 `(36,95,148)` 而令牌明明已经是
+   `#7db3e0` —— 两次都不是任何一个静止态，而它们看起来都像"改动没生效"。
+   判据：等关注元素的目标属性**连续 8–10 帧不变**再读。
+
 2. **`hugo server` 会送旧 CSS。** 改了 `src/css/` 并 `pnpm css:build` 后，
    dev server 可能仍返回上一份产物。判据：抓 `/dist/main.css` 比对磁盘长度。
    不一致就**重启 server**，别怀疑 CSS。
@@ -253,6 +261,21 @@ hugo --source exampleSite --themesDir ../.. --printPathWarnings --panicOnWarning
 6. **过渡中途采样会读到起始值。** 两个 `requestAnimationFrame` 不够覆盖
    150ms 的过渡 —— 期 3 因此以为复制按钮的颜色没跟主题走，等 250ms 再读
    就对了。首选 `await Animation.finished`（见上面第 1 条）。
+7. **`emulateMedia({ colorScheme })` 切不了这套主题。** 深浅色走
+   `[data-td-theme="dark"]`（`theme.css:144`），不是 `prefers-color-scheme`。
+   用 colorScheme 模拟只会让 `bodyBg` 停在亮色的 `rgb(241,244,248)`，看起来像
+   暗色令牌没写对。要改属性。`forcedColors` 与 `media: 'print'` 那两个模拟是
+   真的有效。
+8. **oklch 颜色不能用正则取数。** `getComputedStyle` 对
+   `oklch(0.42 0.06 250 / 0.14)` 原样返回，`match(/[\d.]+/g)` 会把亮度 `0.42`
+   当成 r 通道，算出来的对比度是废数（期 6 量分界线得到 1.34，实际 1.25）。
+   用 canvas 解析，先填底色再填前景色，读回来就是合成后的 sRGB —— 半透明边框
+   的实际观感要这样才量得到：
+   ```js
+   ctx.fillStyle = bgColor; ctx.fillRect(0, 0, 1, 1);
+   ctx.fillStyle = fgColor; ctx.fillRect(0, 0, 1, 1);
+   const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+   ```
 
 - **`localhost` 可能解析到 IPv6，而 `hugo server` 只绑 127.0.0.1。**
   PowerShell 里用 `http://127.0.0.1:1313`；Playwright 用 `localhost` 正常。
