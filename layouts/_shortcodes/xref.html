@@ -36,6 +36,13 @@
 {{- if and (not $kind) (not $anchor) -}}
   {{- warnf "shortcode %q requires fig, tbl, eq, eg, or anchor at %s; rendering the text without a link" .Name $at -}}
 {{- end -}}
+{{- /* 编号引用的锚点是 `<kind>-<num>`，也就是目标的**默认** id。目标写了自定义
+       `id` 时这个锚点落空 —— 而这里查不到登记表：xref 是行内的，页面里靠后的
+       目标此刻还没登记（`book-figures` 那类列表能查表，是因为它整页渲染完才读，
+       跨页还会先强取 .Content）。
+
+       所以警告放在 book/target-head.html —— 作者写下自定义 id 的那一处，那里
+       不依赖渲染顺序。 */ -}}
 {{- if and (not $anchor) $kind }}{{ $anchor = printf "%s-%s" $kind $num }}{{ end -}}
 
 {{- /* 跨页引用。GetPage 找不到就退回本页 —— 生成一个指向不存在页面的链接
