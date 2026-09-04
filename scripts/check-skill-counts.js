@@ -14,6 +14,11 @@ import { readFileSync, readdirSync } from "node:fs";
 const SKILL = "skills/hugo-theme-atlas/SKILL.md";
 const md = readFileSync(SKILL, "utf8");
 
+/** 模板里有没有 `class="… td-x …"` 形式的字面类名。 */
+function hasLiteralClass(path) {
+  return /\bclass="[^"]*(?<![-\w])td-/.test(readFileSync(path, "utf8"));
+}
+
 /** 目录里的 .html 个数，可选前缀过滤。 */
 function count(dir, prefix = "") {
   return readdirSync(dir).filter((f) => f.endsWith(".html") && f.startsWith(prefix)).length;
@@ -54,6 +59,71 @@ for (const f of facts) {
 const baseHook = "render-codeblock.html";
 if (!readdirSync("layouts/_markup").includes(baseHook)) {
   bad.push(`layouts/_markup/${baseHook} is gone; the fence count subtracts it`);
+}
+
+// ---- 「Finding a component's CSS classes」那一节 ----
+//
+// 这一节告诉读者「去读组件自己的模板，类名就在里面」，然后点名了做不到这件事的
+// 那些 shortcode。名单错了的后果跟数字错了一样：读者去读一个没有类名的文件，
+// 找不到就以为组件没有样式。所以名单也是断言，也要有东西看着。
+//
+// 判据就是这一节自己给出的那句话：模板里有没有 `class="… td-x …"`。有就是
+// 「直接带字面量」，没有就必须出现在那三份名单之一里。
+
+const SC = "layouts/_shortcodes";
+const noLiteral = readdirSync(SC)
+  .filter((f) => f.endsWith(".html"))
+  .map((f) => f.replace(".html", ""))
+  .filter((n) => !hasLiteralClass(`${SC}/${n}.html`))
+  .sort();
+
+// 从 SKILL.md 里把三份名单抽回来：那一节的三个 bullet，每个开头是加粗的类别名。
+const section = /## Finding a component's CSS classes\n([\s\S]*?)\n## /.exec(md)?.[1] ?? "";
+if (!section) {
+  bad.push("SKILL.md no longer has a 「Finding a component's CSS classes」 section");
+} else {
+  // 「Three kinds of shortcode do not:」之后到下一个空行为止，就是那三份名单。
+  // 按 bullet 切而不是逐行匹配 —— 名单会折行，`^-` 在续行上匹配不到。
+  const lists = /Three kinds of shortcode do not:\n\n([\s\S]*?)\n\n/.exec(section)?.[1] ?? "";
+  const listed = new Set();
+  for (const n of lists.matchAll(/`([a-z][a-z-]*)`/g)) listed.add(n[1]);
+  const missing = noLiteral.filter((n) => !listed.has(n));
+  const stale = [...listed].filter(
+    (n) => readdirSync(SC).includes(`${n}.html`) && !noLiteral.includes(n),
+  );
+  if (missing.length) {
+    bad.push(
+      `SKILL.md 的类名一节没有交代 ${missing.join(", ")} —— ` +
+        `它们的模板里没有字面类名，读者按那一节去读会落空`,
+    );
+  }
+  if (stale.length) {
+    bad.push(
+      `SKILL.md 的类名一节把 ${stale.join(", ")} 列为「读不到类名」，` +
+        `但它们的模板现在带了字面类名`,
+    );
+  }
+
+  // 围栏那两个同理。
+  const MK = "layouts/_markup";
+  const fenceNoLiteral = readdirSync(MK)
+    .filter((f) => f.startsWith("render-codeblock-"))
+    .filter((f) => !hasLiteralClass(`${MK}/${f}`))
+    .map((f) => f.replace("render-codeblock-", "").replace(".html", ""))
+    .sort();
+  const fenceClaim = /(\d+) of the (\d+)\s*\nfences carry their classes as literals/.exec(section);
+  if (!fenceClaim) {
+    bad.push("SKILL.md 不再声明有多少围栏直接带类名");
+  } else {
+    const total = count("layouts/_markup", "render-codeblock-");
+    const want = total - fenceNoLiteral.length;
+    if (Number(fenceClaim[1]) !== want || Number(fenceClaim[2]) !== total) {
+      bad.push(
+        `SKILL.md 说 ${fenceClaim[1]}/${fenceClaim[2]} 个围栏带字面类名，实际是 ${want}/${total}` +
+          `（不带的是 ${fenceNoLiteral.join(", ")}）`,
+      );
+    }
+  }
 }
 
 if (bad.length > 0) {

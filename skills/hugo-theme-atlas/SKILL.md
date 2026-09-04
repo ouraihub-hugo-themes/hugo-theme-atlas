@@ -139,8 +139,9 @@ Read the component's template instead — `layouts/_shortcodes/<name>.html`,
 fences carry their classes as literals. Three kinds of shortcode do not:
 
 - **Delegates to a partial** — `card`, `download`, `contributors`, `release-assets`,
-  `swagger`, `redoc`, and the four `book-*` lists. The partial's path is named in the
-  same file, one hop away (`card` → `content/card-markup.html`).
+  `swagger`, `redoc`, `book-figures`, `book-tables`, `book-examples`, `book-equations`.
+  The partial's path is named in the same file, one hop away (`card` →
+  `content/card-markup.html`).
 - **Child shortcodes whose markup lives in the parent** — `field` and `tab` only
   register themselves; the classes are all in `fields.html` and `tabs.html`.
 - **Emits no wrapper** — `param` prints a bare value, `include` renders the included
@@ -151,13 +152,16 @@ Two things that grep will not tell you:
 - **Variant classes are assembled at render time** (`printf "td-callout--%s" $type`), so
   `td-callout--note` appears in no template. Read the enum in the template, or read the
   built HTML in `public/`.
-- **A class with no CSS rule is normal, not a bug.** Roughly 36 of the ~366 classes in
-  the output are semantic markers with no styling — the four shell markers
+- **A class with no CSS rule is normal, not a bug.** Some tenth of the classes in the
+  output are semantic markers carrying no styling — the four shell markers
   (`td-shell-docs`, `td-shell-book`, `td-shell-blog`, `td-shell-swagger`) and the
-  `xref`/figure kind markers among them. They exist to be hooked, by your CSS or by
-  tests. The reverse also happens: ~40 classes exist in CSS but in no built page,
-  because JS adds them at runtime (`td-search-*`, `td-palette-*`, `td-scroll-locked`)
-  or because the feature is off in that build (`td-comments-*` needs giscus configured).
+  `xref`/figure kind markers (`td-book-figure--fig`, `td-book-xref--tbl`) among them.
+  They exist to be hooked, by your CSS or by tests. **A variant with no rule of its own
+  is also normal** when the base class already carries that state: `td-badge--neutral`
+  has no rule because `.td-badge` is neutral by default. The reverse case exists too —
+  classes present in CSS but in no built page, because JS adds them at runtime
+  (`td-search-*`, `td-palette-*`, `td-scroll-locked`) or because the feature is off in
+  that build (`td-comments-*` needs giscus configured). **Do not "fix" any of these.**
 
 To restyle, override in your own stylesheet or edit `src/css/<component>.css` and run
 `pnpm css:build`. Do not edit `assets/dist/` — it is generated. Colors, spacing, and
