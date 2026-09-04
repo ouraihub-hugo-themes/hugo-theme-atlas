@@ -80,7 +80,7 @@
     },
     {
       "id": 6,
-      "query": "Code blocks stay light-coloured after switching to dark mode. Fix it.",
+      "query": "On my own site using this theme, code blocks stay light-coloured after switching to dark mode. My hugo.toml has no markup section. Why, and what do I add? Answer from the docs, do not try to reproduce it here.",
       "expected_output": "Identifies missing `noClasses = false` in the site's markup.highlight.",
       "expectations": [
         "Names `[markup.highlight] noClasses = false` as the cause",

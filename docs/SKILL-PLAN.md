@@ -732,4 +732,75 @@ or wiring up search」，而这个任务读起来是**写文档**，不是建站
 ### 16.4 landing 的 eval 补了两条
 
 第 15 条要求 landing 页面写成 front matter 而不是 shortcode；第 16 条是排查题
-（比较表整节不出 → `plans` 空或缺）。现共 16 条。这两条**没跑**，不假装跑过。
+（比较表整节不出 → `plans` 空或缺）。现共 16 条。
+
+## 17. 16 条全跑完的记录（2026-09-04）
+
+### 17.1 第一批的结论作废
+
+先跑了 13 条，跑完才发现 **skill 当时没装** —— 我在 §16 收尾时撤过一次，没装回去。
+那批答案里的主题知识来自仓库文件和 `CLAUDE.md`，不是来自 skill。**对「skill 有没有
+用」不成立**，只对「模型读仓库能答到什么程度」成立，所以 9 条全部重跑。
+
+判据是重跑后的对比：同样的 query，装上之后 `TRIGGERED: true` 且能看到它 `Read` 了
+哪一份支撑文件（第 1 条 → `shortcodes.md`，第 4 条 → `fences.md` + `commands.md`，
+第 6 条 → `config.md`，第 14 条 → `fences.md`）。先前那批全是 `false`。
+
+### 17.2 16 条的结果
+
+| eval | 触发 | 读了 | 结果 |
+|---|---|---|---|
+| 1 cards | ✓ | shortcodes.md | 过 |
+| 2 xref | **✗** | — | 内容三条全过，但**欠触发**，见 17.3 |
+| 3 steps | ✓ | — | 过（§16 已修 `pnpm install`） |
+| 4 mermaid | ✓ | fences.md, commands.md | 过 |
+| 5 建站 | ✓ | — | 六条全过 |
+| 6 深色代码块 | ✓ | config.md | 过（query 先改过，见 17.4） |
+| 7 搜索 | ✓ | commands.md | 过，且带出 README 一处真问题 |
+| 8 contributors | ✓ | — | 过 |
+| 9 `titel=` | ✓ | — | 过（§16 已修参数名那条） |
+| 10 fields | ✓ | shortcodes.md | 过 |
+| 11 Go 重构（负向） | ✓ 不触发 | — | 过 |
+| 12 tabs | ✓ | — | 过 |
+| 13 plantuml | ✓ | — | 过 |
+| 14 filetree | ✓ | fences.md | 过 |
+| 15 landing | ✓ | landing.md | 过 |
+| 16 比较表不出 | ✓ | landing.md | 过，且**指出生成物漏了一整类**，见 17.5 |
+
+### 17.3 第 2 条：description 漏了一个触发词
+
+它靠直接读模板答对了 `{{< xref fig="1" />}}`，但没加载 skill。在消费站里没有模板可
+读，那条路走不通。原因是 description 点了 `figures` 却没点 `cross-reference`。补上
+`cross-referencing a numbered figure or table`。
+
+### 17.4 六条 query 依赖会话上下文，测不到东西
+
+原来 7 条写「this page」「the about page」。`claude -p` 是全新进程，没有会话上下文，
+于是模型**正确地**改成反问「哪个页面」—— 测到的是「它会不会追问」，而不是它会不会
+用对组件。全部改成点名一个真实存在的文件。
+
+第 14 条是判据：原 query 下它把问题当聊天答了，用的是普通围栏；补上文件名之后，
+四条期望全过（`filetree` 围栏、`title`、制表符树、`#` 行尾注释）。
+
+第 6 条另一种毛病：症状在主题仓库里**复现不了**（exampleSite 已配 `noClasses =
+false`），模型跑去浏览器实测，发现深色模式是好的，然后一直找下去 —— raw 涨到
+1.5 MB 还没停，把整批堵住，我把它停了。query 改成自带前提（「我自己的站」「没有
+markup 段」「照文档答，别在这儿复现」）之后一次就过。
+
+### 17.5 模型指出生成物漏了一整类
+
+第 16 条给了 5 个成因并各带行号，其中一条 `landing.md` 里一个字都没有：
+`pricing-compare` 的行要求 `values` 是数组、且格数等于 `plans` 的个数。
+
+查证属实。根因是 `required()` 只认 `requires <key>;` 一种句式，而丢弃输入的警告
+**另有 12 条别的措辞**。四行都差一格整节就空了，而生成物没提。
+
+修法是加 `constraints()`，直接把警告原文当事实用（去占位符、两个 `%d` 那条改写成
+人话），不再手写一份 —— 措辞一改就跟着变。已被 `required()` 或 `PROSE_REQUIRED`
+收掉的不重复输出。门禁验过：改一个字的措辞就响。
+
+### 17.6 第 7 条带出的 README 问题
+
+`commands.md` 和 README 都写 `npx pagefind --site public`，对消费站正确。但主题仓库
+的 `pnpm build` 用 `--source exampleSite`，产物在 `exampleSite/public` —— 改主题的人
+想测搜索会照那行跑然后什么都找不到。`commands.md` 的主题源码那节补了一句。
