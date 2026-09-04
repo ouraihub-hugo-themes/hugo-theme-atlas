@@ -106,6 +106,15 @@ const NOTES = {
     'as in `{{< xref fig="2" >}}see the figure above{{< /xref >}}`. ' +
     "`fig`, `tbl`, `eq`, and `eg` are mutually exclusive — pass exactly one, or use `anchor` " +
     "for an arbitrary fragment. `page` adds a cross-page target.",
+  include:
+    "**`file` resolves in three places, in order:** the page's own resources, then `assets/`, " +
+    "then `content/`. A leading `/` means the content root and skips the first two; anything " +
+    "else is relative to the current page's directory. Found in none of the three warns and " +
+    "includes nothing.",
+  cast:
+    "`poster` and `start` are passed to the player verbatim — they take asciinema's own syntax " +
+    "(`npt:1:23`, `data:text/plain,…`). The theme validates only that they contain no control " +
+    "characters, so a malformed value reaches the player and fails there, not at build time.",
 };
 
 /**
@@ -126,6 +135,19 @@ const PREFER = {
       "the table of contents, or a step has to contain a `%`-delimited container shortcode " +
       "(list indentation swallows those).",
   },
+};
+
+/**
+ * NOTES 里那些「模板行为」断言的判据，各自一个能在模板里查到的标记。
+ *
+ * 手写的散文最容易悄悄变假：模板改了而这里的话还在。有判据的那几条，改了就门禁红。
+ * `comment` 那条是端到端实测里被 agent 报错的一条（它说注释里的 shortcode 照样跑），
+ * 实测证明模板是对的 —— 所以更要钉住它，下次改动就会被拦下。
+ */
+const NOTES_PROOF = {
+  comment: "{{- if false }}{{ .Inner }}{{ end -}}",
+  include: "页面资源 → assets → content/",
+  cast: "poster 与 start 是播放器自己的语法",
 };
 
 /** NEEDS 的判据，各自一个能在模板里查到的标记。 */
@@ -197,6 +219,39 @@ function inner(text) {
  */
 function warnsWhenEmpty(text) {
   return /warnf[^}]*rendering nothing/.test(text);
+}
+
+/**
+ * 非容器里「正文实际必需」的那条警告 → 一句话，或 null。
+ *
+ * `inner()` 只说模板读了 `.Inner`，也就是自闭合语法合法。合法不等于有用：
+ * `field` / `eg` / `tbl` 自闭合是合法调用，但每次都 warn 并丢掉自己。端到端实测里
+ * agent 照着「成对或自闭」写了个自闭的 `field`，拿到的是一条警告和一张空表。
+ *
+ * 按后果过滤而不是按措辞：`xref` 也有一条「缺正文」的警告，但它回退到用锚点当
+ * 链接文字，那是可用的调用形式，不该写成「正文必需」。
+ */
+function bodyRequired(text) {
+  const re =
+    /requires (?:a non-empty description|inner content[^"]*|inner table content|src or inner content) at %s; (rendering nothing|skipping this field)/;
+  const m = re.exec(text);
+  if (!m) return null;
+  if (/src or inner content/.test(m[0])) return "src-or-body";
+  return m[1] === "skipping this field" ? "skips itself" : "renders nothing";
+}
+
+/**
+ * 正文是否走 `content/render-block.html`（内部就是 `RenderString`）。
+ *
+ * 后果是 Hugo 的 shortcode 转义在这些正文里失效：外层渲染把注释标记去掉，内层
+ * RenderString 再看到的就是一个真的 shortcode 调用，于是它执行了。端到端实测里
+ * 这是唯一一条造成硬构建失败的缺口，而这四个容器恰好是「展示示例」用的。
+ *
+ * 抽而不手写：哪几个走二次渲染完全取决于模板里有没有那句 partial 调用。
+ * `eq` 正文进 KaTeX 不进 Markdown，所以它不在这一集里 —— 这个区别只有抽取能保证。
+ */
+function rerenders(text) {
+  return /partial "content\/render-block\.html"/.test(text);
 }
 
 /** `validate-enum` 的 allowed + fallback，只有 badge 用到。 */
@@ -282,6 +337,8 @@ for (const name of names) {
     enums: enums(body),
     needs: NEEDS[name] ?? null,
     warnsWhenEmpty: warnsWhenEmpty(body),
+    bodyRequired: bodyRequired(body),
+    rerenders: rerenders(body),
   };
 
   // NEEDS 是手写的，所以要证明它说的那个依赖还在。模板改成不读数据了而这里
@@ -289,6 +346,12 @@ for (const name of names) {
   const proof = NEEDS_PROOF[name];
   if (proof && !raw.includes(proof))
     unknown.push(`${name}: NEEDS says it reads ${proof}, template no longer mentions it`);
+
+  // NOTES 里的行为断言同理 —— 判据在 raw 上找，因为其中一条本身就是文档注释。
+  const noteProof = NOTES_PROOF[name];
+  if (noteProof && !raw.includes(noteProof)) {
+    unknown.push(`${name}: NOTES describes behaviour the template no longer has (${noteProof})`);
+  }
 
   // 归不到任何一类的才是漏抽。具名参数必须有白名单；positional / none 本来
   // 就没有。这条是这个生成器唯一的失败模式，所以它必须响 —— 不会失败的检查
@@ -328,6 +391,7 @@ for (const [label, table] of [
   ["CHILD_OF", CHILD_OF],
   ["PREFER", PREFER],
   ["NOTES", NOTES],
+  ["NOTES_PROOF", NOTES_PROOF],
   ["SHOW", SHOW],
 ]) {
   for (const name of Object.keys(table)) {
@@ -373,8 +437,26 @@ function callForm(s) {
       const wraps = child ? `, wrapping one or more \`${child}\`` : "";
       return [`${paired}${wraps}.`, `Always paired — ${empty}.`].join(" ");
     }
+    const selfClosed = `\`{{< ${s.name}${attrs} />}}\``;
+    // 「或自闭合」只在自闭合真的可用时说。对正文必需的那几个，自闭合是合法语法
+    // 但每次都 warn —— 写成并列的两个选项，作者会挑短的那个。
+    if (s.bodyRequired === "src-or-body") {
+      return [
+        `${paired}, **or** ${selfClosed} with \`src\`.`,
+        "The body and `src` are the two content sources and are mutually exclusive — but the",
+        "`src` form still needs the closing slash. `{{< " + s.name + ' src="…" >}}` with neither',
+        "a body nor a `/` is a build error, not a shorthand.",
+      ].join(" ");
+    }
+    if (s.bodyRequired) {
+      return [
+        `${paired} — the body is required.`,
+        `Syntactically ${selfClosed} is legal, but it warns and ${s.bodyRequired} every time.`,
+        "Every call must be closed or self-closed; a bare opening tag is a build error.",
+      ].join(" ");
+    }
     return [
-      `${paired} — **or** self-closed \`{{< ${s.name}${attrs} />}}\`.`,
+      `${paired} — **or** self-closed ${selfClosed}.`,
       "Every call in a page must be closed or self-closed; a bare opening tag is a build error.",
     ].join(" ");
   }
@@ -462,6 +544,18 @@ for (const s of specs) {
   if (CHILD_OF[s.name]) {
     lines.push(
       `Only valid inside \`${CHILD_OF[s.name]}\`. On its own it renders outside the layout it needs.`,
+    );
+    lines.push("");
+  }
+
+  if (s.rerenders) {
+    const where = s.name in CONTAINERS ? `a \`${s.name}\` child's body` : `a \`${s.name}\` body`;
+    lines.push(
+      `**This body is rendered in a second pass**, so Hugo's \`{{</* … */>}}\` escape does not ` +
+        `survive it. An escaped shortcode inside ${where} is unescaped by the outer render and ` +
+        "then executed by the inner one — it runs, warns about its own deliberate mistakes, and " +
+        "under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced " +
+        "code block.",
     );
     lines.push("");
   }

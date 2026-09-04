@@ -51,6 +51,31 @@ function allowed(text) {
 }
 
 /**
+ * 属性级约束：`warnf "<fence>: <attr> ...; <后果>"` → [{ attr, what, drops }]。
+ *
+ * 只收开头那个词在 allowed 表里的警告。这样「正文缺内容」那一类留在手写的 `body:`
+ * 里，不会两处都说；而属性自己的限制 —— `algo` 的四个值、`group` 只认 `auto`、
+ * `base` 与 `release_url` 互斥 —— 从警告原文抽出来。
+ *
+ * 端到端实测的两条缺口都在这一类：`group` 看着像个自由文本值（实际单值枚举），
+ * `base` 与 `release_url` 在文档里并列出现（实际互斥，同时给则整块消失）。
+ * 猜错的后果不是少个题注，是整张表不见而构建是绿的。
+ */
+function constraints(text, attrs) {
+  const out = [];
+  for (const m of text.matchAll(/warnf "[a-z-]+: ([^"]+?) at %s(?::[^"]*?)?; ([^"]+)"/g)) {
+    const what = m[1].replace(/ %[vqds]$/, "");
+    const attr = /^([a-z]+)\b/.exec(what)?.[1];
+    if (!attr || !attrs.includes(attr)) continue;
+    // 后果里的占位符也要清：`using %d` 是"回退到那个范围内的默认值"，把 `%d`
+    // 原样印出来只会让作者以为要自己填一个数。
+    const drops = m[2].replace(/ %[vqds]$/, " a value in that range");
+    if (!out.some((x) => x.what === what)) out.push({ attr, what, drops });
+  }
+  return out;
+}
+
+/**
  * 一句话英文说明 + body 是什么格式。**手写。**
  *
  * body 格式抽不出来 —— 它是每个 hook 自己解析的，形状写在文档注释里（中文）。
@@ -147,8 +172,22 @@ for (const name of names) {
   if (!proof && /params\.ui\./.test(raw)) {
     unknown.push(`${name}: the hook reads params.ui.* but NEEDS_CONFIG has no entry for it`);
   }
+  // checksums 的两条是实测暴露的缺口，钉住它们：措辞变了要么跟着更新，要么门禁红。
+  if (name === "checksums") {
+    for (const marker of ["group must be auto", "base is only valid without release_url"]) {
+      if (!raw.includes(marker)) {
+        unknown.push(`${name}: no longer warns "${marker}"; this page documents that it does`);
+      }
+    }
+  }
 
-  specs.push({ name, attrs: attrs ?? [], ...FENCES[name], needs: NEEDS_CONFIG[name] ?? null });
+  specs.push({
+    name,
+    attrs: attrs ?? [],
+    ...FENCES[name],
+    needs: NEEDS_CONFIG[name] ?? null,
+    constraints: constraints(raw, attrs ?? []),
+  });
 }
 
 for (const [label, table] of [
@@ -241,6 +280,12 @@ for (const s of specs) {
       : "**Attributes:** none accepted on the fence itself.",
   );
   lines.push("");
+  if (s.constraints.length > 0) {
+    lines.push("**Attribute constraints** — an attribute name alone does not mean any value works:");
+    lines.push("");
+    for (const c of s.constraints) lines.push(`- \`${c.attr}\`: ${c.what} — ${c.drops}`);
+    lines.push("");
+  }
   if (s.needs) {
     lines.push(`**Requires \`${s.needs.key}\` in the site config.** Without it ${s.needs.without}`);
     lines.push("");

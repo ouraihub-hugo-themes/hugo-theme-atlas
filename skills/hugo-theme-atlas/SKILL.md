@@ -1,6 +1,6 @@
 ---
 name: hugo-theme-atlas
-description: Authoring and configuring sites built on the Atlas Hugo theme (hugo-theme-atlas) — its 30 shortcodes, 9 fence languages, 22 landing sections, required site configuration, and commands. Use this skill whenever the project contains themes/hugo-theme-atlas or a td- CSS class, and whenever the task involves writing Hugo content with shortcodes, editing hugo.toml, building a landing page, adding cards/tabs/badges/figures/steps/mermaid diagrams, cross-referencing a numbered figure or table, setting up search, or debugging a page that renders wrong — even when the theme is not mentioned by name. Almost every mistake with this theme still builds successfully, so relying on general Hugo knowledge instead of this skill produces pages that look fine and are quietly wrong.
+description: Authoring and configuring sites built on the Atlas Hugo theme (hugo-theme-atlas) — its 30 shortcodes, 9 fence languages, 22 landing sections, params.ui settings, data files, required site configuration, and commands. Use this skill whenever the project contains themes/hugo-theme-atlas or a td- CSS class, and whenever the task involves writing Hugo content with shortcodes, editing hugo.toml, setting any params.ui option, building a landing page, adding cards/tabs/badges/figures/steps/mermaid diagrams, cross-referencing a numbered figure or table, enabling comments or an OpenAPI viewer, setting up search, or debugging a page that renders wrong — even when the theme is not mentioned by name. Almost every mistake with this theme still builds successfully, so relying on general Hugo knowledge instead of this skill produces pages that look fine and are quietly wrong.
 user-invocable: false
 ---
 
@@ -16,6 +16,7 @@ sections, and 4 reading shells.
 |---|---|
 | `shortcodes.md` | Writing or fixing any `{{< … >}}` call. Generated from the templates — it is the authority on parameter names and call form. |
 | `config.md` | Setting up or debugging `hugo.toml`. Five `markup` settings the theme cannot default. |
+| `params.md` | Any `params.ui.*` setting — search, share, typography, repo, comments, openapi, plantuml, shell_types. Generated. **Naming the parameter right is not enough; three of the eight are the wrong *shape* if you guess.** Also the page-level keys and the one exception to the `ui.`-prefix rule. |
 | `fences.md` | Adding a diagram, chart, equation, file tree, image grid, or checksum table. Also generated — it is the authority on fence attributes. |
 | `landing.md` | Building or editing a landing page. Generated — it is the authority on the 22 sections' keys. Landing is front matter, not shortcodes. |
 | `data.md` | Any component that needs a `data/` file — `contributors`, `download`. Generated. **Naming the file right is not enough; the keys inside are what fails silently.** |
@@ -39,6 +40,12 @@ is no error to read, so a wrong result looks like a correct one:
 - A self-closed container renders an empty container.
 - A missing `data/` directory drops every icon.
 - A shortcode needing site-side data renders nothing when that data is absent.
+- **A `params.ui.*` setting written in the wrong shape leaves the feature off.** A map
+  where a string belongs, a `provider` key that does not exist, an unconfigured
+  `openapi` — all build clean. See `params.md`.
+- **An enum given an unknown value falls back and renders**, so the page looks
+  finished and says something else. Worse than a missing key, which at least leaves a
+  hole you can see.
 
 So: **build with `--panicOnWarning` before claiming a page works**, and check the
 rendered HTML rather than the exit code.
@@ -107,7 +114,11 @@ found` — one of the few loud failures in this theme.
   sprite. An unknown name warns and emits nothing — the page shows no icon at all,
   which is deliberate: a blank square is harder to diagnose.
 - **Page-level overrides drop the `ui.` prefix.** Site config uses `params.ui.share`;
-  a page's front matter uses `share`.
+  a page's front matter uses `share`. **One exception:** comments. The page key is
+  `comments_off`, not `comments` — `params.md` has the reason and the full list.
+- **Documenting shortcode syntax needs a fenced code block, not Hugo's
+  `{{</* … */>}}` escape.** Several container bodies are rendered in a second pass,
+  which unescapes it and then runs it. `shortcodes.md` marks which.
 - **Boolean switches are bare booleans**, except where a multi-setting feature also
   accepts a boolean shorthand.
 - Reading shells are `docs`, `book`, `blog`, and `swagger`, set via `type` in front
@@ -126,11 +137,17 @@ Work down this list — it is ordered by how often each is the cause and how sil
    matter)? Those render nothing when it is absent — **and equally when the file
    exists with the wrong keys.** `data.md` has the schemas; do not guess them.
 4. Is the relevant `markup` setting present? See `config.md`.
-5. For a fence: is the brace-attribute line rendering as text? That means
+5. Does it need a `params.ui.*` setting, and is that setting the right *shape*?
+   `swagger` and `redoc` render only a link without `params.ui.openapi`; comments need
+   all four giscus ids or none. See `params.md`.
+6. For a fence: is the brace-attribute line rendering as text? That means
    `attribute.block = true` is missing. Is a diagram showing its source instead? For
    `plantuml` that means `params.ui.plantuml.server` is unset.
-6. Is it an icon name missing from `data/icons.json`?
-7. On a landing page: is a required key missing? That drops the entry, or the whole
+7. Is it an icon name missing from `data/icons.json`?
+8. On a landing page: is a required key missing? That drops the entry, or the whole
    section, silently. `landing.md` states which per section.
+9. Is an attribute or enum *present but constrained*? `checksums`'s `group` accepts only
+   `auto`; `capabilities.status` and `timeline.status` are three-value enums. A rejected
+   value warns and falls back — the block still renders.
 
 Then rebuild with `--panicOnWarning` and read the warnings.

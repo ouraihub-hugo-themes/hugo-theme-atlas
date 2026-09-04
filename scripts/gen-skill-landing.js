@@ -90,6 +90,27 @@ function constraints(text) {
   return out;
 }
 
+/**
+ * validate-enum 调用 → [{ key, values, fallback }]。
+ *
+ * 端到端实测暴露的缺口：`capabilities.status` 与 `timeline.status` 两个枚举一个字都没写，
+ * agent 只能猜，七条警告。枚举与「必需键」不同 —— 漏一个必需键的后果是空一块，
+ * 猜错一个枚举值的后果是那一项静默换成 fallback，看起来像渲染对了。
+ *
+ * 抽 `key` 里的最后一个词而不是整串：模板里写的是 `"capability status"`，
+ * 作者写进 front matter 的是 `status`。
+ */
+function enums(text) {
+  const out = [];
+  const re =
+    /"value" \(index [^)]*"([a-z_]+)"\)\s*"allowed" \(slice ((?:"[a-z:_-]+" ?)+)\)\s*"fallback" "([a-z]+)"/g;
+  for (const m of text.matchAll(re)) {
+    const values = [...m[2].matchAll(/"([a-z:_-]+)"/g)].map((x) => x[1]);
+    if (!out.some((x) => x.key === m[1])) out.push({ key: m[1], values, fallback: m[3] });
+  }
+  return out;
+}
+
 /** 警告原文 → 能读的短语：去掉 printf 占位符，两个 %d 的那条改写成人话。 */
 function m1Clean(s) {
   if (/has %d values but there are %d plans/.test(s)) {
@@ -174,6 +195,14 @@ for (const name of names) {
   if (!NEEDS_DATA[name] && keys?.includes("data")) {
     bad.push(`${name}: allows a data key but NEEDS_DATA has no entry for it`);
   }
+  // 反向：调了 validate-enum 而抽不出来。静默漏掉一个枚举，作者就会去猜它的值。
+  const enumCalls = (raw.match(/validate-enum\.html/g) ?? []).length;
+  if (enumCalls !== enums(raw).length) {
+    bad.push(
+      `${name}: has ${enumCalls} validate-enum call(s) but ${enums(raw).length} extracted; ` +
+        "the call shape changed",
+    );
+  }
 
   const prose = PROSE_REQUIRED[name];
   if (prose && !raw.includes(prose.proof)) {
@@ -191,6 +220,7 @@ for (const name of names) {
     items,
     required: required(raw),
     constraints: constraints(raw),
+    enums: enums(raw),
     prose: prose ?? null,
     data: NEEDS_DATA[name] ?? null,
     actions: (keys ?? []).includes("actions"),
@@ -307,6 +337,20 @@ for (const s of specs) {
       lines.push(`**Required per entry:** ${code(drop)} — omit one and that entry is skipped.`);
     if (kill.length > 0)
       lines.push(`**Required:** ${code(kill)} — omit one and the whole section renders nothing.`);
+    lines.push("");
+  }
+  for (const e of s.enums) {
+    lines.push(
+      `**\`${e.key}\` is an enum:** ${code(e.values)} — default \`${e.fallback}\`. ` +
+        "Any other value warns and falls back, so the entry still renders, wrong.",
+    );
+    if (e.values.some((v) => v === "yes" || v === "no")) {
+      lines.push("");
+      lines.push(
+        "Quote these in YAML. Bare `yes` and `no` are booleans there, and a boolean is not " +
+          "one of the allowed values.",
+      );
+    }
     lines.push("");
   }
   if (s.constraints.length > 0) {

@@ -804,3 +804,81 @@ markup 段」「照文档答，别在这儿复现」）之后一次就过。
 `commands.md` 和 README 都写 `npx pagefind --site public`，对消费站正确。但主题仓库
 的 `pnpm build` 用 `--source exampleSite`，产物在 `exampleSite/public` —— 改主题的人
 想测搜索会照那行跑然后什么都找不到。`commands.md` 的主题源码那节补了一句。
+
+## 18. 端到端验收：从空目录建全组件站（2026-09-04）
+
+前 17 节测的都是「问一句答一句」。这一节换测法：让 agent 从空目录建一个用**全部**
+组件的站，然后看它撞了哪些墙。这是用户要的效果，也是一次都没做过的测法。
+
+### 18.1 怎么跑的
+
+临时把 skill 装到用户级 `~/.claude/skills/`，`claude -p` 从空目录起，任务是
+「建一个站，用上主题提供的每个组件，跑到 `--panicOnWarning` 干净」。三次权限升级
+才跑通：写文件要 `--permission-mode acceptEdits`，读 cwd 外的 skill 要 `--add-dir`，
+构建要 `--allowedTools "Bash(hugo:*)"` —— 每一次都是它停下来问才发现的。
+
+### 18.2 产出
+
+36 页、184 静态文件、`--printPathWarnings --panicOnWarning` **零警告**。覆盖：
+22 个 landing section 全用、30 个 shortcode 全用、9 种围栏加 5 种普通语言、
+4 种阅读外壳、2 个数据文件、8 棵 `params.ui`。
+
+它没只信 exit 0，自己回读了产物：6 个贡献者头像、3 个下载渠道、8 个编号目标的
+xref 标签、两个 OpenAPI 容器越过 `unconfigured`、`config.md` 那五条 markup 探针。
+
+### 18.3 报告的 14 条缺口，逐条核过
+
+**agent 的结论不直接采信**。生成物那几份逐条比对源码，行为断言实测。结果：
+
+| 它说的 | 核的结果 |
+|---|---|
+| `params.ui.openapi` 无文档 | 真。`config.md` 那张可选表整个漏了它 |
+| `params.ui.comments` 形状猜错、无 `provider` 键 | 真，`comments.html:48` 四键 |
+| `comments` 是 `ui.` 前缀规则的例外 | 真，`comments.html:29-36` 写明了原因 |
+| `params.ui.typography` 是标量不是 map | 真，`typography-preset.html:4` |
+| `field` 可自闭合 | 真。语法合法但每次 warn 并跳过自己 |
+| `fig` 带 `src` 仍需显式自闭 | 真，措辞「either src or a body」误导 |
+| **`comment` 不压住正文** | **假**。实测 exit 0 零警告，模板是对的 |
+| **fig/eg/eq 三个都二次渲染** | **机制对、集合错**。是 fig/eg/tbl，`eq` 正文进 KaTeX 不进 Markdown |
+| `checksums` 的 `group` 只认 `auto` | 真，`render-codeblock-checksums.html:29` |
+| `base` 与 `release_url` 互斥 | 真，同文件 `:49` |
+| `published` 是布尔不是日期 | 真，`resolve.html:115` |
+| `capabilities`/`timeline` 的 status 枚举无文档 | 真，两处 `validate-enum` 调用 |
+| `include` 路径解析顺序未说 | 真，源码注释里有，生成物没抽 |
+| `cast` 的 `poster`/`start` 格式未说 | 真，它们**故意**不校验，只挡控制字符 |
+
+12 真 2 假。两条假的都在「模板行为」类 —— 那类只能实测，读代码会读出想当然。
+
+二次渲染那条实测扩到 8 个：`fig` `eg` `tbl` `card` `tabs` `fields` `include`
+`mindmap`（凡调 `content/render-block.html` 的）。其中 5 个亲手复现过，`eq` 确认
+不复现。测 `tab` 时我自己把 `label` 写成 `title`，那一 tab 被跳过所以内层没跑 ——
+是我的调用错，不是缺口。
+
+### 18.4 补法：第五个生成器 + 四处抽取器
+
+新的手写散文一律不加，缺口全部变成从源码抽的事实：
+
+| 补什么 | 怎么抽 | 门禁 |
+|---|---|---|
+| `params.md`（新，第五个生成器）| 八个 partial 的白名单、枚举、必需键 | 8 个输入逐个改坏，8/8 红 |
+| landing 的 per-item 枚举 | 每节的 `validate-enum` 调用 | 改枚举值 + 改调用形状，两条都红 |
+| shortcode 的「正文实际必需」 | 按后果过滤警告（`xref` 是回退，排除） | 改警告措辞即红 |
+| shortcode 的正文二次渲染 | 有没有调 `render-block.html` | 拿掉调用即红 |
+| 围栏的属性级约束 | 警告开头那个词在 allowed 表里的 | 改 `group` 那句即红 |
+| `data.md` 的 `published` 类型 | 那条类型警告本身 | 同上 |
+
+`include`/`cast` 两条进 `NOTES`，但同时加了 `NOTES_PROOF` —— 手写散文最容易悄悄
+变假，有判据的改了就红。`comment` 那条**也钉进 NOTES_PROOF**：实测证明模板对，
+所以更要锁住，下次谁改了 `{{ if false }}` 那行就会被拦。
+
+`config.md` 和 `commands.md` 保持手写：markup 那五条「漏了会怎样」是实测叙述，
+命令是操作流程，都不是能从模板抽的结构。
+
+### 18.5 这次测法本身的收获
+
+七轮单问单答从没碰到的两类缺口，一次端到端全出来了：**数据文件的字段**（第 17 节
+之前）和**配置的形状**（这一节）。原因是单问单答的问题都由我出，而我只会问我知道
+存在的东西。让 agent 自己从零搭，它撞的是我没想到要问的那些墙。
+
+代价是一次跑要几十分钟、要三次权限升级、报告里有 2/14 是错的需要逐条核。值得，
+但它是补充而不是替代 —— 16 条 eval 跑一遍是分钟级的回归，这个不是。

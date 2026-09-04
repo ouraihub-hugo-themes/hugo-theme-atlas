@@ -74,6 +74,10 @@ if (!src.contrib.includes('isset .data "items"')) {
 if (!/只有 pinned 能插值/.test(src.channels)) {
   bad.push(`${F.channels}: the pinned-only interpolation rule is no longer stated there`);
 }
+// published 的类型：实测里 agent 把它当发布日期写。判据是那条类型警告本身。
+if (!/download published must be a boolean/.test(src.resolve)) {
+  bad.push(`${F.resolve}: published is no longer type-checked as a boolean; this page says it is`);
+}
 
 if (bad.length > 0) {
   for (const n of bad) console.error(`FAIL  ${n}`);
@@ -135,6 +139,12 @@ L.push("");
 L.push(`**Top-level fields:** ${code(topKeys)} — anything else skips the whole block.`);
 L.push("`version` and `channels` are required; `channels` must be a non-empty array.");
 L.push("`repo` is an `owner/repository` pair. `tag` defaults to `v` plus the version.");
+L.push("");
+L.push(
+  "**`published` is a boolean, not a date.** It means “this version number is decided but the " +
+    "release is not out yet”: `false` greys out the pinned channels. Next to a `version` and a " +
+    "`tag` a date is the obvious reading and the wrong one — a date warns and is treated as `true`.",
+);
 L.push("");
 L.push(`**Per-channel fields:** ${code(chanKeys)}`);
 L.push("");

@@ -35,10 +35,10 @@ pnpm dev             # CSS + TS watch + hugo server
 
 ```sh
 pnpm build           # css + ts + hugo
-pnpm check           # 全套门禁：格式、类型、lint、单测 + 六个检查器
+pnpm check           # 全套门禁：格式、类型、lint、单测 + 七个检查器
 ```
 
-`pnpm check` 里的六个检查器各管一段契约，红了单独跑那一个：
+`pnpm check` 里的七个检查器各管一段契约，红了单独跑那一个：
 
 | 命令 | 管什么 |
 | --- | --- |
@@ -48,6 +48,7 @@ pnpm check           # 全套门禁：格式、类型、lint、单测 + 六个�
 | `check:i18n` | 32 份 locale 的 schema 完全一致 |
 | `check:outputs` | 建真站点读真产物：RSS/markdown/llms 的结构与安全 |
 | `check:vendor` | `VENDOR.json` 与 `NOTICES.md` 跟产物里的第三方代码对得上 |
+| `check:skill` | `skills/` 下五份生成的参考页与它们的模板、partial 一致 |
 
 发布前另跑一次带门的构建：
 
@@ -243,17 +244,22 @@ cp -r <主题>/skills/hugo-theme-atlas .claude/skills/
 landing section 漏一个必需字段那一项（有时整节）被跳过。模型光靠通用 Hugo 知识会
 交付「看着对」的产物。
 
-六份文件，模型按任务自己挑：
+七份文件，模型按任务自己挑：
 
-| 文件 | 内容 |
-|---|---|
-| `SKILL.md` | 入口，路由到下面几份 |
-| `shortcodes.md` | 30 个 shortcode 的参数与调用形式 |
-| `fences.md` | 9 种代码围栏的属性与 body 格式 |
-| `landing.md` | 22 个 landing section 的键与必需字段 |
-| `config.md` | 站点侧那五条 `markup` 配置 |
-| `commands.md` | 建站、构建、预览、搜索 |
+| 文件 | 内容 | 生成 |
+|---|---|---|
+| `SKILL.md` | 入口，路由到下面几份 | |
+| `shortcodes.md` | 30 个 shortcode 的参数、调用形式与正文二次渲染 | ✓ |
+| `fences.md` | 9 种代码围栏的属性、约束与 body 格式 | ✓ |
+| `landing.md` | 22 个 landing section 的键、必需字段与枚举 | ✓ |
+| `data.md` | `data/contributors.yaml` 与 `data/download/*.yaml` 的字段 | ✓ |
+| `params.md` | 八棵 `params.ui.*` 的形状与页面级键 | ✓ |
+| `config.md` | 站点侧那五条 `markup` 配置 | |
+| `commands.md` | 建站、构建、预览、搜索 | |
 
-**前三份由 `pnpm gen:skill` 从模板生成**，`pnpm check` 里的 `check:skill` 盯着它们
-与模板一致 —— 改了 shortcode 的参数、围栏的属性或 section 的键而没重新生成，门禁
-会红。别手改这三份。
+**打勾的五份由 `pnpm gen:skill` 从模板与 partial 生成**，`pnpm check` 里的
+`check:skill` 盯着它们与来源一致 —— 改了参数、属性、section 的键、数据文件字段或
+`params.ui` 的形状而没重新生成，门禁会红。别手改这五份。
+
+后两份手写：那五条 `markup` 配置「漏了会怎样」是实测叙述，命令是操作流程，都不是
+能从模板里抽出来的结构。
