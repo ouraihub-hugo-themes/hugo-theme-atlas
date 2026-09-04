@@ -123,6 +123,8 @@ Terminal session recording from an asciicast file.
 
 Parameters: `src`, `caption`, `poster`, `start`
 
+Boolean: `autoplay`, `preload`, `loop` — takes `true` or `false`, nothing else. Any other value warns and falls back to `false`.
+
 `poster` and `start` are passed to the player verbatim — they take asciinema's own syntax (`npt:1:23`, `data:text/plain,…`). The theme validates only that they contain no control characters, so a malformed value reaches the player and fails there, not at build time.
 
 ## comment
@@ -210,9 +212,15 @@ Parameters: `num`, `id`, `caption`, `class`, `src`, `alt`, `link`, `width`, `hei
 
 Pull in another file: a page resource, an assets mount, or another content file.
 
-`{{< include file="…" code="…" >}}` — never closed. Adding `{{< /include >}}` is a build error.
+`{{< include file="…" code="true" >}}` — never closed. Adding `{{< /include >}}` is a build error.
 
 Parameters: `file`, `code`, `lang`
+
+Boolean: `code` — takes `true` or `false`, nothing else. Any other value warns and falls back to `false`.
+
+**Parameters that depend on each other:**
+
+- `lang requires code=true` — otherwise: ignoring lang
 
 **`file` resolves in three places, in order:** the page's own resources, then `assets/`, then `content/`. A leading `/` means the content root and skips the first two; anything else is relative to the current page's directory. Found in none of the three warns and includes nothing.
 
@@ -265,6 +273,10 @@ Turn `sha*sum` output into a table of download links and checksums.
 
 Parameters: `algo`, `base`, `src`, `group`
 
+**Parameters that depend on each other:**
+
+- `base is only valid without release_url front matter` — otherwise: skipping the block
+
 **Also requires:** `release_url` in the page front matter, plus `sha*sum` output as the body
 Without it the shortcode renders nothing at all — the build still succeeds.
 
@@ -283,7 +295,7 @@ Without it the shortcode renders nothing at all — the build still succeeds.
 
 Numbered steps driven by headings in the body.
 
-`{{< steps >}}` … `{{< /steps >}}`. Always paired — an empty body renders an empty container and says nothing.
+`{{% steps %}}` … `{{% /steps %}}` — **`%` delimiters, not `<`.** With `{{<` the body is not parsed as Markdown: headings and code fences render as literal text, with no warning and a green build. Leave a blank line above and below the body so Goldmark sees block boundaries.
 
 Takes no parameters.
 

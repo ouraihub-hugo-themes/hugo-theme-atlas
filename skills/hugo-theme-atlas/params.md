@@ -136,5 +136,15 @@ Site-side `params.ui.<key>` pairs with a page-side `<key>` — the `ui.` prefix 
 | `feedback` | `params.ui.repo` | `false` to drop the feedback widget |
 | `comments_off` | `params.ui.comments` | **the exception above** — page-only, `true` to turn off |
 
-Page-only presentation keys, no `params.ui` counterpart: `reading_width`
-(`slim`, `normal`, `wide`), `featured_image`, `tone`, `note`, `pem`.
+These four are read with Hugo's `.Param`, which checks the page and then the site's **top-level** `params` — not `params.ui`:
+
+| Key | Shape |
+|---|---|
+| `reading_width` | enum: `slim`, `normal`, `wide` |
+| `featured_image` | enum: `none`, `banner`, `wash`, `hero` — **a treatment, not a path** |
+| `search_boost` | whole number 1–5, a tier not a multiplier |
+| `search_exclude` | boolean — `true` keeps the whole page out of the index |
+
+**`featured_image` names the treatment, not the image.** It is one of `none`, `banner`, `wash`, `hero`; a path warns and falls back. The image comes from the page's own `images` front-matter list, or a page resource named `featured`, `feature`, `cover`, or `thumbnail`. A mode with no image found renders nothing and does not warn — `images` often lives in site config or a cascade. `featured_image_alt` supplies the alt text.
+
+`search_boost` is a tier, not a multiplier: below 1 it warns and uses 1, above 5 it clamps. To drop a page entirely use `search_exclude`, not a zero boost — a non-boolean there warns and keeps the page indexed.

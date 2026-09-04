@@ -36,7 +36,9 @@ filename, and it must match `^[a-z0-9][a-z0-9_-]*$`.
 
 **`published` is a boolean, not a date.** It means “this version number is decided but the release is not out yet”: `false` greys out the pinned channels. Next to a `version` and a `tag` a date is the obvious reading and the wrong one — a date warns and is treated as `true`.
 
-**Per-channel fields:** `id`, `kind`, `icon`, `url`, `steps`, `checksums`, `checksums_src`
+**Per-channel fields:** `id`, `kind`, `icon`, `url`, `steps`, `checksums`, `checksums_src`, plus `title`, `note`.
+
+`title` is **required** — a channel without one is skipped entirely. Both `title` and `note` accept a language suffix (`title_zh`), which is why they are matched by pattern rather than listed in the whitelist.
 
 `kind` is one of `rolling`, `pinned` and is what decides whether interpolation is allowed:
 
