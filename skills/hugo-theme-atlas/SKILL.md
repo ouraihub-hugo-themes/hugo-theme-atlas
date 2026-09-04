@@ -18,10 +18,14 @@ sections, and 4 reading shells.
 | `config.md` | Setting up or debugging `hugo.toml`. Five `markup` settings the theme cannot default. |
 | `fences.md` | Adding a diagram, chart, equation, file tree, image grid, or checksum table. Also generated — it is the authority on fence attributes. |
 | `landing.md` | Building or editing a landing page. Generated — it is the authority on the 22 sections' keys. Landing is front matter, not shortcodes. |
-| `commands.md` | Starting a site, building, previewing, or wiring up search. |
+| `commands.md` | Starting a site, building, previewing, or wiring up search — **and whenever you write install or setup steps as page content.** A plausible-looking procedure is usually wrong here: there is no CLI, and `pnpm install` is not part of installing the theme. |
 
 Do not guess a shortcode's parameters. `shortcodes.md` lists every accepted name for
 all 30; anything absent from it does not exist.
+
+**A parameter name in the question is not evidence the parameter exists.** Someone
+asking why `titel=` failed has also assumed `title` is right — and on `badge` it is
+not, the parameter is `text`. Check the name they meant, not just the one they typed.
 
 ## The failure mode to design against
 

@@ -30,7 +30,8 @@
       "expectations": [
         "Uses an ordered list with `{.steps}` rather than `{{< steps >}}`",
         "If it does use the shortcode, it states the specific reason (TOC entries or a container shortcode inside a step)",
-        "Does not self-close the container if the shortcode is used"
+        "Does not self-close the container if the shortcode is used",
+        "If the steps describe installing this theme, they do not include `pnpm install` — measured failure: the model reached for a plausible install procedure instead of the one in commands.md"
       ]
     },
     {
@@ -115,7 +116,8 @@
       "expectations": [
         "Explains that unknown parameters warn and are ignored, leaving the build green",
         "Recommends `hugo --printPathWarnings --panicOnWarning`",
-        "Notes that `badge` has no `title` parameter at all — the correct one is `text`"
+        "Notes that `badge` has no `title` parameter at all — the correct one is `text`, so fixing the typo to `title=` would not have helped either",
+        "Says the badge renders nothing rather than rendering empty — badge.html warns `needs a non-empty text; rendering nothing`"
       ]
     },
     {
@@ -127,6 +129,27 @@
         "Uses only name, type, required, default on `field`",
         "Does not self-close `fields`, which warns and renders nothing",
         "Puts each field's prose in the body, since that is what gets rendered as Markdown"
+      ]
+    },
+    {
+      "id": 15,
+      "query": "Build a landing page for this site with a hero, a three-card section, and a pricing table.",
+      "expected_output": "Front matter with layout: landing and a sections array — no shortcodes.",
+      "expectations": [
+        "Writes `layout: landing` plus a `sections:` array in front matter, not body content",
+        "Does not reach for `{{< cards >}}` or any shortcode on a landing page",
+        "Uses only keys listed in landing.md for each section type",
+        "Supplies every required key — `name` and `price` on a pricing entry, `title` on a card — since omitting one drops that entry silently"
+      ]
+    },
+    {
+      "id": 16,
+      "query": "My landing page's comparison table isn't showing up at all. The build succeeded.",
+      "expected_output": "Identifies a missing or empty required key on pricing-compare.",
+      "expectations": [
+        "Names `plans` as the likely cause — it must be a non-empty array or the whole section renders nothing",
+        "Distinguishes section-level failure from per-entry failure, where a bad row is skipped and the rest renders",
+        "Does not treat a green build as evidence the front matter is correct"
       ]
     },
     {
