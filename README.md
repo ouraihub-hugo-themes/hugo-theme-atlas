@@ -81,8 +81,10 @@ skills/              给 AI 搭站者的 Claude Code skill（拷进消费方站�
   `-diff`。（**唯一例外是搜索** —— 见下方站点侧要求。）
 - **模板里不拼类名。** `class="text-{{ .Param }}"` Tailwind 扫不到，样式
   会静默消失。需要动态就写完整类名分支。
-- **组件样式用 `@utility` 语义类**，不在模板里堆 utility。这样 print、
-  forced-colors、RTL 能集中声明，不散到每个 partial。
+- **组件样式写成 `td-` 语义类**，不在模板里堆 utility。这样 print、
+  forced-colors、RTL 能集中声明，不散到每个 partial。绝大多数是 `@layer
+  components` 里的普通 `.td-x` 选择器；`@utility` 只给需要跟 Tailwind variant
+  或 `@apply` 组合的那几个（现有 13 个，其余 359 个是普通选择器）。
 - **同一组件的变体用 BEM 的 `--`**（`td-pager-link--next`），不另起类名。
   `.stylelintrc.json` 的 `selector-class-pattern` 为此放开了 `--`；JSON 写
   不了注释，理由记在这里。

@@ -126,6 +126,44 @@ found` — one of the few loud failures in this theme.
 - **A landing page carries no shortcodes.** It is `layout: landing` plus a `sections:`
   array in front matter, one entry per section. See `landing.md`.
 
+## Finding a component's CSS classes
+
+**The class name is not the shortcode name.** `fig` emits `td-book-figure`, not
+`td-fig` — the four numbered targets `fig`/`tbl`/`eq`/`eg` all share that root and
+differ by a `--fig`/`--tbl`/`--eq`/`--eg` suffix. Grepping the name you called comes
+back empty.
+
+Read the component's template instead — `layouts/_shortcodes/<name>.html`,
+`layouts/_markup/render-codeblock-<lang>.html`, or
+`layouts/_partials/landing/section/<name>.html`. All 22 landing sections and 7 of the 9
+fences carry their classes as literals. Three kinds of shortcode do not:
+
+- **Delegates to a partial** — `card`, `download`, `contributors`, `release-assets`,
+  `swagger`, `redoc`, and the four `book-*` lists. The partial's path is named in the
+  same file, one hop away (`card` → `content/card-markup.html`).
+- **Child shortcodes whose markup lives in the parent** — `field` and `tab` only
+  register themselves; the classes are all in `fields.html` and `tabs.html`.
+- **Emits no wrapper** — `param` prints a bare value, `include` renders the included
+  file's own markup, `comment` prints nothing. There is no class to target.
+
+Two things that grep will not tell you:
+
+- **Variant classes are assembled at render time** (`printf "td-callout--%s" $type`), so
+  `td-callout--note` appears in no template. Read the enum in the template, or read the
+  built HTML in `public/`.
+- **A class with no CSS rule is normal, not a bug.** Roughly 36 of the ~366 classes in
+  the output are semantic markers with no styling — the four shell markers
+  (`td-shell-docs`, `td-shell-book`, `td-shell-blog`, `td-shell-swagger`) and the
+  `xref`/figure kind markers among them. They exist to be hooked, by your CSS or by
+  tests. The reverse also happens: ~40 classes exist in CSS but in no built page,
+  because JS adds them at runtime (`td-search-*`, `td-palette-*`, `td-scroll-locked`)
+  or because the feature is off in that build (`td-comments-*` needs giscus configured).
+
+To restyle, override in your own stylesheet or edit `src/css/<component>.css` and run
+`pnpm css:build`. Do not edit `assets/dist/` — it is generated. Colors, spacing, and
+type scale are `@theme` custom properties in `src/css/theme.css`; changing a token
+there is usually the shorter path than overriding a class.
+
 ## When something does not render
 
 Work down this list — it is ordered by how often each is the cause and how silent it is.
