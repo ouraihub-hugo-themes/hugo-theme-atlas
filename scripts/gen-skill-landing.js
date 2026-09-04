@@ -67,6 +67,38 @@ function required(text) {
 }
 
 /**
+ * 类型与形状约束。`required()` 只认 `requires <key>;` 一种句式，而丢弃输入的警告
+ * 远不止那一种 —— 实测另有 12 条别的措辞。
+ *
+ * 漏掉这一整类的代价是真的：`pricing-compare` 的行要求 `values` 是数组、且格数等于
+ * `plans` 的个数，两条都只 warn 一句就把整行丢掉。四行都差一格，整节就空了，而
+ * 生成物里一个字都没提。**这是跑 eval 时模型自己带行号指出来的，我没写进去。**
+ *
+ * 直接把警告原文当事实用（去掉 printf 占位符），不再手写一份 —— 措辞一改就跟着变。
+ */
+function constraints(text) {
+  const out = [];
+  const re = /warnf "%s: ([^"]*?); (skipping it|rendering nothing)"/g;
+  for (const m of text.matchAll(re)) {
+    let what = m1Clean(m[1]);
+    // `required()` 已经收的那类，无论前面有没有名词前缀（`row requires feature`）。
+    if (/(^|\s)requires [a-z_]+$/.test(what)) continue;
+    // `PROSE_REQUIRED` 已经收的那条，措辞里带 `requires`。
+    if (/requires a non-empty/.test(what)) continue;
+    if (!out.some((x) => x.what === what)) out.push({ what, drops: m[2] });
+  }
+  return out;
+}
+
+/** 警告原文 → 能读的短语：去掉 printf 占位符，两个 %d 的那条改写成人话。 */
+function m1Clean(s) {
+  if (/has %d values but there are %d plans/.test(s)) {
+    return "a row's values count does not match the number of plans";
+  }
+  return s.replace(/; got %[vqds]$/, "");
+}
+
+/**
  * 一句话英文说明。**手写**，理由同前两个生成器：模板头注释是中文，而 skill 是英文。
  *
  * 只写「它是什么 / 什么时候选它」。字段名一律从模板抽，不在这里重复 —— 重复一遍
@@ -158,6 +190,7 @@ for (const name of names) {
     keys: keys ?? [],
     items,
     required: required(raw),
+    constraints: constraints(raw),
     prose: prose ?? null,
     data: NEEDS_DATA[name] ?? null,
     actions: (keys ?? []).includes("actions"),
@@ -274,6 +307,15 @@ for (const s of specs) {
       lines.push(`**Required per entry:** ${code(drop)} — omit one and that entry is skipped.`);
     if (kill.length > 0)
       lines.push(`**Required:** ${code(kill)} — omit one and the whole section renders nothing.`);
+    lines.push("");
+  }
+  if (s.constraints.length > 0) {
+    lines.push("**Also dropped when:**");
+    lines.push("");
+    for (const c of s.constraints) {
+      const tail = c.drops === "rendering nothing" ? "whole section" : "that entry only";
+      lines.push(`- ${c.what} — ${tail}`);
+    }
     lines.push("");
   }
   if (s.prose) {

@@ -105,5 +105,10 @@ pnpm check    # the full gate: format, types, lint, tests, and the checkers
 otherwise Hugo picks up the previous build's assets and reports nothing wrong. Do not
 run `hugo` directly after editing `src/` — run `pnpm build`.
 
+**`pnpm build` writes to `exampleSite/public`, not `public/`**, because it passes
+`--source exampleSite`. Testing search in the theme repo therefore needs
+`npx pagefind --site exampleSite/public`. The bare `--site public` above is for a
+consuming site, where `hugo` runs at the root.
+
 Compiled output under `assets/dist/` is committed, so any source change means
 rebuilding and committing the artifacts too.

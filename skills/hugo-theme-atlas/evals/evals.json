@@ -1,10 +1,10 @@
 {
   "skill_name": "hugo-theme-atlas",
-  "notes": "Each eval targets a failure this theme produces *with a green build*. An eval that only checks 'the build succeeded' proves nothing here. Schema follows the skill-creator evals.json shape. Field name is `query`: that is what run_eval.py reads (the plugin references say `prompt`, the code disagrees).",
+  "notes": "Each eval targets a failure this theme produces *with a green build*. An eval that only checks 'the build succeeded' proves nothing here. Field name is `query`: that is what run_eval.py reads (the plugin references say `prompt`, the code disagrees). **Every query names a concrete existing file.** Measured: queries saying \"this page\" left a fresh `claude -p` with no referent, so it correctly asked which page instead of authoring anything — testing whether it asks, not whether it picks the right component.",
   "evals": [
     {
       "id": 1,
-      "query": "Add a grid of three cards to docs/index.md linking to the getting-started, configuration, and reference pages.",
+      "query": "Add a grid of three cards to exampleSite/content/docs/_index.md linking to the tokens, typography, and components pages.",
       "expected_output": "A `cards` block wrapping three `card` calls, each using only parameters from the whitelist.",
       "expectations": [
         "Uses `{{< cards >}}` … `{{< /cards >}}` as a pair, not self-closed",
@@ -15,7 +15,7 @@
     },
     {
       "id": 2,
-      "query": "This page has a numbered figure. Add a cross-reference to it from an earlier paragraph.",
+      "query": "In exampleSite/content/docs/components/book.md, add a cross-reference to the numbered figure from an earlier paragraph.",
       "expected_output": "A self-closed `xref` with exactly one target kind.",
       "expectations": [
         "Writes `{{< xref fig=\"…\" />}}` self-closed, or paired only when supplying custom link text",
@@ -25,7 +25,7 @@
     },
     {
       "id": 3,
-      "query": "Write a three-step install procedure for this docs page.",
+      "query": "Write a three-step install procedure to paste into exampleSite/content/docs/_index.md.",
       "expected_output": "An ordered list carrying `{.steps}`, not the steps shortcode.",
       "expectations": [
         "Uses an ordered list with `{.steps}` rather than `{{< steps >}}`",
@@ -36,7 +36,7 @@
     },
     {
       "id": 4,
-      "query": "Add a Mermaid flowchart showing the request lifecycle to this page.",
+      "query": "Add a Mermaid flowchart of the theme's build pipeline to exampleSite/content/docs/components/diagram.md.",
       "expected_output": "A fenced code block with language `mermaid`.",
       "expectations": [
         "Uses a ```mermaid fence",
@@ -46,7 +46,7 @@
     },
     {
       "id": 13,
-      "query": "Add a PlantUML sequence diagram to this page.",
+      "query": "Add a PlantUML sequence diagram to exampleSite/content/docs/components/diagram.md.",
       "expected_output": "A plantuml fence plus the server config it needs.",
       "expectations": [
         "Uses a ```plantuml fence, not a shortcode",
@@ -56,7 +56,7 @@
     },
     {
       "id": 14,
-      "query": "Show the project's directory layout on this page.",
+      "query": "Show this project's directory layout in exampleSite/content/docs/tokens.md.",
       "expected_output": "A filetree fence with box-drawing characters.",
       "expectations": [
         "Uses a ```filetree fence",
@@ -101,7 +101,7 @@
     },
     {
       "id": 8,
-      "query": "Add a contributors section to the about page.",
+      "query": "Add a contributors section to a new page exampleSite/content/about.md.",
       "expected_output": "The shortcode plus the data file it depends on.",
       "expectations": [
         "Notes that a data/<key>.yaml file is required",
@@ -122,7 +122,7 @@
     },
     {
       "id": 10,
-      "query": "Document these API fields on the reference page: name, timeout, retries.",
+      "query": "Document these API fields in exampleSite/content/docs/components/field.md: name, timeout, retries.",
       "expected_output": "A `fields` block wrapping three `field` calls.",
       "expectations": [
         "Uses `fields` as the container and `field` for each entry",
