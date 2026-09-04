@@ -239,8 +239,21 @@ cp -r <主题>/skills/hugo-theme-atlas .claude/skills/
 ```
 
 它解决的是**这套主题几乎所有错误都不会让构建失败**这件事：参数名打错只 warn、
-站点侧五条配置漏了照样绿、自闭合容器渲染成空容器、缺 `data/` 图标静默消失。
-模型光靠通用 Hugo 知识会交付「看着对」的产物。
+站点侧五条配置漏了照样绿、自闭合容器渲染成空容器、缺 `data/` 图标静默消失、
+landing section 漏一个必需字段那一项（有时整节）被跳过。模型光靠通用 Hugo 知识会
+交付「看着对」的产物。
 
-`shortcodes.md` 由 `pnpm gen:skill` 从模板生成，`pnpm check` 里的 `check:skill`
-盯着它与模板一致 —— 改了 shortcode 的参数而没重新生成，门禁会红。
+六份文件，模型按任务自己挑：
+
+| 文件 | 内容 |
+|---|---|
+| `SKILL.md` | 入口，路由到下面几份 |
+| `shortcodes.md` | 30 个 shortcode 的参数与调用形式 |
+| `fences.md` | 9 种代码围栏的属性与 body 格式 |
+| `landing.md` | 22 个 landing section 的键与必需字段 |
+| `config.md` | 站点侧那五条 `markup` 配置 |
+| `commands.md` | 建站、构建、预览、搜索 |
+
+**前三份由 `pnpm gen:skill` 从模板生成**，`pnpm check` 里的 `check:skill` 盯着它们
+与模板一致 —— 改了 shortcode 的参数、围栏的属性或 section 的键而没重新生成，门禁
+会红。别手改这三份。
