@@ -63,6 +63,11 @@ Horizontal bars from label/value pairs. No chart runtime.
 
 **Required per entry:** `label` — omit one and that entry is skipped.
 
+**Also dropped when:**
+
+- bar value must be a number — that entry only
+- bar value must not be negative — that entry only
+
 ## capabilities
 
 Feature list with a per-row status marker.
@@ -91,6 +96,10 @@ One narrative case with an image and its own metrics.
 
 **Required per entry:** `value`, `label` — omit one and that entry is skipped.
 
+**Also dropped when:**
+
+- each case-study metric must be a map — that entry only
+
 ## code-plate
 
 A single code sample presented as a section.
@@ -113,6 +122,11 @@ Avatars from a data file.
 
 **Section keys:** `data`
 
+**Also dropped when:**
+
+- data must name one top-level data file — whole section
+- data file %q was not found — whole section
+
 **Needs a data file.** The `data` key names a top-level file under `data/`, defaulting to `data/contributors.yaml`. Without that file the section renders nothing.
 
 ## cta
@@ -126,6 +140,10 @@ A band of action buttons and nothing else.
 Install instructions from a data file.
 
 **Section keys:** `data`
+
+**Also dropped when:**
+
+- download requires data naming one data/download/<key>.yaml — whole section
 
 **Needs a data file.** The `data` key names a top-level file under `data/`, defaulting to `data/download.yaml`. Without that file the section renders nothing.
 
@@ -165,6 +183,10 @@ Row of logos, optionally linked.
 
 **Required per entry:** `src` — omit one and that entry is skipped.
 
+**Also dropped when:**
+
+- logo requires alt (the name is the whole point of this section) — that entry only
+
 ## markdown
 
 An escape hatch: a block of Markdown as its own section.
@@ -191,6 +213,10 @@ One framed screenshot.
 
 **Required:** `image` — omit one and the whole section renders nothing.
 
+**Also dropped when:**
+
+- preview requires image_alt (the image is the whole section) — whole section
+
 ## pricing
 
 Plan cards with price, features, and actions.
@@ -210,6 +236,12 @@ Feature-by-plan comparison table.
 **Each entry in `items`:** `feature`, `values`
 
 **Required per entry:** `feature` — omit one and that entry is skipped.
+
+**Also dropped when:**
+
+- pricing-compare plans must be an array — whole section
+- row values must be an array — that entry only
+- a row's values count does not match the number of plans — that entry only
 
 **Required:** `plans` — must be a non-empty array — an empty one counts as missing, and the whole section renders nothing.
 
