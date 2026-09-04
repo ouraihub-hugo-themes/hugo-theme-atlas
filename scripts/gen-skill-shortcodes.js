@@ -43,6 +43,32 @@ const NEEDS = {
 };
 
 /**
+ * 需要站点侧 `params.ui.*` 才有完整输出的 shortcode。与 NEEDS 分开：缺数据是
+ * 「什么都不出」，缺配置是「出一个降级的东西」—— 后者更难发现，因为页面上确实
+ * 有块内容在。
+ *
+ * 端到端实测撞的就是这个：两个渲染器都只出了一个指向 spec 的链接，构建全绿，
+ * 而 shortcodes.md 的条目里一个字没提要配 runtime 地址。
+ */
+const NEEDS_CONFIG = {
+  swagger: {
+    key: "params.ui.openapi.swagger",
+    without:
+      "it renders only a link to the spec, in a container marked `td-openapi-unconfigured` — " +
+      "no warning, green build. Needs both `js` and `css`. See `params.md`.",
+  },
+  redoc: {
+    key: "params.ui.openapi.redoc",
+    without:
+      "it renders only a link to the spec, in a container marked `td-openapi-unconfigured` — " +
+      "no warning, green build. Needs `js`. See `params.md`.",
+  },
+};
+
+/** NEEDS_CONFIG 的判据：那个 shortcode 确实走了 openapi runtime 解析。 */
+const NEEDS_CONFIG_PROOF = { swagger: "openapi-embed.html", redoc: "openapi-embed.html" };
+
+/**
  * 位置参数的语义。**手写** —— `"form" "positional"` 只说明它不收具名参数，
  * 参数是什么、能有几个，只写在模板的文档注释里（中文）。
  */
@@ -339,6 +365,7 @@ for (const name of names) {
     warnsWhenEmpty: warnsWhenEmpty(body),
     bodyRequired: bodyRequired(body),
     rerenders: rerenders(body),
+    needsConfig: NEEDS_CONFIG[name] ?? null,
   };
 
   // NEEDS 是手写的，所以要证明它说的那个依赖还在。模板改成不读数据了而这里
@@ -351,6 +378,16 @@ for (const name of names) {
   const noteProof = NOTES_PROOF[name];
   if (noteProof && !raw.includes(noteProof)) {
     unknown.push(`${name}: NOTES describes behaviour the template no longer has (${noteProof})`);
+  }
+
+  const cfgProof = NEEDS_CONFIG_PROOF[name];
+  if (cfgProof && !raw.includes(cfgProof)) {
+    unknown.push(`${name}: NEEDS_CONFIG says it goes through ${cfgProof}, it no longer does`);
+  }
+  // 反向：开始读 params.ui 了而这里没记。漏掉的后果是作者不知道要配什么，
+  // 而没配时那一块降级成一个看起来像内容的东西 —— 比什么都不出更难发现。
+  if (!cfgProof && /params\.ui\./.test(raw)) {
+    unknown.push(`${name}: reads params.ui.* but NEEDS_CONFIG has no entry for it`);
   }
 
   // 归不到任何一类的才是漏抽。具名参数必须有白名单；positional / none 本来
@@ -392,6 +429,8 @@ for (const [label, table] of [
   ["PREFER", PREFER],
   ["NOTES", NOTES],
   ["NOTES_PROOF", NOTES_PROOF],
+  ["NEEDS_CONFIG", NEEDS_CONFIG],
+  ["NEEDS_CONFIG_PROOF", NEEDS_CONFIG_PROOF],
   ["SHOW", SHOW],
 ]) {
   for (const name of Object.keys(table)) {
@@ -563,6 +602,13 @@ for (const s of specs) {
   if (s.needs) {
     lines.push(`**Also requires:** ${s.needs}`);
     lines.push("Without it the shortcode renders nothing at all — the build still succeeds.");
+    lines.push("");
+  }
+
+  if (s.needsConfig) {
+    lines.push(
+      `**Requires \`${s.needsConfig.key}\` in the site config.** Without ${s.needsConfig.without}`,
+    );
     lines.push("");
   }
 }
