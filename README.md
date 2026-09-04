@@ -48,7 +48,7 @@ pnpm check           # 全套门禁：格式、类型、lint、单测 + 七个�
 | `check:i18n` | 32 份 locale 的 schema 完全一致 |
 | `check:outputs` | 建真站点读真产物：RSS/markdown/llms 的结构与安全 |
 | `check:vendor` | `VENDOR.json` 与 `NOTICES.md` 跟产物里的第三方代码对得上 |
-| `check:skill` | `skills/` 下五份生成的参考页与来源一致，且 `SKILL.md` 里的数字没漂 |
+| `check:skill` | `skills/` 下六份生成的参考页与来源一致，且 `SKILL.md` 里的数字与名单没漂 |
 
 发布前另跑一次带门的构建：
 
@@ -99,31 +99,36 @@ skills/              给 AI 搭站者的 Claude Code skill（拷进消费方站�
 
 ## 定制
 
-**改外观走 `@theme`，不覆盖 Sass、不改 `assets/dist/`。**
+**改外观改 `--td-*`，不覆盖 Sass、不改 `assets/dist/`。**
 
 这个主题是 clone-and-own 的：你 clone 之后 `src/css/theme.css` 就是你的文件。
-颜色、字号、间距、圆角、阴影全部是那一层里的 CSS 自定义属性，改一个值重新
+颜色、字族、布局量度全是那一层里的 CSS 自定义属性，改一个值重新
 `pnpm css:build` 即可。
 
 ```css
-/* src/css/theme.css */
-@theme {
-  --color-accent: oklch(0.55 0.19 250);
-  --font-display: "Your Display Face", var(--font-sans);
+/* src/css/theme.css 的 :root 块 */
+:root {
+  --td-accent: oklch(0.55 0.19 250);
+  --td-font-display: "Your Display Face", var(--td-font-ui);
   --td-shell-sidebar-w: 20rem;
 }
 ```
 
-命名分两族：Tailwind 要解析成类名的那些不带前缀（`--color-accent` 对应
-`text-accent`、`--font-display` 对应 `font-display`），主题自己的布局量度带
-`--td-`（`--td-shell-sidebar-w`）—— 后者只被 CSS 与 JS 直接读，不需要类名。
+命名分两族，**改的是 `--td-` 那族**：它们是真实值，组件样式直接读。不带前缀的
+`--color-*` / `--font-*` / `--shadow-*` 是 `@theme inline` 里的映射，只为让
+Tailwind 生成 `bg-accent`、`font-display` 这类类名 —— 改映射只影响用了那个类名
+的地方，直接读 `--td-accent` 的组件不会跟着变，而构建照常绿。
+
+完整清单见 `skills/hugo-theme-atlas/tokens.md` —— 每个 token 的 Tailwind 别名、
+深色下是否被覆盖、以及哪些只被 CSS/JS 直接读。那一页由 `theme.css` 生成，
+`pnpm check:skill` 盯着它不漂。
 
 为什么是这一层而不是别处：
 
 - **不改 `assets/dist/`。** 那是产物，下一次 `pnpm css:build` 会覆盖掉。
 - **不用 Sass 变量覆盖那套做法。** 这里没有预处理器变量 —— token 只有 CSS
   自定义属性一层。单层的直接后果是深浅色主题、`forced-colors`、打印都用同一
-  组名字：`--color-accent` 在 `[data-td-theme="dark"]` 下换一个值，所有
+  组名字：`--td-accent` 在 `[data-td-theme="dark"]` 下换一个值，所有
   引用它的组件跟着变，不必为每个组件各写一份深色规则。两层的话浅色那份在
   构建时就烧进了产物，运行时换不了。
 - **纯给 JS 读的 token 别放进 `@theme`。** 那一层里没被任何类名引用的名字会被
@@ -132,7 +137,7 @@ skills/              给 AI 搭站者的 Claude Code skill（拷进消费方站�
   就是后者。
 
 只加一两条覆盖时不必动 `theme.css`：在它之后 `@import` 一份自己的文件，或者
-直接写一段 `:root { --color-accent: … }`。层叠顺序照常。
+直接写一段 `:root { --td-accent: … }`。层叠顺序照常。
 
 组件级的调整改 `src/css/<组件>.css` 里那条 `@utility`。改模板结构改
 `layouts/` 下**最窄的那个 partial** —— 不要为了一个功能复制整个外壳。
@@ -246,7 +251,7 @@ cp -r <主题>/skills/hugo-theme-atlas .claude/skills/
 landing section 漏一个必需字段那一项（有时整节）被跳过。模型光靠通用 Hugo 知识会
 交付「看着对」的产物。
 
-七份文件，模型按任务自己挑：
+八份文件，模型按任务自己挑：
 
 | 文件 | 内容 | 生成 |
 |---|---|---|
@@ -256,12 +261,13 @@ landing section 漏一个必需字段那一项（有时整节）被跳过。模�
 | `landing.md` | 22 个 landing section 的键、必需字段与枚举 | ✓ |
 | `data.md` | `data/contributors.yaml` 与 `data/download/*.yaml` 的字段 | ✓ |
 | `params.md` | 八棵 `params.ui.*` 的形状与页面级键 | ✓ |
+| `tokens.md` | 换外观：token 名、Tailwind 别名、深色覆盖 | ✓ |
 | `config.md` | 站点侧那五条 `markup` 配置 | |
 | `commands.md` | 建站、构建、预览、搜索 | |
 
-**打勾的五份由 `pnpm gen:skill` 从模板与 partial 生成**，`pnpm check` 里的
-`check:skill` 盯着它们与来源一致 —— 改了参数、属性、section 的键、数据文件字段或
-`params.ui` 的形状而没重新生成，门禁会红。别手改这五份。
+**打勾的六份由 `pnpm gen:skill` 从模板、partial 与 `theme.css` 生成**，`pnpm check`
+里的 `check:skill` 盯着它们与来源一致 —— 改了参数、属性、section 的键、数据文件
+字段、`params.ui` 的形状或任何 token 而没重新生成，门禁会红。别手改这六份。
 
 后两份手写：那五条 `markup` 配置「漏了会怎样」是实测叙述，命令是操作流程，都不是
 能从模板里抽出来的结构。

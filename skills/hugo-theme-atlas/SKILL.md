@@ -18,6 +18,7 @@ sections, and 4 reading shells.
 | `config.md` | Setting up or debugging `hugo.toml`. Five `markup` settings the theme cannot default. |
 | `params.md` | Any `params.ui.*` setting — search, share, typography, repo, comments, openapi, plantuml, shell_types. Generated. **Naming the parameter right is not enough; three of the eight are the wrong *shape* if you guess.** Also the page-level keys and the one exception to the `ui.`-prefix rule. |
 | `fences.md` | Adding a diagram, chart, equation, file tree, image grid, or checksum table. Also generated — it is the authority on fence attributes. |
+| `tokens.md` | Changing colours, fonts, spacing, or any part of the look. Generated. **Set the `--td-*` name, not the `--color-*` alias** — the alias only feeds Tailwind's utility classes, so setting it changes half the page and builds clean. |
 | `landing.md` | Building or editing a landing page. Generated — it is the authority on the 22 sections' keys. Landing is front matter, not shortcodes. |
 | `data.md` | Any component that needs a `data/` file — `contributors`, `download`. Generated. **Naming the file right is not enough; the keys inside are what fails silently.** |
 | `commands.md` | Starting a site, building, previewing, or wiring up search — **and whenever you write install or setup steps as page content.** A plausible-looking procedure is usually wrong here: there is no CLI, and `pnpm install` is not part of installing the theme. |
@@ -163,10 +164,11 @@ Two things that grep will not tell you:
   (`td-search-*`, `td-palette-*`, `td-scroll-locked`) or because the feature is off in
   that build (`td-comments-*` needs giscus configured). **Do not "fix" any of these.**
 
-To restyle, override in your own stylesheet or edit `src/css/<component>.css` and run
-`pnpm css:build`. Do not edit `assets/dist/` — it is generated. Colors, spacing, and
-type scale are `@theme` custom properties in `src/css/theme.css`; changing a token
-there is usually the shorter path than overriding a class.
+**Before overriding a class, check `tokens.md`.** Most restyling is one custom property,
+and a token change carries through light mode, dark mode, print, and forced colors at
+once. Overriding a class reaches one component in one mode. When a class override really
+is the answer, edit `src/css/<component>.css` and run `pnpm css:build` — never
+`assets/dist/`, which is generated.
 
 ## When something does not render
 
