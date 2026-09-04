@@ -1,6 +1,6 @@
 ---
 name: hugo-theme-atlas
-description: Authoring and configuring sites built on the Atlas Hugo theme (hugo-theme-atlas) — its 30 shortcodes, 9 fence languages, required site configuration, and commands. Use this skill whenever the project contains themes/hugo-theme-atlas or a td- CSS class, and whenever the task involves writing Hugo content with shortcodes, editing hugo.toml, adding cards/tabs/badges/figures/steps/mermaid diagrams, setting up search, or debugging a page that renders wrong — even when the theme is not mentioned by name. Almost every mistake with this theme still builds successfully, so relying on general Hugo knowledge instead of this skill produces pages that look fine and are quietly wrong.
+description: Authoring and configuring sites built on the Atlas Hugo theme (hugo-theme-atlas) — its 30 shortcodes, 9 fence languages, 22 landing sections, required site configuration, and commands. Use this skill whenever the project contains themes/hugo-theme-atlas or a td- CSS class, and whenever the task involves writing Hugo content with shortcodes, editing hugo.toml, building a landing page, adding cards/tabs/badges/figures/steps/mermaid diagrams, setting up search, or debugging a page that renders wrong — even when the theme is not mentioned by name. Almost every mistake with this theme still builds successfully, so relying on general Hugo knowledge instead of this skill produces pages that look fine and are quietly wrong.
 user-invocable: false
 ---
 
@@ -17,6 +17,7 @@ sections, and 4 reading shells.
 | `shortcodes.md` | Writing or fixing any `{{< … >}}` call. Generated from the templates — it is the authority on parameter names and call form. |
 | `config.md` | Setting up or debugging `hugo.toml`. Five `markup` settings the theme cannot default. |
 | `fences.md` | Adding a diagram, chart, equation, file tree, image grid, or checksum table. Also generated — it is the authority on fence attributes. |
+| `landing.md` | Building or editing a landing page. Generated — it is the authority on the 22 sections' keys. Landing is front matter, not shortcodes. |
 | `commands.md` | Starting a site, building, previewing, or wiring up search. |
 
 Do not guess a shortcode's parameters. `shortcodes.md` lists every accepted name for
@@ -106,6 +107,8 @@ found` — one of the few loud failures in this theme.
   accepts a boolean shorthand.
 - Reading shells are `docs`, `book`, `blog`, and `swagger`, set via `type` in front
   matter. Landing is a layout, not a shell.
+- **A landing page carries no shortcodes.** It is `layout: landing` plus a `sections:`
+  array in front matter, one entry per section. See `landing.md`.
 
 ## When something does not render
 
@@ -121,5 +124,7 @@ Work down this list — it is ordered by how often each is the cause and how sil
    `attribute.block = true` is missing. Is a diagram showing its source instead? For
    `plantuml` that means `params.ui.plantuml.server` is unset.
 6. Is it an icon name missing from `data/icons.json`?
+7. On a landing page: is a required key missing? That drops the entry, or the whole
+   section, silently. `landing.md` states which per section.
 
 Then rebuild with `--panicOnWarning` and read the warnings.

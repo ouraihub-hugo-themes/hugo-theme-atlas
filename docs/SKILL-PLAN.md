@@ -383,15 +383,18 @@ clone-and-own 分发下他拿的是 `themes/` 里的一份主题）。
 |---|---|---|---|
 | 1 | 从零建一个新站的最小步骤 | 在仓库外 `hugo new site`，拷主题，贴 §8 的配置，`hugo server` 打开 | §9.1 已证明 `pnpm dev` 不是这条路；最小配置集要靠真建一次才敢写 |
 | 2 | ~~9 个围栏语言各自的属性语法~~ | 读 `render-codeblock-*.html` | 只确认了名字；`{num="1" caption="…"}` 这类块属性的允许键没核 → **已做，见 §14** |
-| 3 | 22 个 landing section 的字段 | 读 `layouts/_partials/landing/section/*.html` | skill 要不要覆盖 landing 还没定；覆盖的话字段量比 shortcode 还大 |
+| 3 | ~~22 个 landing section 的字段~~ | 读 `layouts/_partials/landing/section/*.html` | skill 要不要覆盖 landing 还没定；覆盖的话字段量比 shortcode 还大 → **已做，见 §15** |
 
 **组件不止 shortcode 一种形态** —— 还有 9 个围栏语言、类名标记（`.steps`
 `.cards`）、22 个 landing section。清单表只列 shortcode 的话，模型会以为
 `filetree` 得写成 `{{< filetree >}}`。这个错误的形态是「构建绿、页面上什么都没有」。
 
-**范围决定（现在定）：第一版覆盖 30 个 shortcode + 9 个围栏语言，不覆盖 landing。**
+**范围决定（当时定）：第一版覆盖 30 个 shortcode + 9 个围栏语言，不覆盖 landing。**
 理由：landing 是整页布局，作者是在写 `content/landing/index.md` 的 front matter，
 那是另一类任务，值得单独一份附属文件；先把正文创作这条路做完整。
+
+**后续推翻了后半句**：landing 确实是另一类任务，但「值得单独一份附属文件」正是做它的
+理由而不是不做的理由 —— 正文那条路做完之后就补上了，见 §15。
 
 ## 11. 交付顺序
 
@@ -558,6 +561,64 @@ page in this Hugo theme."`，读它的 stream-json，第一个工具调用就是
 
 **14 条的期望没有逐条核过** —— 运行器只数触发率，不比对 `expectations`。那些要靠人
 读答案，留到之后。
+
+## 15. landing 的执行记录（2026-09-04）
+
+补 §10.2 第 3 项，也就是上面那条被推翻的范围决定。
+
+### 15.1 形状与前两份都不同
+
+**landing 有两层允许键**，shortcode 和围栏都只有一层：
+
+- section 自己的键 → `landing/keys.html` 的 `allowed`
+- `items` 里每项的键 → `landing/items.html` 的 `allowed`
+
+一个 section 文件里因此有两处 `"allowed"`，抽取要按调用点分别取，只认第一处会把
+每项的键整类丢掉。22/22 都抽出来了，13 个有 `items`。
+
+还有第三层：`actions`（5 个 section 允许它）走 `landing/actions.html`，键是
+`text href style icon`。公共键（`type id tone title subtitle eyebrow`）和 `tone`
+的取值（`plain muted accent`）各从自己的所有者抽，不手写 —— 它们是 22 个 section
+共用的，手写一份就是加一处会漂的地方。
+
+### 15.2 最值钱的一类事实：必需字段
+
+漏一个必需字段的表现分两种，**实测 22 : 4**：`skipping it` 只丢那一项，
+`rendering nothing` 整节不出。对作者是两条完全不同的排查路径，所以跟键名一起抽。
+
+`pricing-compare` 有一条散文式的警告：`requires a non-empty plans array;
+rendering nothing`。宽松的正则会把 `a` 当成键名抽出来 —— 凭空造一个不存在的键，
+模型会照着写。所以正则收紧到分号结尾的单个词。
+
+但收紧之后这条真的必需项就漏了，而 `plans` 是真键。**三条路选了第三条**：不放宽正则
+（会造假键）、不改模板措辞（`tests/invalid/landing.md:169` 锁着这句原话，且「非空」
+比「有这个键」更准，空数组和缺键是两种输入），而是照本仓库已有的「手写表 + 判据」
+模式补一条 `PROSE_REQUIRED`，附一个能在模板里查到的标记：措辞一改门禁就响。
+
+### 15.3 门禁验过的五种失效
+
+逐个改坏输入，确认非零退出，跑完还原（`git status` 干净）：
+
+1. 生成物与 partial 漂移。
+2. `PROSE_REQUIRED` 引的措辞在模板里不存在了。
+3. 新增 section 而 `SECTIONS` 没描述它。
+4. 某个 section 开始吃 `data` 键而 `NEEDS_DATA` 没记（反向检查）。
+5. `keys.html` 的公共键抽不出来。
+
+外加一条：`PROSE_REQUIRED` 登记了模板 allowed 里不存在的键。
+
+### 15.4 连带改动
+
+`package.json` 的 `check:skill` / `gen:skill` 各串三个脚本。`SKILL.md` 路由表加
+`landing.md`、创作规则加「landing 页面不含 shortcode」、诊断清单加第 7 条，
+description 加 `22 landing sections` 和 `building a landing page` 两个触发线索
+（现 741 字符，上限 1536）。
+
+### 15.5 一处自我纠正
+
+我先前说「14 个 section 有 items」，那是 `grep -c` 数出来的，把 `case-study` 算进去
+了 —— 它只在注释里提到 `items.html`，说明自己为什么**不**用（一个案例只有一份叙述，
+`items` 名额没意义，它的 metrics 自己走一遍）。实际是 13 个。以生成器为准。
 
 ## 14. 围栏语言的执行记录（2026-09-03）
 
