@@ -38,6 +38,17 @@ Turn `sha*sum` output into a table of download links and checksums.
 
 **Attributes:** `base`, `algo`, `group`
 
+**Attribute constraints** — an attribute name alone does not mean any value works:
+
+- `algo`: algo must be md5, sha1, sha256, or sha512 — skipping the block
+- `group`: group must be auto — ignoring it
+- `base`: base is only valid without release_url front matter — skipping the block
+- `base`: base must not be empty — skipping the block
+- `base`: base must use http or https — skipping the block
+- `base`: base URL requires a host — skipping the block
+- `base`: base URL must not contain a query or fragment — skipping the block
+- `base`: base is required unless the page has release_url front matter — skipping the block
+
 ## chem
 
 Chemical equation.
@@ -45,6 +56,10 @@ Chemical equation.
 **Body:** mhchem notation, e.g. `CO2 + C -> 2 CO`. The `\ce{}` wrapper is added for you.
 
 **Attributes:** `title`
+
+**Attribute constraints** — an attribute name alone does not mean any value works:
+
+- `title`: title must not be empty — dropping it
 
 ## echarts
 
@@ -54,6 +69,11 @@ Chart rendered in the browser by Apache ECharts.
 
 **Attributes:** `caption`, `num`, `id`, `height`
 
+**Attribute constraints** — an attribute name alone does not mean any value works:
+
+- `height`: height must be an integer between 10 and 9999 — using a value in that range
+- `id`: id requires num — ignoring it
+
 ## filetree
 
 Directory tree with per-type icons.
@@ -61,6 +81,10 @@ Directory tree with per-type icons.
 **Body:** One path per line using box-drawing characters (`├──`, `│`, `└──`). A `#` starts a trailing comment on that line.
 
 **Attributes:** `title`
+
+**Attribute constraints** — an attribute name alone does not mean any value works:
+
+- `title`: title must not be empty — dropping it
 
 ## gallery
 
@@ -78,6 +102,10 @@ ASCII diagram converted to SVG. No runtime, no network.
 
 **Attributes:** `caption`, `num`, `id`
 
+**Attribute constraints** — an attribute name alone does not mean any value works:
+
+- `id`: id requires num — ignoring it
+
 ## math
 
 Display equation.
@@ -85,6 +113,10 @@ Display equation.
 **Body:** LaTeX. Backslashes are safe here — inside `$$…$$` a `\\` is eaten once by the Markdown parser, so the author has to write four; the fence has no such problem.
 
 **Attributes:** `title`
+
+**Attribute constraints** — an attribute name alone does not mean any value works:
+
+- `title`: title must not be empty — dropping it
 
 ## mermaid
 
@@ -94,6 +126,10 @@ Diagram rendered in the browser by Mermaid.
 
 **Attributes:** `caption`, `num`, `id`
 
+**Attribute constraints** — an attribute name alone does not mean any value works:
+
+- `id`: id requires num — ignoring it
+
 ## plantuml
 
 UML diagram rendered server-side into a plain `<img>`.
@@ -101,6 +137,10 @@ UML diagram rendered server-side into a plain `<img>`.
 **Body:** PlantUML source, e.g. `Alice -> Bob: request`. No `@startuml` wrapper needed.
 
 **Attributes:** `caption`, `num`, `id`, `alt`
+
+**Attribute constraints** — an attribute name alone does not mean any value works:
+
+- `id`: id requires num — ignoring it
 
 **Requires `params.ui.plantuml.server` in the site config.** Without it the fence renders its source as a plain code block instead of a diagram. The theme ships no default server on purpose: pointing at a public one would send every site's diagrams — possibly internal architecture — to a third party.
 

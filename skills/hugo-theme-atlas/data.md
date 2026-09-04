@@ -34,6 +34,8 @@ filename, and it must match `^[a-z0-9][a-z0-9_-]*$`.
 `version` and `channels` are required; `channels` must be a non-empty array.
 `repo` is an `owner/repository` pair. `tag` defaults to `v` plus the version.
 
+**`published` is a boolean, not a date.** It means “this version number is decided but the release is not out yet”: `false` greys out the pinned channels. Next to a `version` and a `tag` a date is the obvious reading and the wrong one — a date warns and is treated as `true`.
+
 **Per-channel fields:** `id`, `kind`, `icon`, `url`, `steps`, `checksums`, `checksums_src`
 
 `kind` is one of `rolling`, `pinned` and is what decides whether interpolation is allowed:

@@ -78,6 +78,10 @@ Feature list with a per-row status marker.
 
 **Required per entry:** `title` — omit one and that entry is skipped.
 
+**`status` is an enum:** `yes`, `partial`, `no` — default `yes`. Any other value warns and falls back, so the entry still renders, wrong.
+
+Quote these in YAML. Bare `yes` and `no` are booleans there, and a boolean is not one of the allowed values.
+
 ## cards
 
 Grid of linked cards. Same markup as the `card` shortcode.
@@ -284,3 +288,5 @@ Dated entries in order, each with an optional status.
 **Each entry in `items`:** `date`, `title`, `body`, `status`
 
 **Required per entry:** `date`, `title` — omit one and that entry is skipped.
+
+**`status` is an enum:** `done`, `current`, `planned` — default `done`. Any other value warns and falls back, so the entry still renders, wrong.

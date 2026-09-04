@@ -105,6 +105,8 @@ Parameters: `title`, `link`, `icon`, `badge`, `image`, `image_alt`
 
 Only valid inside `cards`. On its own it renders outside the layout it needs.
 
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `card` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
+
 ## cards
 
 Grid container for `card`. Takes no parameters of its own.
@@ -120,6 +122,8 @@ Terminal session recording from an asciicast file.
 `{{< cast src="…" caption="…" >}}` — never closed. Adding `{{< /cast >}}` is a build error.
 
 Parameters: `src`, `caption`, `poster`, `start`
+
+`poster` and `start` are passed to the player verbatim — they take asciinema's own syntax (`npt:1:23`, `data:text/plain,…`). The theme validates only that they contain no control characters, so a malformed value reaches the player and fails there, not at build time.
 
 ## comment
 
@@ -158,9 +162,11 @@ Without it the shortcode renders nothing at all — the build still succeeds.
 
 Numbered example. Caption on top, body is usually one or more code fences.
 
-`{{< eg num="…" id="…" >}}` … `{{< /eg >}}` — **or** self-closed `{{< eg num="…" id="…" />}}`. Every call in a page must be closed or self-closed; a bare opening tag is a build error.
+`{{< eg num="…" id="…" >}}` … `{{< /eg >}}` — the body is required. Syntactically `{{< eg num="…" id="…" />}}` is legal, but it warns and renders nothing every time. Every call must be closed or self-closed; a bare opening tag is a build error.
 
 Parameters: `num`, `id`, `caption`, `class`
+
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `eg` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
 
 ## eq
 
@@ -174,7 +180,7 @@ Parameters: `num`, `id`, `caption`, `class`
 
 One field definition. Must be wrapped in `fields`.
 
-`{{< field name="…" type="…" >}}` … `{{< /field >}}` — **or** self-closed `{{< field name="…" type="…" />}}`. Every call in a page must be closed or self-closed; a bare opening tag is a build error.
+`{{< field name="…" type="…" >}}` … `{{< /field >}}` — the body is required. Syntactically `{{< field name="…" type="…" />}}` is legal, but it warns and skips itself every time. Every call must be closed or self-closed; a bare opening tag is a build error.
 
 Parameters: `name`, `type`, `required`, `default`
 
@@ -188,13 +194,17 @@ Definition list of `field` children.
 
 Parameters: `label`, `id`, `class`
 
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `fields` child's body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
+
 ## fig
 
 Numbered figure. Either `src` for an image, or a body for arbitrary block content.
 
-`{{< fig num="…" id="…" >}}` … `{{< /fig >}}` — **or** self-closed `{{< fig num="…" id="…" />}}`. Every call in a page must be closed or self-closed; a bare opening tag is a build error.
+`{{< fig num="…" id="…" >}}` … `{{< /fig >}}`, **or** `{{< fig num="…" id="…" />}}` with `src`. The body and `src` are the two content sources and are mutually exclusive — but the `src` form still needs the closing slash. `{{< fig src="…" >}}` with neither a body nor a `/` is a build error, not a shorthand.
 
 Parameters: `num`, `id`, `caption`, `class`, `src`, `alt`, `link`, `width`, `height`
+
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `fig` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
 
 ## include
 
@@ -203,6 +213,10 @@ Pull in another file: a page resource, an assets mount, or another content file.
 `{{< include file="…" code="…" >}}` — never closed. Adding `{{< /include >}}` is a build error.
 
 Parameters: `file`, `code`, `lang`
+
+**`file` resolves in three places, in order:** the page's own resources, then `assets/`, then `content/`. A leading `/` means the content root and skips the first two; anything else is relative to the current page's directory. Found in none of the three warns and includes nothing.
+
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `include` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
 
 ## kbd
 
@@ -220,6 +234,8 @@ Mind map drawn in the browser from a nested Markdown list body.
 `{{< mindmap caption="…" num="…" >}}` … `{{< /mindmap >}}` — **or** self-closed `{{< mindmap caption="…" num="…" />}}`. Every call in a page must be closed or self-closed; a bare opening tag is a build error.
 
 Parameters: `caption`, `num`, `id`, `height`, `expand`
+
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `mindmap` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
 
 ## param
 
@@ -300,13 +316,17 @@ Tab group.
 
 Parameters: `group`, `default`, `label`
 
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `tabs` child's body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
+
 ## tbl
 
 Numbered table. Body is a Markdown table.
 
-`{{< tbl num="…" id="…" >}}` … `{{< /tbl >}}` — **or** self-closed `{{< tbl num="…" id="…" />}}`. Every call in a page must be closed or self-closed; a bare opening tag is a build error.
+`{{< tbl num="…" id="…" >}}` … `{{< /tbl >}}` — the body is required. Syntactically `{{< tbl num="…" id="…" />}}` is legal, but it warns and renders nothing every time. Every call must be closed or self-closed; a bare opening tag is a build error.
 
 Parameters: `num`, `id`, `caption`, `class`
+
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `tbl` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
 
 ## xref
 
