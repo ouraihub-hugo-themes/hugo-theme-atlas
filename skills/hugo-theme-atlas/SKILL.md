@@ -18,6 +18,7 @@ sections, and 4 reading shells.
 | `config.md` | Setting up or debugging `hugo.toml`. Five `markup` settings the theme cannot default. |
 | `fences.md` | Adding a diagram, chart, equation, file tree, image grid, or checksum table. Also generated — it is the authority on fence attributes. |
 | `landing.md` | Building or editing a landing page. Generated — it is the authority on the 22 sections' keys. Landing is front matter, not shortcodes. |
+| `data.md` | Any component that needs a `data/` file — `contributors`, `download`. Generated. **Naming the file right is not enough; the keys inside are what fails silently.** |
 | `commands.md` | Starting a site, building, previewing, or wiring up search — **and whenever you write install or setup steps as page content.** A plausible-looking procedure is usually wrong here: there is no CLI, and `pnpm install` is not part of installing the theme. |
 
 Do not guess a shortcode's parameters. `shortcodes.md` lists every accepted name for
@@ -122,7 +123,8 @@ Work down this list — it is ordered by how often each is the cause and how sil
 2. Is the call form right — paired, self-closed, or neither? `shortcodes.md` states
    which per shortcode.
 3. Does the shortcode need site-side data (`data/*.yaml`, `release_url` in front
-   matter)? Those render nothing when it is absent.
+   matter)? Those render nothing when it is absent — **and equally when the file
+   exists with the wrong keys.** `data.md` has the schemas; do not guess them.
 4. Is the relevant `markup` setting present? See `config.md`.
 5. For a fence: is the brace-attribute line rendering as text? That means
    `attribute.block = true` is missing. Is a diagram showing its source instead? For
