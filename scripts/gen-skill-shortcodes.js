@@ -267,6 +267,64 @@ function bodyRequired(text) {
 }
 
 /**
+ * 参数之间的依赖与互斥 → [{ what, drops }]。
+ *
+ * 两条，都是实测暴露的：`include` 的 `lang requires code=true`（写了 lang 没写
+ * code 就静默不高亮），`release-assets` 的 `base is only valid without release_url`
+ * （文档把两者并列列出，同时给则整张表消失）。
+ *
+ * 只收「参数 A 与参数 B 的关系」那一类，不收单参数的取值校验 —— 后者已经在
+ * enums 与 bools 里。
+ */
+function deps(text) {
+  const out = [];
+  const re =
+    /warnf "shortcode %q: ([a-z_]+ (?:requires [a-z_]+=?[a-z]*|is only valid [^"]*?)) at %s; ([^"]+)"/g;
+  for (const m of text.matchAll(re)) {
+    if (!out.some((x) => x.what === m[1])) out.push({ what: m[1], drops: m[2] });
+  }
+  return out;
+}
+
+/**
+ * 走 `validate-bool.html` 的参数名。
+ *
+ * 为什么要单独标出来：`callForm` 的占位符一律印 `name="…"`，而 `…` 对布尔参数是
+ * 错的示范。实测里 agent 照着 `code="…"` 写了 `code="toml"` —— 而 `code="true"`
+ * 恰好能用，所以错的心智模型不会被纠正，下一次它会写 `copy="yes"`。
+ *
+ * 两种写法都收：单个 `validate-bool` 调用，以及 `$bools := slice` 那种批量的。
+ */
+function bools(text) {
+  const out = new Set();
+  for (const m of text.matchAll(/validate-bool\.html" \(dict\s*\n?\s*"value" \(\.Get "([a-z_]+)"/g)) {
+    out.add(m[1]);
+  }
+  for (const m of text.matchAll(/\$bools := slice ((?:"[a-z_]+" ?)+)/g)) {
+    for (const n of m[1].matchAll(/"([a-z_]+)"/g)) out.add(n[1]);
+  }
+  return [...out];
+}
+
+/**
+ * 正文必须用 `{{% %}}` 而不是 `{{< >}}` 调用。
+ *
+ * 判据：模板把 `.Inner` 原样输出（前后留空行给 Goldmark 看块边界），而不是过
+ * `render-block`。`{{< >}}` 不让正文过 Markdown，于是 `### 标题` 变成页面上的
+ * 字面量 —— 零警告、exit 0。
+ *
+ * 端到端实测里这是最贵的一条：生成物对 30 个 shortcode 一律印 `{{< >}}`，
+ * 而 `steps` 照着写出来的是一堆字面量文本。exampleSite 里 `{{% steps %}}` 是
+ * 整个示例站唯一的 `%` 调用，所以「照抄示例」也救不了。
+ */
+function needsPercent(text) {
+  // 通用形状而不是写死 `td-steps`：`{{ .Inner }}` 独占一行、前后空行、且模板
+  // 全篇不调 render-block。第二个这样的 shortcode 出现时要自动被认出来。
+  if (/partial "content\/render-block\.html"/.test(text)) return false;
+  return /\n\s*\n\{\{ \.Inner \}\}\s*\n\s*\n/.test(text);
+}
+
+/**
  * 正文是否走 `content/render-block.html`（内部就是 `RenderString`）。
  *
  * 后果是 Hugo 的 shortcode 转义在这些正文里失效：外层渲染把注释标记去掉，内层
@@ -366,6 +424,9 @@ for (const name of names) {
     bodyRequired: bodyRequired(body),
     rerenders: rerenders(body),
     needsConfig: NEEDS_CONFIG[name] ?? null,
+    percent: needsPercent(raw),
+    bools: bools(body),
+    deps: deps(body),
   };
 
   // NEEDS 是手写的，所以要证明它说的那个依赖还在。模板改成不读数据了而这里
@@ -458,14 +519,26 @@ function callForm(s) {
   // 取前两个参数当占位对大多数条目都对，但对参数互斥的不对。只有 xref 这一个，
   // 所以给一张覆写表而不是建通用的互斥声明机制。
   const shown = SHOW[s.name] ?? (s.params ?? []).slice(0, 2);
+  // 布尔参数印 `="true"`，不印 `="…"`：后者是在教一个会静默失效的值。
+  const ph = (p) => `${p}="${s.bools.includes(p) ? "true" : "…"}"`;
   const attrs =
     s.form === "named" && shown.length > 0
-      ? " " + shown.map((p) => `${p}="…"`).join(" ")
+      ? " " + shown.map(ph).join(" ")
       : s.form === "positional"
         ? " " + POSITIONAL[s.name].shape
         : "";
   if (s.inner) {
-    const paired = `\`{{< ${s.name}${attrs} >}}\` … \`{{< /${s.name} >}}\``;
+    // `%` 分隔符的那几个：正文原样交给 Goldmark，用 `<` 会把 Markdown 变字面量。
+    const [o, c] = s.percent ? ["{{%", "%}}"] : ["{{<", ">}}"];
+    const paired = `\`${o} ${s.name}${attrs} ${c}\` … \`${o} /${s.name} ${c}\``;
+    if (s.percent) {
+      return [
+        `${paired} — **\`%\` delimiters, not \`<\`.**`,
+        "With `{{<` the body is not parsed as Markdown: headings and code fences render as",
+        "literal text, with no warning and a green build. Leave a blank line above and below the",
+        "body so Goldmark sees block boundaries.",
+      ].join(" ");
+    }
     // `in` 而不是取值判真：steps 的值是 null（没有固定子 shortcode），但它同样
     // 必须成对。
     if (s.name in CONTAINERS) {
@@ -553,6 +626,19 @@ for (const s of specs) {
   if (s.form === "named" && s.params && s.params.length > 0) {
     lines.push(`Parameters: ${s.params.map((p) => `\`${p}\``).join(", ")}`);
     if (s.via) lines.push(`(validated in \`${s.via}\`, shared with the other OpenAPI renderer)`);
+    if (s.bools.length > 0) {
+      lines.push("");
+      lines.push(
+        `Boolean: ${s.bools.map((p) => `\`${p}\``).join(", ")} — takes \`true\` or \`false\`, ` +
+          "nothing else. Any other value warns and falls back to `false`.",
+      );
+    }
+    if (s.deps.length > 0) {
+      lines.push("");
+      lines.push("**Parameters that depend on each other:**");
+      lines.push("");
+      for (const d of s.deps) lines.push(`- \`${d.what}\` — otherwise: ${d.drops}`);
+    }
     lines.push("");
   } else if (s.form === "positional") {
     lines.push(`Positional, not named. ${POSITIONAL[s.name].note}`);

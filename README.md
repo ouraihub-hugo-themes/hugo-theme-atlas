@@ -48,7 +48,7 @@ pnpm check           # 全套门禁：格式、类型、lint、单测 + 七个�
 | `check:i18n` | 32 份 locale 的 schema 完全一致 |
 | `check:outputs` | 建真站点读真产物：RSS/markdown/llms 的结构与安全 |
 | `check:vendor` | `VENDOR.json` 与 `NOTICES.md` 跟产物里的第三方代码对得上 |
-| `check:skill` | `skills/` 下五份生成的参考页与它们的模板、partial 一致 |
+| `check:skill` | `skills/` 下五份生成的参考页与来源一致，且 `SKILL.md` 里的数字没漂 |
 
 发布前另跑一次带门的构建：
 

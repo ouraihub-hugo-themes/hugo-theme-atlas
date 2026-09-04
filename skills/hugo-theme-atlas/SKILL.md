@@ -109,7 +109,7 @@ found` — one of the few loud failures in this theme.
 
 - **Labels are plain text.** Shortcode parameters do not render Markdown. Landing
   narrative fields do.
-- **An `icon` parameter takes a name from the theme's `data/icons.json`** (76 names),
+- **An `icon` parameter takes a name from the theme's `data/icons.json`** (72 names),
   not a CSS class and not an arbitrary icon-set name. Icons render from an inline SVG
   sprite. An unknown name warns and emits nothing — the page shows no icon at all,
   which is deliberate: a blank square is harder to diagnose.

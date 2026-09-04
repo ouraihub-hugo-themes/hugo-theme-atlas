@@ -48,6 +48,10 @@ for (const [k, p] of Object.entries(F)) {
 // 不存在，而它写进去只会被 warn 掉。
 const topKeys = allowedList(src.resolve);
 const chanKeys = allowedList(src.channels);
+// 渠道的白名单有两支：`$allowed` slice，加一条正则收 `title` / `note` 及其语言
+// 后缀变体。只抽前者会产出一张缺 title 的表 —— 而 title 是必需的，缺了整个渠道
+// 被跳过。实测里 agent 正是照着那张表发现它与页内示例自相矛盾的。
+const chanSuffixed = /\^\(([a-z|]+)\)\(_\[a-z0-9_\]\+\)\?\$/.exec(src.channels)?.[1]?.split("|");
 const stepKeys = [
   ...(src.steps.match(/in \(slice ((?:"[a-z_]+" ?)+)\)/)?.[1] ?? "").matchAll(/"([a-z_]+)"/g),
 ].map((m) => m[1]);
@@ -55,6 +59,12 @@ const kinds = enumList(src.channels);
 
 if (!topKeys?.length) bad.push(`${F.resolve}: could not extract the top-level field list`);
 if (!chanKeys?.length) bad.push(`${F.channels}: could not extract the channel field list`);
+if (chanSuffixed?.length !== 2) {
+  bad.push(`${F.channels}: expected two language-suffixed channel keys, got ${chanSuffixed}`);
+}
+if (!/title must resolve to a non-empty string; skipping the channel/.test(src.channels)) {
+  bad.push(`${F.channels}: title is no longer required per channel; this page says it is`);
+}
 if (!stepKeys?.length) bad.push(`${F.steps}: could not extract the step field list`);
 if (kinds?.length !== 2) bad.push(`${F.channels}: expected two channel kinds, got ${kinds}`);
 
@@ -146,7 +156,14 @@ L.push(
     "`tag` a date is the obvious reading and the wrong one — a date warns and is treated as `true`.",
 );
 L.push("");
-L.push(`**Per-channel fields:** ${code(chanKeys)}`);
+L.push(`**Per-channel fields:** ${code(chanKeys)}, plus ${code(chanSuffixed)}.`);
+L.push("");
+L.push(
+  `\`${chanSuffixed[0]}\` is **required** — a channel without one is skipped entirely. Both ` +
+    `\`${chanSuffixed[0]}\` and \`${chanSuffixed[1]}\` accept a language suffix ` +
+    `(\`${chanSuffixed[0]}_zh\`), which is why they are matched by pattern rather than listed ` +
+    "in the whitelist.",
+);
 L.push("");
 L.push(`\`kind\` is one of ${code(kinds)} and is what decides whether interpolation is allowed:`);
 L.push("");

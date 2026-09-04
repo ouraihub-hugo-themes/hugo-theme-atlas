@@ -65,6 +65,37 @@ if (commentsMapping?.length !== 6) {
 }
 const readingWidth = sliceAt(src.shell, /"allowed" \(slice ((?:"[a-z]+" ?)+)\)/);
 
+// 页面级键。上一版这一段是手写的，而它把三个不存在的键当成页面键列了出来
+// （`tone` 是 badge 的参数、`note` 是下载渠道的字段、`pem` 是 filetree 的扩展名），
+// 还把 `featured_image` 当成图片路径。全部改成从消费方抽。
+const F2 = {
+  featured: "layouts/_partials/shell/featured.html",
+  searchMarks: "layouts/_partials/search/resolve.html",
+};
+for (const [k, p] of Object.entries(F2)) {
+  if (!existsSync(p)) {
+    console.error(`FAIL  ${p} is gone; this generator's source moved`);
+    process.exit(1);
+  }
+  src[k] = readFileSync(p, "utf8");
+}
+
+const featuredModes = sliceAt(src.featured, /"allowed" \(slice ((?:"[a-z]+" ?)+)\)/);
+if (featuredModes?.length !== 4) {
+  bad.push(`${F2.featured}: expected four featured_image modes, got ${featuredModes}`);
+}
+// 图源顺序写在文档注释里，是作者最需要而抽不出结构的一段，所以只钉住它还在。
+if (!/名字像 featured \/ feature \/ cover \/ thumbnail/.test(src.featured)) {
+  bad.push(`${F2.featured}: the page-resource name list changed; this page quotes it`);
+}
+const boostRange = /from (\d) to (\d)/.exec(src.searchMarks)?.slice(1, 3);
+if (boostRange?.length !== 2) {
+  bad.push(`${F2.searchMarks}: could not extract the search_boost range`);
+}
+if (!/search_exclude must be a boolean/.test(src.searchMarks)) {
+  bad.push(`${F2.searchMarks}: search_exclude is no longer a boolean; this page says it is`);
+}
+
 if (!shareTargets?.length) bad.push(`${F.share}: could not extract the share target list`);
 if (typoValues?.length !== 2) bad.push(`${F.typo}: expected two typography presets, got ${typoValues}`);
 if (shellTypes?.length !== 4) bad.push(`${F.shell}: expected four default shell types, got ${shellTypes}`);
@@ -310,8 +341,33 @@ L.push("| `edit_page` | `params.ui.repo` | `false` to drop the edit link on this
 L.push("| `feedback` | `params.ui.repo` | `false` to drop the feedback widget |");
 L.push("| `comments_off` | `params.ui.comments` | **the exception above** — page-only, `true` to turn off |");
 L.push("");
-L.push(`Page-only presentation keys, no \`params.ui\` counterpart: \`reading_width\``);
-L.push(`(${code(readingWidth)}), \`featured_image\`, \`tone\`, \`note\`, \`pem\`.`);
+L.push("");
+L.push(
+  "These four are read with Hugo's `.Param`, which checks the page and then the site's " +
+    "**top-level** `params` — not `params.ui`:",
+);
+L.push("");
+L.push("| Key | Shape |");
+L.push("|---|---|");
+L.push(`| \`reading_width\` | enum: ${code(readingWidth)} |`);
+L.push(`| \`featured_image\` | enum: ${code(featuredModes)} — **a treatment, not a path** |`);
+L.push(`| \`search_boost\` | whole number ${boostRange[0]}–${boostRange[1]}, a tier not a multiplier |`);
+L.push("| `search_exclude` | boolean — `true` keeps the whole page out of the index |");
+L.push("");
+L.push(
+  `**\`featured_image\` names the treatment, not the image.** It is one of ${code(featuredModes)}; ` +
+    "a path warns and falls back. The image comes from the page's own `images` front-matter list, " +
+    "or a page resource named `featured`, `feature`, `cover`, or `thumbnail`. A mode with no image " +
+    "found renders nothing and does not warn — `images` often lives in site config or a cascade. " +
+    "`featured_image_alt` supplies the alt text.",
+);
+L.push("");
+L.push(
+  "`search_boost` is a tier, not a multiplier: below " +
+    `${boostRange[0]} it warns and uses ${boostRange[0]}, above ${boostRange[1]} it clamps. ` +
+    "To drop a page entirely use `search_exclude`, not a zero boost — a non-boolean there warns " +
+    "and keeps the page indexed.",
+);
 
 const out =
   L.join("\n")
