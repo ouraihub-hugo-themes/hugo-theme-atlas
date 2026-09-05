@@ -84,6 +84,8 @@ Press {{< kbd "ctrl+c" >}} to stop. Status: {{< badge "beta" >}}.
 
 const site = mkdtempSync(join(tmpdir(), "atlas-out-"));
 const failures = [];
+// 在 try 外面：结论行要报这个数，而它在 try/finally 之后。
+let iconControls = 0;
 
 try {
   mkdirSync(join(site, "content", "feed"), { recursive: true });
@@ -148,8 +150,19 @@ try {
       'section = ["HTML", "RSS"]',
       'page = ["HTML", "markdown"]',
       // 开搜索，下面那条 `hidden` 断言才有东西可断。默认关着。
+      //
+      // 分享栏、反馈组件与编辑链接也一起开：纯图标风险最高的控件都在这三处
+      // （复制链接、点赞点踩、去仓库编辑），默认关着的话可及名那条断言看不到
+      // 它们 —— 摘掉可见文本也不报。破坏测试第一版就是这样漏的。
+      //
+      // 三个开关三种形状：`share` 是目标 id 的列表，`feedback` 是布尔，编辑链接
+      // 没有自己的开关 —— 配了 `params.ui.repo.url` 就出现。
       "[params.ui]",
       "search = true",
+      "feedback = true",
+      'share = ["x", "email", "copy"]',
+      "[params.ui.repo]",
+      'url = "https://github.com/example/site"',
       "[markup.goldmark.renderer]",
       "unsafe = true",
       "[markup.goldmark.parser.attribute]",
@@ -232,6 +245,57 @@ try {
     if (/href="[^"]*icons\.svg#/.test(page)) {
       failures.push(`${path}: cross-document <use href="...icons.svg#id">; Chrome and Safari do not resolve it`);
     }
+  }
+
+  // 可交互控件必须有可及名，而图标给不了。
+  //
+  // `content/icon.html` 恒 `aria-hidden="true"`，这是对的 —— 装饰性图形不该被朗读。
+  // 但它的推论是：一个只有图标的按钮或链接**没有名字**，屏幕阅读器读到的是"按钮"。
+  // 审计过一遍，全项目一个都不缺（14 处 sr-only、几十处 aria-label 各自覆盖到了），
+  // 可是没有一条门禁在守这件事 —— 将来加一个纯图标按钮，它会无声发布，其余检查
+  // 照样绿。这与遮罩那个缺陷同一个形状：完全合法的标记，缺的东西不在标记里。
+  //
+  // 在渲染后的 HTML 上判而不是在模板上判：名字可能来自 i18n、来自条件分支里的
+  // `<span>`、来自 aria-labelledby 指向的别处，模板源码里看不出最终有没有。
+  // 复用上面那张页面清单：它已经覆盖四种 shell、landing、单页与首页。
+  //
+  // 数一下检查了多少个带图标的控件：这条断言的形状是"没找到问题就通过"，
+  // fixture 少渲染一个组件它就少查一个而不报。下限守住"确实查到了东西"。
+  for (const [, path] of classes) {
+    const page = readFileSync(join(site, "public", path), "utf8");
+    // 取每个 button/a 的开标签到闭标签之间。嵌套的 a 不合法、button 里不能有
+    // button，所以非贪婪匹配到最近的同名闭标签是准的。
+    for (const m of page.matchAll(/<(button|a)\b([^>]*)>([\s\S]*?)<\/\1>/g)) {
+      const [, tag, attrs, inner] = m;
+      // 带图标的才在管辖范围内：空的 `<a>` 是别的问题。计数放在最前面 —— 放在
+      // 下面几个 continue 之后的话，恰好有名字的控件（搜索、复制）不进计数，
+      // 下限就守不住它们。
+      if (!/<svg|<use\b|<i\s/.test(inner)) continue;
+      iconControls += 1;
+      if (/\baria-hidden="true"/.test(attrs)) continue; // 整个控件都对朗读器隐藏
+      if (/\baria-label=|\baria-labelledby=|\btitle=/.test(attrs)) continue;
+      // 去掉 aria-hidden 的子元素与所有标签，剩下的才是会被朗读的文本。
+      const spoken = inner
+        .replace(/<(\w+)\b[^>]*\baria-hidden="true"[^>]*>[\s\S]*?<\/\1>/g, "")
+        .replace(/<[^>]+>/g, "")
+        .replace(/&[a-z]+;|&#\d+;/gi, "")
+        .trim();
+      if (spoken.length > 0) continue;
+      const shown = m[0].length > 120 ? `${m[0].slice(0, 120)}…` : m[0];
+      failures.push(
+        `${path}: <${tag}> 只有图标，没有可及名 —— 图标恒 aria-hidden，屏幕阅读器读到的是一个` +
+          `没有名字的控件。给容器加 aria-label，或在里面放一个 <span class="sr-only">。找到：${shown}`,
+      );
+    }
+  }
+  // 现在是 35 个（七类页面上的主题开关、搜索、复制、分享三项、点赞点踩、编辑
+  // 链接……）。20 是留了余量的下限：关掉 feedback 与 share 会掉到 15，也就是
+  // "fixture 少渲染了整个组件"这件事的形状 —— 那时这条断言查的比它看起来的少。
+  if (iconControls < 20) {
+    failures.push(
+      `只检查到 ${iconControls} 个带图标的控件（应有 35 上下）；fixture 大概少渲染了组件，` +
+        `可及名那条断言现在覆盖不到它们`,
+    );
   }
 
   // 面包屑与翻页要被排除。它们带的是**别的页面**的标题，进了索引就是搜到 A 却
@@ -355,6 +419,7 @@ if (failures.length > 0) {
 console.log("ok  RSS table output keeps semantics and drops theme-only markup");
 console.log("ok  every page class carries data-pagefind-body; navigation is excluded");
 console.log("ok  icon <use> references resolve in-document and inline exactly what the page uses");
+console.log(`ok  ${iconControls} icon-bearing controls all have an accessible name`);
 console.log("ok  the search button ships hidden and is revealed by the runtime");
 console.log("ok  markdown output is Markdown: no component markup, no double escaping, author source intact");
 console.log("ok  llms.txt is an index: one entry per line, no page bodies");
