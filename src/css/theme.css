@@ -85,6 +85,26 @@
   /* 同一 accent 更薄的一层，给必须明显低于选中态的 hover。 */
   --td-shell-wash: color-mix(in srgb, var(--td-accent) 7%, transparent);
 
+  /* 模态遮罩与浮层阴影。搜索、命令面板、窄屏抽屉共用 —— 三处曾各写一份字面值，
+     两个对话框逐字节相同，抽屉那份是 15%，差的 5% 没有注释。
+
+     遮罩的判据是**压暗倍数**而不是对比度：读者感知到的是"身后暗了"。浏览器实测
+     （sRGB 空间合成，不是线性空间——两者差一倍有余，只有前者是读者看到的）：
+
+       浅色 L=20%   3.26×   ← 已发布的观感基准
+       深色 L=20%   0.99×   ← 照搬浅色档：在提亮，等于没有遮罩
+       深色 L=15%   1.42×   ← 旧 shell.css，弱但有效
+       深色 L=0%    2.18×   ← 现在的值
+
+     深色达不到 3.26× 不是没调够：画布已近亮度地板，纯黑 45% 就是这个上限。
+     对话框与身后的分离在深色下主要靠它自己那圈 1px 边框。
+
+     两者都别名进 Tailwind 命名空间（`--color-shell-scrim`、`--shadow-overlay`），
+     与 `--td-nav-shadow` 一致 —— 不别名会掉进 tokens.md 的兜底组，那组叙述是
+     "长度，不是颜色"。 */
+  --td-shell-scrim: oklch(20% 0.02 250deg / 45%);
+  --td-shell-overlay-shadow: 0 1.5rem 3rem oklch(20% 0.03 250deg / 24%);
+
   /* ---- 运行时几何：由 JS 与 body class 改写，不是设计常量 ---- */
 
   /* navbar 高度。粘顶偏移、阅读线、抽屉让位都算这个值，所以它是常量而非
@@ -184,6 +204,18 @@
   /* 深色画布上每层向上走，card 混白而非混墨色。 */
   --td-shell-card: color-mix(in srgb, var(--td-canvas) 96%, #fff 4%);
   --td-shell-rail: oklch(95% 0.01 250deg / 10%);
+
+  /* 遮罩降到 L=0%，alpha 不变。浅色档那个 20% 比深色画布 #0d161f 还亮，照搬过来
+     实测压暗 0.99× —— 遮罩在提亮，等于没有。四组实测数见浅色块里那张表。
+
+     方向与 --td-nav-shadow 相反但同一个道理：阴影在深底上要更实（8%→35%），
+     遮罩在深底上要更黑。两者都不跟着画布变亮。 */
+  --td-shell-scrim: oklch(0% 0.02 250deg / 45%);
+
+  /* 浮层阴影归零。浅色档那个 L=20% 落在遮罩后的深色画布上是**变亮**，围着对话框
+     画一圈光晕而不是阴影。调黑也压不出可见阴影：那片底已近亮度地板。这与上面
+     "外壳表面层级"那条同一个决定 —— 深色下靠层级与边框分离，不靠阴影。 */
+  --td-shell-overlay-shadow: none;
 }
 
 /* ============================================================
@@ -221,7 +253,9 @@
   --color-status-danger: var(--td-status-danger);
   --color-status-accent: var(--td-status-accent);
   --color-status-neutral: var(--td-status-neutral);
+  --color-shell-scrim: var(--td-shell-scrim);
   --shadow-nav: var(--td-nav-shadow);
+  --shadow-overlay: var(--td-shell-overlay-shadow);
   --font-sans: var(--td-font-ui);
   --font-mono: var(--td-font-code);
   --font-display: var(--td-font-display);

@@ -326,7 +326,7 @@
         /* 与抽屉同起点：navbar 不该被压暗，它上面的控件抽屉开着时仍可用。 */
         inset: var(--td-shell-nav-h) 0 0;
         z-index: 30;
-        background: oklch(15% 0.02 250deg / 45%);
+        background: var(--td-shell-scrim);
       }
     }
   }
