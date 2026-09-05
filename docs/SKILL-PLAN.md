@@ -1033,3 +1033,61 @@ exampleSite 里 `{{% steps %}}` 是整个示例站唯一的 `%` 调用 —— �
 顺带修 README 三处同一个错：定制那节的示例把 `--color-accent` 写进 `@theme`
 （正是这个陷阱）、说 `--td-` 只是布局量度（51 个里颜色是主体）、两处说深色下改
 `--color-accent`（深色改的是 `--td-link`，`--td-accent` 经别名跟随）。
+
+## 21. 第四轮端到端：两个主题缺陷，两个主题缺口（2026-09-05）
+
+十二条逐条实测复现，全部属实（前三轮各含 1–2 条假条目，这一轮零假），
+其中两条报告本身不完整或不准确。四条是文档缺口，四条要改主题。
+
+### 21.1 我上一轮加的警告本身是缺陷
+
+`be6aab0` 让自定义 `id` 一用就 warn。判据错在问「作者写了自定义 id 吗」——
+任何有意义的自定义 id 都不等于默认的 `<kind>-<num>`，所以 `--panicOnWarning`
+下 `fig`/`tbl`/`eq`/`eg` 的 `id` 参数等于不可用。而稳定的深链地址是合法需求。
+
+真死链要两个条件同时成立：目标有自定义 id，**且**同一页真的用编号形式引它。
+判据需要两边的信息，而 xref 是行内的 —— 渲染到它时靠后的目标还没登记。所以
+两边都只登记，等正文渲染完再比：新的 `book/xref-check.html` 挂在 `baseof.html`
+两处 `block "main"` 之后。前向引用因此也能判，那是旧修法到不了的一半。
+
+教训：一条警告的判据必须是「这会出错」，不能是「这看起来可疑」。后者在
+`--panicOnWarning` 下等于禁用一个合法参数。
+
+### 21.2 枚举措辞的白名单必然漂
+
+`bodyRequired()` 枚举了四种「缺正文」的警告措辞。仓里这类措辞实际有十九种，
+于是漏了 `eq`（"requires TeX content"）和 `mindmap`（"requires a nested list as
+its body"）—— 两个都被文档写成「**or** self-closed」，而实测两个都 warn 并什么
+都不渲染。报告只抓到 `eq`，漏了 `mindmap`。
+
+判据换成结构：绑定到 trim 过的 `.InnerDeindent` 的变量、守卫里判它为空、块内
+warn 且后果是丢掉自己。跑遍 30 个模板对比新旧，新增两个、原有四个不变。
+
+### 21.3 许诺一个不存在的机制
+
+`tokens.md` 写着「your own stylesheet, loaded after the theme's」，而主题没有
+追加点。agent 因此整份覆盖了 `head/css.html`，连带抄走指纹与 integrity 两个
+分支 —— 那种覆盖以后主题改了这两段也不会跟着改，构建照样绿。
+
+补 `assets/css/custom.css` 约定：文件存在即加载，没有就什么都不输出。指纹分支
+抽成 `head/css-link.html` 给两张表共用。文档写的每个机制都要真的存在，否则
+读者会自己造一个更差的。
+
+### 21.4 landing 的 markdown 输出是空的
+
+landing 的内容全在 front matter 里，正文是空的，`all.md` 走 `.RenderShortcodes`
+于是只剩一行标题 —— 实测 13 字节。站点最该被抓到的一页，抓取方拿到「什么都
+没说」。
+
+摊平按字段名白名单，不逐 section 写一份：22 种 section 的字段名不统一但含义
+统一，写 22 份 schema 的代价是每加一种要记得加一份。几处形状是读 HTML 侧定
+的：`label` 算标题（它在 `<dt>` 里）、`display` 与 `value` 取第一个、数值与注解
+之间用分号而非中文顿号（主题输出要对 32 种语言成立）。
+
+### 21.5 示例站的数字也会漂
+
+landing 的 markdown 输出把 front matter 里的数字摊出来之后，才看见示例站写着
+29 个 shortcode 而实际 30。三处都在 front matter 里，HTML 上看不出对错。
+
+上门禁时踩了一个坑：按摊平后的数字总数判「至少三处」不成立 ——
+`pricing-compare` 一处就出三个数，删掉另外两处仍然够数。改成三个锚各自判命中。
