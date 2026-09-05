@@ -17,9 +17,13 @@
 //   --check 只比对不写：产物变了而这两份没跟着更新时以非零退出。
 
 import { build } from "esbuild";
-import { readFileSync, writeFileSync, existsSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
+
+// 大小写无关的查找单独一个模块：它的正确性只能靠真建文件来验，而这个脚本顶层有
+// `await build(...)`，门禁 import 它就会跑一遍 esbuild。见 scripts/lib/find-file.js。
+import { findFile } from "./lib/find-file.js";
 
 const OUT = "VENDOR.json";
 const NOTICES = "NOTICES.md";
@@ -60,32 +64,10 @@ function packageOf(file) {
 // 许可文件的常见名字。有些包（khroma）不写 package.json 的 license 字段，
 // 只放一个文件 —— 合规文档里留 "?" 等于没记。
 //
-// 匹配不区分大小写，因为 store 里这个名字有 13 种写法（LICENSE、license、
-// license.txt、LICENCE…）。逐个 existsSync 探测在 Windows 上会"意外成功"：
-// NTFS 大小写不敏感，`LICENSE.txt` 能命中磁盘上的 `license.txt`，Linux 命中
-// 不了 —— 那时同一次提交在作者机器上绿、在 CI 上红，@iconify/utils 正是这样。
+// 查找走 findFile，不区分大小写 —— 理由与那一次真实的 CI 失败都写在
+// scripts/lib/find-file.js 里。这张表只管候选名与优先级。
 const LICENSE_FILES = ["LICENSE", "LICENSE.md", "LICENSE.txt", "LICENCE", "COPYING"];
 const NOTICE_FILES = ["NOTICE", "NOTICE.txt", "NOTICE.md"];
-
-/**
- * 在目录里按名字找文件，不区分大小写。命中返回磁盘上的真实文件名。
- *
- * 读一次目录再比，而不是对每种大小写写法各探测一次：后者在两种文件系统上
- * 结果不同，而这份输出要在两边逐字节相同。
- */
-function findFile(dir, names) {
-  let entries;
-  try {
-    entries = readdirSync(dir);
-  } catch {
-    return null;
-  }
-  for (const want of names) {
-    const hit = entries.find((e) => e.toLowerCase() === want.toLowerCase());
-    if (hit) return hit;
-  }
-  return null;
-}
 
 /**
  * 从许可文件正文认 SPDX 标识。
