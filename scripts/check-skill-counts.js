@@ -61,6 +61,39 @@ if (!readdirSync("layouts/_markup").includes(baseHook)) {
   bad.push(`layouts/_markup/${baseHook} is gone; the fence count subtracts it`);
 }
 
+// ---- exampleSite 的 landing 页也报数 ----
+//
+// 那一页把 shortcode 数写进 metrics、pricing-compare 和一条卡片正文。它漂过一次：
+// 主题加到 30 个之后示例站还写着 29，而两处都在 front matter 里，HTML 上看不出对错。
+// 示例站是作者第一眼看到的东西，报错数比 SKILL.md 报错数更容易被当成真的。
+// 按各自的标签定位，不按数值范围猜 —— 同一页还写着 landing section 数与语言数，
+// 靠「排除 22 和 32」区分的话，那两个数一变这里就静默失效。
+const DEMO = "exampleSite/content/landing/index.md";
+const demo = readFileSync(DEMO, "utf8");
+const scCount = count("layouts/_shortcodes");
+// 三个锚各自判命中，不看摊平后的数字个数 —— pricing-compare 那一处本身就出三个数，
+// 按总数判的话删掉另外两处仍然够数，门禁静默放行（实测过一次）。
+const ANCHORS = {
+  // metrics：`- value: "30"` 紧跟着 `label: shortcode`
+  metrics: /- value: "(\d+)"\s*\n\s*label: shortcode\s*$/gm,
+  // pricing 的 features 列表项
+  features: /全部 (\d+) 个 shortcode/g,
+  // pricing-compare：`- feature: shortcode 数量` 之后那一行 values
+  compare: /- feature: shortcode [^\n]*\n\s*values: \[([^\]]*)\]/g,
+};
+const claims = [];
+for (const [where, re] of Object.entries(ANCHORS)) {
+  const hits = [...demo.matchAll(re)];
+  if (hits.length === 0) {
+    bad.push(`${DEMO}: ${where} 那一处不再报 shortcode 数量；这个判据要改`);
+    continue;
+  }
+  claims.push(...hits.flatMap((m) => [...m[1].matchAll(/\d+/g)].map((d) => Number(d[0]))));
+}
+for (const got of new Set(claims)) {
+  if (got !== scCount) bad.push(`${DEMO}: 写着 ${got} 个 shortcode，实际有 ${scCount}`);
+}
+
 // ---- 「Finding a component's CSS classes」那一节 ----
 //
 // 这一节告诉读者「去读组件自己的模板，类名就在里面」，然后点名了做不到这件事的
