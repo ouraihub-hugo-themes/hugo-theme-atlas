@@ -254,16 +254,26 @@ function warnsWhenEmpty(text) {
  * `field` / `eg` / `tbl` 自闭合是合法调用，但每次都 warn 并丢掉自己。端到端实测里
  * agent 照着「成对或自闭」写了个自闭的 `field`，拿到的是一条警告和一张空表。
  *
- * 按后果过滤而不是按措辞：`xref` 也有一条「缺正文」的警告，但它回退到用锚点当
- * 链接文字，那是可用的调用形式，不该写成「正文必需」。
+ * 判据是结构而不是措辞：绑定到 trim 过的 `.InnerDeindent` 的变量，守卫里判它为空，
+ * 块内 warn 且后果是丢掉自己。曾按措辞枚举（"inner table content" 那一串），漏了
+ * `eq` 的 "TeX content" 与 `mindmap` 的 "a nested list as its body" —— 两个都在
+ * 文档里被写成「或自闭合」，而实测两个都 warn。仓里这类「缺正文」的措辞有十九种，
+ * 白名单必然继续漂。
+ *
+ * 按后果过滤：`xref` 也有一条「缺正文」的警告，但它回退到用锚点当链接文字，那是
+ * 可用的调用形式，不该写成「正文必需」。守卫条件里带 `or` 的是 `fig` 那种二选一。
  */
 function bodyRequired(text) {
-  const re =
-    /requires (?:a non-empty description|inner content[^"]*|inner table content|src or inner content) at %s; (rendering nothing|skipping this field)/;
-  const m = re.exec(text);
-  if (!m) return null;
-  if (/src or inner content/.test(m[0])) return "src-or-body";
-  return m[1] === "skipping this field" ? "skips itself" : "renders nothing";
+  const bind = /(\$\w+)\s*:=\s*strings\.TrimSpace \(printf "%s" \.InnerDeindent\)/.exec(text);
+  if (!bind) return null;
+  const guard = new RegExp(
+    `if ([^\\n]*not[^\\n]*\\${bind[1]}\\b[^\\n]*?)-?\\}\\}\\s*\\r?\\n\\s*\\{\\{-? warnf "[^"]*? at %s; ([a-z][^"]*?)" `,
+  ).exec(text);
+  if (!guard) return null;
+  const [, cond, drop] = guard;
+  if (!/^(rendering nothing|skipping this field)$/.test(drop)) return null;
+  if (/\bor\b/.test(cond)) return "src-or-body";
+  return drop === "skipping this field" ? "skips itself" : "renders nothing";
 }
 
 /**
