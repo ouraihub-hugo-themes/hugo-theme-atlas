@@ -54,13 +54,13 @@ const NEEDS_CONFIG = {
   swagger: {
     key: "params.ui.openapi.swagger",
     without:
-      "it renders only a link to the spec, in a container marked `td-openapi-unconfigured` — " +
+      "it renders only a link to the spec, on a container carrying the `data-td-openapi-unconfigured` attribute (an attribute, not a class) — " +
       "no warning, green build. Needs both `js` and `css`. See `params.md`.",
   },
   redoc: {
     key: "params.ui.openapi.redoc",
     without:
-      "it renders only a link to the spec, in a container marked `td-openapi-unconfigured` — " +
+      "it renders only a link to the spec, on a container carrying the `data-td-openapi-unconfigured` attribute (an attribute, not a class) — " +
       "no warning, green build. Needs `js`. See `params.md`.",
   },
 };

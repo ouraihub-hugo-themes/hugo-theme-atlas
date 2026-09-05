@@ -108,8 +108,10 @@ found` — one of the few loud failures in this theme.
 
 ## Authoring rules
 
-- **Labels are plain text.** Shortcode parameters do not render Markdown. Landing
-  narrative fields do.
+- **Labels are plain text.** Shortcode parameters do not render Markdown, and nothing
+  inside them is evaluated at all — `badge="v{{< param product_version >}}"` emits that
+  text literally, with no warning. Dynamic values have to go in a body, which is where
+  the second pass runs them. Landing narrative fields do render Markdown.
 - **An `icon` parameter takes a name from the theme's `data/icons.json`** (72 names),
   not a CSS class and not an arbitrary icon-set name. Icons render from an inline SVG
   sprite. An unknown name warns and emits nothing — the page shows no icon at all,
@@ -117,9 +119,13 @@ found` — one of the few loud failures in this theme.
 - **Page-level overrides drop the `ui.` prefix.** Site config uses `params.ui.share`;
   a page's front matter uses `share`. **One exception:** comments. The page key is
   `comments_off`, not `comments` — `params.md` has the reason and the full list.
-- **Documenting shortcode syntax needs a fenced code block, not Hugo's
-  `{{</* … */>}}` escape.** Several container bodies are rendered in a second pass,
-  which unescapes it and then runs it. `shortcodes.md` marks which.
+- **Documenting shortcode syntax needs a fenced code block. Backticks do not work.**
+  Hugo expands shortcodes before Goldmark parses the Markdown, so inline code is not
+  yet code when the expansion happens: `` `{{< cards />}}` `` in ordinary prose really
+  renders an empty grid mid-sentence, and self-closing a container warns about nothing.
+  A fence is the only form that protects the syntax everywhere. Hugo's `{{</* … */>}}`
+  escape works in ordinary prose but not inside the container bodies that get a second
+  pass — that pass unescapes it and then runs it. `shortcodes.md` marks which.
 - **Boolean switches are bare booleans**, except where a multi-setting feature also
   accepts a boolean shorthand.
 - Reading shells are `docs`, `book`, `blog`, and `swagger`, set via `type` in front
@@ -169,6 +175,12 @@ and a token change carries through light mode, dark mode, print, and forced colo
 once. Overriding a class reaches one component in one mode. When a class override really
 is the answer, edit `src/css/<component>.css` and run `pnpm css:build` — never
 `assets/dist/`, which is generated.
+
+**To add a stylesheet, create `assets/css/custom.css`.** The theme loads it right after
+its own, with the same fingerprint and `integrity` handling. Its presence is the switch —
+there is no config key, and no file means nothing is emitted. Do not override
+`head/css.html` to append one; that copies the fingerprint branches, which then go stale
+silently. It is served as-is, so plain CSS only — no `@utility`, no `@theme`.
 
 ## When something does not render
 

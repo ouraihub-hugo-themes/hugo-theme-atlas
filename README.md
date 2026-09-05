@@ -114,6 +114,11 @@ skills/              给 AI 搭站者的 Claude Code skill（拷进消费方站�
 }
 ```
 
+**想把定制留在主题文件之外**（跟上游 rebase 时没有冲突要处理），就建
+`assets/css/custom.css`：主题在自己那张表之后加载它，生产下同样带指纹与
+`integrity`。没有配置项 —— 文件存在即生效，不存在什么都不输出。它不经过
+Tailwind，所以只写普通 CSS 与 `--td-*` 覆盖，别指望 `@utility` 或 `@theme`。
+
 命名分两族，**改的是 `--td-` 那族**：它们是真实值，组件样式直接读。不带前缀的
 `--color-*` / `--font-*` / `--shadow-*` 是 `@theme inline` 里的映射，只为让
 Tailwind 生成 `bg-accent`、`font-display` 这类类名 —— 改映射只影响用了那个类名

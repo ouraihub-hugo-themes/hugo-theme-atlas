@@ -107,7 +107,12 @@ const FENCES = {
   },
   goat: {
     what: "ASCII diagram converted to SVG. No runtime, no network.",
-    body: "ASCII art using `-`, `|`, `+`, `.`, `'`, and arrowheads.",
+    body:
+      "ASCII art using `-`, `|`, `+`, `.`, `'`, and arrowheads. **Labels must be ASCII.** " +
+      "The grid is measured in single-byte cells, so a full-width character (CJK, or a " +
+      "full-width punctuation mark) occupies two and skews every line after it. It warns and " +
+      "still draws the skewed diagram. Use a `mermaid` fence for a diagram with CJK labels — " +
+      "this is the only fence of the nine with that restriction.",
   },
   filetree: {
     what: "Directory tree with per-type icons.",
@@ -145,6 +150,16 @@ const NEEDS_CONFIG = {
 /** NEEDS_CONFIG 的判据，各自一个能在 hook 里查到的标记。 */
 const NEEDS_CONFIG_PROOF = { plantuml: "params.ui.plantuml.server" };
 
+/**
+ * 这一页断言「某个围栏会为某件事 warn」时，钉住那条 warn 的措辞。
+ *
+ * 都是端到端实测暴露的缺口：文档里看不出来，作者要撞一次才知道。
+ */
+const WARN_PROOF = {
+  checksums: ["group must be auto", "base is only valid without release_url"],
+  goat: ["full-width characters overlap"],
+};
+
 const names = readdirSync(DIR)
   .filter((f) => f.startsWith(PREFIX) && f.endsWith(".html"))
   .map((f) => f.slice(PREFIX.length, -".html".length))
@@ -172,12 +187,10 @@ for (const name of names) {
   if (!proof && /params\.ui\./.test(raw)) {
     unknown.push(`${name}: the hook reads params.ui.* but NEEDS_CONFIG has no entry for it`);
   }
-  // checksums 的两条是实测暴露的缺口，钉住它们：措辞变了要么跟着更新，要么门禁红。
-  if (name === "checksums") {
-    for (const marker of ["group must be auto", "base is only valid without release_url"]) {
-      if (!raw.includes(marker)) {
-        unknown.push(`${name}: no longer warns "${marker}"; this page documents that it does`);
-      }
+  // 实测暴露的缺口，钉住各自那条 warn 的措辞：变了要么跟着更新，要么门禁红。
+  for (const marker of WARN_PROOF[name] ?? []) {
+    if (!raw.includes(marker)) {
+      unknown.push(`${name}: no longer warns "${marker}"; this page documents that it does`);
     }
   }
 

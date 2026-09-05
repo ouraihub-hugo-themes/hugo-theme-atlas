@@ -122,6 +122,14 @@ if (emphasisUsers.length === 0) {
   bad.push("src/css: 没有一个组件样式表读 --td-status-*-emphasis；这一页声称有，判据要改");
 }
 
+// 这一页告诉作者把覆盖放进 assets/css/custom.css，那是模板行为，钉住它。
+// 端到端实测里 agent 因为没有这个追加点，整份覆盖了 head/css.html —— 连带抄走
+// 指纹与 integrity 分支。许诺一个不存在的机制比不许诺更糟。
+const CSS_HOOK = "layouts/_partials/head/css.html";
+if (!readFileSync(CSS_HOOK, "utf8").includes('resources.Get "css/custom.css"')) {
+  bad.push(`${CSS_HOOK}: 不再加载 css/custom.css；这一页让作者把覆盖写在那里`);
+}
+
 // 运行时会变的量度有两个来源：JS 写（setProperty），和媒体查询里重声明。
 // 后者是本主题实际用的手法 —— print 把 chrome 高度归零，宽断点换侧栏宽度。
 const tsSrc = tsFiles("src/ts")
@@ -189,8 +197,17 @@ L.push(
     "**Set the `--td-*` name.**",
 );
 L.push("");
+L.push(
+  "Two places to put them. Editing `src/css/theme.css` and running `pnpm css:build` is the " +
+    "clone-and-own path — that file is yours. To keep customisation outside the theme's own " +
+    "files (so an upstream rebase has nothing to conflict with), create " +
+    "**`assets/css/custom.css`**: the theme loads it right after its own stylesheet, with the " +
+    "same fingerprint and `integrity` treatment in production. No config key — the file's " +
+    "presence is the switch, and its absence emits nothing.",
+);
+L.push("");
 L.push("```css");
-L.push("/* your own stylesheet, loaded after the theme's */");
+L.push("/* assets/css/custom.css — loaded after the theme's stylesheet */");
 L.push(":root {");
 L.push("  --td-accent: oklch(0.55 0.19 250);");
 L.push("  --td-shell-sidebar-w: 20rem;");
