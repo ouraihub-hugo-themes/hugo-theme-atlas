@@ -271,7 +271,7 @@ Render an OpenAPI document with Redoc (three-column, read-only).
 Parameters: `spec`, `height`, `id`
 (validated in `layouts/_partials/content/openapi-embed.html`, shared with the other OpenAPI renderer)
 
-**Requires `params.ui.openapi.redoc` in the site config.** Without it renders only a link to the spec, in a container marked `td-openapi-unconfigured` — no warning, green build. Needs `js`. See `params.md`.
+**Requires `params.ui.openapi.redoc` in the site config.** Without it renders only a link to the spec, on a container carrying the `data-td-openapi-unconfigured` attribute (an attribute, not a class) — no warning, green build. Needs `js`. See `params.md`.
 
 ## release-assets
 
@@ -322,7 +322,7 @@ Render an OpenAPI document with Swagger UI (includes the "try it" panel).
 Parameters: `spec`, `height`, `id`
 (validated in `layouts/_partials/content/openapi-embed.html`, shared with the other OpenAPI renderer)
 
-**Requires `params.ui.openapi.swagger` in the site config.** Without it renders only a link to the spec, in a container marked `td-openapi-unconfigured` — no warning, green build. Needs both `js` and `css`. See `params.md`.
+**Requires `params.ui.openapi.swagger` in the site config.** Without it renders only a link to the spec, on a container carrying the `data-td-openapi-unconfigured` attribute (an attribute, not a class) — no warning, green build. Needs both `js` and `css`. See `params.md`.
 
 ## tab
 

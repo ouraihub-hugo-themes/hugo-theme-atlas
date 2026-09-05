@@ -83,8 +83,9 @@ category_id = "DIC_..."
 ## `openapi`
 
 Required by the `swagger` and `redoc` shortcodes. **Without it both render only a link
-to the spec** — a green build, no warning, and a container marked
-`td-openapi-unconfigured`.
+to the spec** — a green build, no warning, and a container carrying the
+`data-td-openapi-unconfigured` attribute. That is an attribute, not a class, so
+`grep 'class=.*unconfigured'` finds nothing.
 
 ```toml
 [params.ui.openapi.swagger]

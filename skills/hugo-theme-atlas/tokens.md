@@ -10,8 +10,10 @@ Restyling this theme means setting a custom property, not overriding a class. Th
 
 So setting `--color-accent` changes what `bg-accent` paints and leaves every component reading `--td-accent` untouched. The page half-changes and the build stays green. **Set the `--td-*` name.**
 
+Two places to put them. Editing `src/css/theme.css` and running `pnpm css:build` is the clone-and-own path — that file is yours. To keep customisation outside the theme's own files (so an upstream rebase has nothing to conflict with), create **`assets/css/custom.css`**: the theme loads it right after its own stylesheet, with the same fingerprint and `integrity` treatment in production. No config key — the file's presence is the switch, and its absence emits nothing.
+
 ```css
-/* your own stylesheet, loaded after the theme's */
+/* assets/css/custom.css — loaded after the theme's stylesheet */
 :root {
   --td-accent: oklch(0.55 0.19 250);
   --td-shell-sidebar-w: 20rem;

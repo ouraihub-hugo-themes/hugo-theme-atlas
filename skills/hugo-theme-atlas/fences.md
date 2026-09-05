@@ -98,7 +98,7 @@ Grid of images.
 
 ASCII diagram converted to SVG. No runtime, no network.
 
-**Body:** ASCII art using `-`, `|`, `+`, `.`, `'`, and arrowheads.
+**Body:** ASCII art using `-`, `|`, `+`, `.`, `'`, and arrowheads. **Labels must be ASCII.** The grid is measured in single-byte cells, so a full-width character (CJK, or a full-width punctuation mark) occupies two and skews every line after it. It warns and still draws the skewed diagram. Use a `mermaid` fence for a diagram with CJK labels — this is the only fence of the nine with that restriction.
 
 **Attributes:** `caption`, `num`, `id`
 
