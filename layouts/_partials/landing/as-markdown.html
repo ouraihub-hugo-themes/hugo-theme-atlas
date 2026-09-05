@@ -1,0 +1,87 @@
+{{- /* Landing 页的 Markdown 版：把 `sections:` 里的叙述文字摊平成散文。
+
+     为什么需要：landing 页的全部内容都在 front matter 里，正文是空的。
+     `all.md` 走 `.RenderShortcodes`（正文），于是那一页的 markdown 输出只剩
+     一行标题 —— 实测 13 字节。而 landing 往往是站点最该被抓到的一页，抓取方
+     拿到的却是「这一页什么都没说」。
+
+     为什么按字段名白名单而不是逐 section 写一份：22 种 section 的字段名不统
+     一（hero 用 headline/tagline，别处用 title/subtitle/body），但**含义**统
+     一 —— 标题就那两个名字，叙述就那几个。写 22 份 schema 的代价是每加一种
+     section 要记得加一份，漏了的表现是那一节静默消失。按名字取则新 section
+     只要沿用同样的键名就自动被覆盖。
+
+     为什么不复用 landing/resolve.html 与 landing/items.html：它们会为非法输
+     入 warn，而 HTML 那一侧已经报过一遍了。同一页两种输出格式各求值一次，
+     复用等于每条警告说两遍，`--panicOnWarning` 下也一样。这里只读键、不校验。
+
+     入参：page */ -}}
+{{- $page := . -}}
+{{- $sections := $page.Params.sections -}}
+{{- $out := slice -}}
+{{- if and $sections (reflect.IsSlice $sections) -}}
+  {{- range $sections -}}
+    {{- if reflect.IsMap . -}}
+      {{- $s := . -}}
+      {{- /* eyebrow 是标题上方的小字，并进标题行读起来比单独一段自然。 */ -}}
+      {{- $eyebrow := partial "landing/md-text.html" (index $s "eyebrow") -}}
+      {{- range $key := slice "headline" "title" -}}
+        {{- with partial "landing/md-text.html" (index $s $key) -}}
+          {{- $out = $out | append (printf "## %s%s" (cond (ne $eyebrow "") (printf "%s: " $eyebrow) "") .) -}}
+          {{- $eyebrow = "" -}}
+        {{- end -}}
+      {{- end -}}
+      {{- /* 标题一个都没有但有 eyebrow 时也别丢它。 */ -}}
+      {{- with $eyebrow -}}{{- $out = $out | append (printf "## %s" .) -}}{{- end -}}
+      {{- range $key := slice "tagline" "subtitle" "body" "text" "description" "note" -}}
+        {{- with partial "landing/md-text.html" (index $s $key) -}}
+          {{- $out = $out | append . -}}
+        {{- end -}}
+      {{- end -}}
+      {{- /* 逐项 section 的每一项：一个 `- **标题** — 正文` 的列表项。 */ -}}
+      {{- $items := index $s "items" -}}
+      {{- if and $items (reflect.IsSlice $items) -}}
+        {{- $lines := slice -}}
+        {{- range $items -}}
+          {{- if reflect.IsMap . -}}
+            {{- $it := . -}}
+{{- /* 取第一个有值的标题键。`label` 与 `title` 都算标题：HTML 那侧
+                     metrics/bar-chart 把 label 放在 `<dt>` 里，也就是术语的位置，
+                     而 value 是 `<dd>`。testimonials 的自然读法是「谁 — 说了什么」，
+                     所以 name 是标题、quote 归到后面那族。 */ -}}
+            {{- $head := "" -}}
+            {{- range $key := slice "title" "term" "label" "name" "feature" "question" "date" -}}
+              {{- if eq $head "" -}}{{- $head = partial "landing/md-text.html" (index $it $key) -}}{{- end -}}
+            {{- end -}}
+            {{- $rest := slice -}}
+            {{- /* 数值同样取第一个：bar-chart 的 `display` 是 `value` 给人看的
+                   写法，两个都出会印成「70 70%」。 */ -}}
+            {{- $num := "" -}}
+            {{- range $key := slice "display" "value" "price" -}}
+              {{- if eq $num "" -}}{{- $num = partial "landing/md-text.html" (index $it $key) -}}{{- end -}}
+            {{- end -}}
+            {{- with $num -}}{{- $rest = $rest | append . -}}{{- end -}}
+            {{- range $key := slice "period" "role" "quote" "body" "text" "description" "answer" "note" "status" -}}
+              {{- with partial "landing/md-text.html" (index $it $key) -}}
+                {{- $rest = $rest | append . -}}
+              {{- end -}}
+            {{- end -}}
+{{- /* 用分号而不是空格接：metrics 的 value 与 note 是两件事（`22` 与
+                   「这一批四个」），空格拼出来读成一句话。分号而不是中文顿号 ——
+                   主题输出要对 32 种语言都成立，不能硬编某种语言的标点。 */ -}}
+            {{- $tail := delimit $rest "; " -}}
+            {{- if and (ne $head "") (ne $tail "") -}}
+              {{- $lines = $lines | append (printf "- **%s** — %s" $head $tail) -}}
+            {{- else if ne $head "" -}}
+              {{- $lines = $lines | append (printf "- **%s**" $head) -}}
+            {{- else if ne $tail "" -}}
+              {{- $lines = $lines | append (printf "- %s" $tail) -}}
+            {{- end -}}
+          {{- end -}}
+        {{- end -}}
+        {{- with $lines -}}{{- $out = $out | append (delimit . "\n") -}}{{- end -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- return delimit $out "\n\n" -}}

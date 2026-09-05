@@ -1,0 +1,21 @@
+{{- /* 一个 landing 字段 → 一行纯文本，或空串。
+
+     值可能是任意类型（作者写了数字、布尔、甚至 map），所以先 `printf "%v"`
+     再 trim。不 RenderString：那会出 HTML，而这里是 markdown 输出，作者写的
+     Markdown 原样传过去正好。
+
+     `plainify` 也不用 —— 它会吃掉作者故意写的 `**粗体**`。字段里本来就允许
+     Markdown（landing 叙述字段是唯一渲染 Markdown 的那一类），保留它。
+
+     换行折成空格：这些字段进的是「一段」，而 front matter 里的折行是排版而
+     非语义。留着的话 markdown 输出里会出现半截段落。
+
+     入参：字段的原始值（可以是 nil） */ -}}
+{{- /* 单个 return：Hugo 的 `return` 只设返回值、不中断模板，两个都会被执行到，
+       第二个就报「wrong number of args」。同一条在 shell/search.html 里记过。 */ -}}
+{{- $v := . -}}
+{{- $flat := "" -}}
+{{- if and $v (not (reflect.IsMap $v)) (not (reflect.IsSlice $v)) -}}
+  {{- $flat = strings.TrimSpace (replaceRE `\s*\n\s*` " " (printf "%v" $v)) -}}
+{{- end -}}
+{{- return $flat -}}

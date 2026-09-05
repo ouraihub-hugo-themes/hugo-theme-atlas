@@ -108,9 +108,28 @@ try {
       );
     }
   }
+  // landing 的内容全在 front matter 里，正文是空的。所以这一页除了 HTML 那一侧，
+  // 还是「markdown 输出能不能看见 section 叙述」的用例 —— 一个 hero 的 headline、
+  // 一个逐项 section 的 items，下面各自有断言。
   writeFileSync(
     join(site, "content", "start.md"),
-    "---\ntitle: landing\nlayout: landing\nsections:\n  - type: cta\n    title: go\n---\n",
+    [
+      "---",
+      "title: landing",
+      "layout: landing",
+      "sections:",
+      "  - type: hero",
+      "    headline: landing headline",
+      "  - type: steps",
+      "    title: how it goes",
+      "    items:",
+      "      - title: first step",
+      "        body: do this",
+      "  - type: cta",
+      "    title: go",
+      "---",
+      "",
+    ].join("\n"),
   );
   writeFileSync(join(site, "content", "plain.md"), "---\ntitle: plain\n---\n\nno shell here.\n");
   mkdirSync(join(site, "content", "md"), { recursive: true });
@@ -286,6 +305,21 @@ try {
   }
   // 空跑防护：这一页确实经过了纯文本分支。
   if (!/^#### /m.test(md)) failures.push("markdown output has no card heading; the plain branch did not run");
+
+  // Landing 的 markdown 输出。它的内容全在 front matter 里，正文是空的 ——
+  // `.RenderShortcodes` 什么都取不到，回退的表现是这一页只剩一行标题（实测 13
+  // 字节）。而 landing 往往是站点最该被抓到的一页，抓取方拿到的却是「什么都没说」。
+  // 三条各管一种形状：section 级的 headline、逐项 section 的标题、item 的正文。
+  const landingMd = readFileSync(join(site, "public", "start", "index.md"), "utf8");
+  for (const kept of ["landing headline", "how it goes", "first step", "do this"]) {
+    if (!landingMd.includes(kept)) {
+      failures.push(`landing markdown output lost ${JSON.stringify(kept)}; sections are not being flattened`);
+    }
+  }
+  // 组件标记不能漏进来 —— 这一页与别的页守同一条契约。
+  if (/<(div|section|h[1-6])\b/.test(landingMd)) {
+    failures.push("landing markdown output carries HTML; the section flattener emitted markup");
+  }
 
   // llms.txt 是索引，不含正文。带上正文的表现是几百 KB 的响应里大部分是抓取方
   // 不需要的东西，而它要的那一页还得自己切出来。

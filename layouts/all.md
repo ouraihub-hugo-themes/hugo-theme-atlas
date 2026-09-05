@@ -33,6 +33,16 @@
        转义它没有安全收益 —— HTML 输出那一侧同样原样交给浏览器。 */ -}}
 {{- $body := safeHTML (strings.TrimSpace .RenderShortcodes) -}}
 {{- .Store.Set "tdOutputFormat" "html" -}}
+{{- /* Landing 页的内容全在 front matter 的 `sections:` 里，正文是空的 ——
+       上面那次 .RenderShortcodes 什么都取不到，这一页的 markdown 输出就只剩
+       一行标题（实测 13 字节）。把 section 的叙述文字摊平接在正文之前。
+
+       只对 landing 布局做：别的页面正文就是内容，没有这个问题。 */ -}}
+{{- if eq .Layout "landing" -}}
+  {{- with partial "landing/as-markdown.html" . -}}
+    {{- $body = safeHTML (printf "%s%s" . (cond (eq (printf "%s" $body) "") "" (printf "\n\n%s" $body))) -}}
+  {{- end -}}
+{{- end -}}
 # {{ .Title }}
 
 {{ with .Description }}> {{ . | plainify | chomp }}
