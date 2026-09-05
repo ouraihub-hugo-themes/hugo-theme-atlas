@@ -123,6 +123,18 @@ const SHOW = { xref: ["fig"] };
  * - `xref` 的常规用法是自闭合，成对只为自定义链接文字。模板的头注释示例写的是
  *   不成对形式，照抄会硬错（判据：exampleSite 里全是 `{{< xref fig="1" />}}`）。
  */
+/**
+ * 四张清单共用这一条：`page` 不只是「哪一页」的开关，它能指向另一个页面。
+ *
+ * 参数列表里光有个 `page` 看不出这个用法 —— 端到端实测里 agent 是读了模板注释
+ * 才发现的。四个 shortcode 都是 5 行委派，行为在 book/figure-list.html 里。
+ */
+const listPage = (name) =>
+  "`page` takes another page's path, not just this one's — " +
+  `\`{{< ${name} page="/docs/fences" >}}\` lists that page's targets here. ` +
+  "The partial forces the target page's `.Content` first, because Hugo does not guarantee " +
+  "render order and an unrendered page has an empty registry.";
+
 const NOTES = {
   comment:
     "The body is intentionally never rendered — shortcodes inside a comment do not run, so a " +
@@ -141,6 +153,14 @@ const NOTES = {
     "`poster` and `start` are passed to the player verbatim — they take asciinema's own syntax " +
     "(`npt:1:23`, `data:text/plain,…`). The theme validates only that they contain no control " +
     "characters, so a malformed value reaches the player and fails there, not at build time.",
+  "book-figures": listPage("book-figures"),
+  "book-tables": listPage("book-tables"),
+  "book-examples": listPage("book-examples"),
+  "book-equations": listPage("book-equations"),
+  "release-assets":
+    "**`src` resolves in two places, in order:** the page's own resources, then `assets/`. " +
+    "Unlike `include` there is no `content/` tier. Not found there warns and skips the block. " +
+    "`src` and inner checksum lines are mutually exclusive.",
 };
 
 /**
@@ -174,6 +194,14 @@ const NOTES_PROOF = {
   comment: "{{- if false }}{{ .Inner }}{{ end -}}",
   include: "页面资源 → assets → content/",
   cast: "poster 与 start 是播放器自己的语法",
+  // 四张清单的判据是它们自己注释里那句「或 page= 指定的页」——「跨页」这件事
+  // 就写在这五行里，删了或改了措辞都会红。委派目标换了人也会红。
+  "book-figures": "或 page= 指定的页",
+  "book-tables": "或 page= 指定的页",
+  "book-examples": "或 page= 指定的页",
+  "book-equations": "或 page= 指定的页",
+  // 两档解析的判据就是那一行 or：加了 content/ 那一档它就变了。
+  "release-assets": "(.Page.Resources.Get $src) (resources.Get $src)",
 };
 
 /** NEEDS 的判据，各自一个能在模板里查到的标记。 */
