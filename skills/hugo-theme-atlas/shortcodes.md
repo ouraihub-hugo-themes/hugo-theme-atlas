@@ -63,6 +63,8 @@ List of every numbered equation on the page, in source order.
 
 Parameters: `page`, `title`, `class`
 
+`page` takes another page's path, not just this one's — `{{< book-equations page="/docs/fences" >}}` lists that page's targets here. The partial forces the target page's `.Content` first, because Hugo does not guarantee render order and an unrendered page has an empty registry.
+
 ## book-examples
 
 List of every numbered example on the page, in source order.
@@ -70,6 +72,8 @@ List of every numbered example on the page, in source order.
 `{{< book-examples page="…" title="…" >}}` — never closed. Adding `{{< /book-examples >}}` is a build error.
 
 Parameters: `page`, `title`, `class`
+
+`page` takes another page's path, not just this one's — `{{< book-examples page="/docs/fences" >}}` lists that page's targets here. The partial forces the target page's `.Content` first, because Hugo does not guarantee render order and an unrendered page has an empty registry.
 
 ## book-figures
 
@@ -79,6 +83,8 @@ List of every numbered figure on the page, in source order.
 
 Parameters: `page`, `title`, `class`
 
+`page` takes another page's path, not just this one's — `{{< book-figures page="/docs/fences" >}}` lists that page's targets here. The partial forces the target page's `.Content` first, because Hugo does not guarantee render order and an unrendered page has an empty registry.
+
 ## book-tables
 
 List of every numbered table on the page, in source order.
@@ -86,6 +92,8 @@ List of every numbered table on the page, in source order.
 `{{< book-tables page="…" title="…" >}}` — never closed. Adding `{{< /book-tables >}}` is a build error.
 
 Parameters: `page`, `title`, `class`
+
+`page` takes another page's path, not just this one's — `{{< book-tables page="/docs/fences" >}}` lists that page's targets here. The partial forces the target page's `.Content` first, because Hugo does not guarantee render order and an unrendered page has an empty registry.
 
 ## book-toc
 
@@ -276,6 +284,8 @@ Parameters: `algo`, `base`, `src`, `group`
 **Parameters that depend on each other:**
 
 - `base is only valid without release_url front matter` — otherwise: skipping the block
+
+**`src` resolves in two places, in order:** the page's own resources, then `assets/`. Unlike `include` there is no `content/` tier. Not found there warns and skips the block. `src` and inner checksum lines are mutually exclusive.
 
 **Also requires:** `release_url` in the page front matter, plus `sha*sum` output as the body
 Without it the shortcode renders nothing at all — the build still succeeds.
