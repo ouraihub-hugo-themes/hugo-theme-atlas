@@ -174,7 +174,7 @@ Parameters: `num`, `id`, `caption`, `class`
 
 Numbered equation. Body is LaTeX.
 
-`{{< eq num="…" id="…" >}}` … `{{< /eq >}}` — **or** self-closed `{{< eq num="…" id="…" />}}`. Every call in a page must be closed or self-closed; a bare opening tag is a build error.
+`{{< eq num="…" id="…" >}}` … `{{< /eq >}}` — the body is required. Syntactically `{{< eq num="…" id="…" />}}` is legal, but it warns and renders nothing every time. Every call must be closed or self-closed; a bare opening tag is a build error.
 
 Parameters: `num`, `id`, `caption`, `class`
 
@@ -239,7 +239,7 @@ Named parameters are rejected and warned about, not rendered.
 
 Mind map drawn in the browser from a nested Markdown list body.
 
-`{{< mindmap caption="…" num="…" >}}` … `{{< /mindmap >}}` — **or** self-closed `{{< mindmap caption="…" num="…" />}}`. Every call in a page must be closed or self-closed; a bare opening tag is a build error.
+`{{< mindmap caption="…" num="…" >}}` … `{{< /mindmap >}}` — the body is required. Syntactically `{{< mindmap caption="…" num="…" />}}` is legal, but it warns and renders nothing every time. Every call must be closed or self-closed; a bare opening tag is a build error.
 
 Parameters: `caption`, `num`, `id`, `height`, `expand`
 
