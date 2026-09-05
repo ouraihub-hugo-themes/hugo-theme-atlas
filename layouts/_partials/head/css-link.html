@@ -1,0 +1,15 @@
+{{- /* 一张样式表的 <link>。生产下加指纹与 integrity，开发下不加 —— 指纹会让
+       每次改动换 URL，热重载就失效。
+
+       抽出来是因为主题表与站点自己的 css/custom.css 要走同一套分支：两处各写
+       一遍的话，以后改了 integrity 或 crossorigin 只会改到其中一处，而漏掉的
+       那张表照样加载，构建全绿。
+
+       入参就是一个 resource。 */ -}}
+{{- if hugo.IsProduction -}}
+  {{- $css := . | fingerprint -}}
+  <link rel="stylesheet" href="{{ $css.RelPermalink }}"
+        integrity="{{ $css.Data.Integrity }}" crossorigin="anonymous">
+{{- else -}}
+  <link rel="stylesheet" href="{{ .RelPermalink }}">
+{{- end -}}

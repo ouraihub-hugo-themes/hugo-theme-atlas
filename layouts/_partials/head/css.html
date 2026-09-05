@@ -2,13 +2,17 @@
        让 Hugo 当资源处理 —— 拿到内容指纹与 integrity；源文件在 src/，
        不与它撞路径。 */ -}}
 {{- with resources.Get "dist/main.css" -}}
-  {{- if hugo.IsProduction -}}
-    {{- $css := . | fingerprint -}}
-    <link rel="stylesheet" href="{{ $css.RelPermalink }}"
-          integrity="{{ $css.Data.Integrity }}" crossorigin="anonymous">
-  {{- else -}}
-    <link rel="stylesheet" href="{{ .RelPermalink }}">
-  {{- end -}}
+  {{- partial "head/css-link.html" . -}}
 {{- else -}}
   {{- warnf "stylesheet missing: assets/dist/main.css -- run `pnpm css:build`" -}}
+{{- end -}}
+{{- /* 站点自己的表，加在主题表之后 —— 后来的声明赢，`--td-*` 的覆盖就落在这里。
+       约定而非配置：文件存在即加载，没有就什么都不输出，也不警告（它是可选的）。
+
+       为什么要这个钩子：clone-and-own 的正路是直接改 src/css/theme.css 再
+       `pnpm css:build`，但那样每次跟上游 rebase 都要处理那个文件的冲突。想把
+       定制留在主题之外的站点需要一个追加点，否则只能整份覆盖这个 partial ——
+       连带抄走上面的指纹与 integrity 分支，那两段以后改了它也不会跟着改。 */ -}}
+{{- with resources.Get "css/custom.css" -}}
+  {{- partial "head/css-link.html" . -}}
 {{- end -}}
