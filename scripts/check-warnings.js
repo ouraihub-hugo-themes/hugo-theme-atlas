@@ -112,8 +112,12 @@ try {
 //
 // 不开 shell：临时目录路径会作为参数传进去，经 shell 拼接就是一条注入面，
 // 而 hugo 是可执行文件本身，不需要 shell 解析。
+//
+// timeout 是必须的：本地这批用例整批 1 秒内跑完，但一次挂住的构建在 CI 上会一直
+// 等到 job 上限，而那时的报错是"job 被取消"，看不出卡在哪一步。超时时 spawnSync
+// 把 error 设成 ETIMEDOUT，下面那句 throw 就是它的出口。
 function run(args) {
-  const result = spawnSync("hugo", args, { encoding: "utf8" });
+  const result = spawnSync("hugo", args, { encoding: "utf8", timeout: 120_000 });
   if (result.error) throw result.error;
   return { ok: result.status === 0, text: `${result.stdout ?? ""}${result.stderr ?? ""}` };
 }

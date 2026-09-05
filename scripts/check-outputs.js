@@ -338,8 +338,11 @@ try {
 }
 
 // 不开 shell：临时目录路径作为参数传进去，经 shell 拼接就是一条注入面。
+//
+// timeout 见 check-warnings.js 里同名函数的注释。超时时 spawnSync 设 error 为
+// ETIMEDOUT，下面那句 throw 直接把它抛出去 —— 不用另写一条分支。
 function run(args) {
-  const result = spawnSync("hugo", args, { encoding: "utf8" });
+  const result = spawnSync("hugo", args, { encoding: "utf8", timeout: 120_000 });
   if (result.error) throw result.error;
   return { ok: result.status === 0, text: `${result.stdout ?? ""}${result.stderr ?? ""}` };
 }

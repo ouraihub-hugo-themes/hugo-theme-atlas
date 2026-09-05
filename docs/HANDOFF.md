@@ -54,7 +54,7 @@ sections、4 阅读外壳、32 locales。
 已验证可用的版本：
 
 ```
-Hugo Extended 0.165.0     兼容下限 0.160.1
+Hugo Extended 0.165.0     兼容下限 0.160.1（由 floor.yml 手动验，不进 ci.yml）
 Node v24.18.1
 pnpm 11.21.0
 Tailwind CSS 4.3.3

@@ -1,0 +1,43 @@
+# 兼容下限验证。手动触发，不进每次推送。
+#
+# theme.toml 的 `min_version` 与 README 的下限声明是对消费方的承诺，而一个没人跑过
+# 的下限等于没声明。这条曾经在 ci.yml 的矩阵里，与开发版并列每次推送都跑 —— 换来的
+# 信息量抵不上每次多一整轮的等待：两版跑同一套检查器，下限专有的失败一次都没出现。
+#
+# 所以挪到这里：发版前手动跑一次，或者改了模板里与版本相关的东西时跑。红了就说明
+# min_version 该往上抬，那是一次公开行为变更，本来就该是有意识的决定。
+#
+# 版本号写死在这里而不是读 theme.toml：这份工作流的意义是"下限那个具体版本能不能
+# 通过"，动它就该是一次显式修改。改 min_version 时记得一起改。
+
+name: floor
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: peaceiris/actions-hugo@v3
+        with:
+          # theme.toml 的 min_version。两处必须一致。
+          hugo-version: "0.160.1"
+          extended: true
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm check
