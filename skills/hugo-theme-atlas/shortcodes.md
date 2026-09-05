@@ -114,7 +114,9 @@ Parameters: `title`, `link`, `icon`, `badge`, `image`, `image_alt`
 
 Only valid inside `cards`. On its own it renders outside the layout it needs.
 
-**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `card` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `card` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build.
+
+To show shortcode syntax as text, use `demo` — it prints the source next to the rendered result. A fence does **not** protect shortcode syntax anywhere on a page: Hugo expands shortcodes before Goldmark sees the fence.
 
 ## cards
 
@@ -165,7 +167,7 @@ Component example: the rendered result above, its copyable source below.
 
 Parameters: `lang`, `title`
 
-**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `demo` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
+**Write the body in Hugo's escaped shortcode form** — `{{<` and `>}}` each wrapped in a C-style comment. That escape being unescaped and then executed is the mechanism, not a hazard: Hugo strips the markers during parsing, so `.InnerDeindent` already holds the literal text. The rendered half runs that text as a real shortcode; the source half highlights the same text through `transform.Highlight`, which no shortcode parser touches. One input, two outputs, so the demo and its source cannot drift apart. Nesting works — an escaped `cards` containing escaped `card` children renders as a real grid above its own source. Plain fences work too, and stay visible in the source half. In Markdown and other plain-text outputs only the source is emitted.
 
 ## download
 
@@ -187,7 +189,9 @@ Numbered example. Caption on top, body is usually one or more code fences.
 
 Parameters: `num`, `id`, `caption`, `class`
 
-**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `eg` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `eg` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build.
+
+To show shortcode syntax as text, use `demo` — it prints the source next to the rendered result. A fence does **not** protect shortcode syntax anywhere on a page: Hugo expands shortcodes before Goldmark sees the fence.
 
 ## eq
 
@@ -215,7 +219,9 @@ Definition list of `field` children.
 
 Parameters: `label`, `id`, `class`
 
-**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `fields` child's body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `fields` child's body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build.
+
+To show shortcode syntax as text, use `demo` — it prints the source next to the rendered result. A fence does **not** protect shortcode syntax anywhere on a page: Hugo expands shortcodes before Goldmark sees the fence.
 
 ## fig
 
@@ -225,7 +231,9 @@ Numbered figure. Either `src` for an image, or a body for arbitrary block conten
 
 Parameters: `num`, `id`, `caption`, `class`, `src`, `alt`, `link`, `width`, `height`
 
-**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `fig` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `fig` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build.
+
+To show shortcode syntax as text, use `demo` — it prints the source next to the rendered result. A fence does **not** protect shortcode syntax anywhere on a page: Hugo expands shortcodes before Goldmark sees the fence.
 
 ## include
 
@@ -243,7 +251,9 @@ Boolean: `code` — takes `true` or `false`, nothing else. Any other value warns
 
 **`file` resolves in three places, in order:** the page's own resources, then `assets/`, then `content/`. A leading `/` means the content root and skips the first two; anything else is relative to the current page's directory. Found in none of the three warns and includes nothing.
 
-**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `include` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `include` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build.
+
+To show shortcode syntax as text, use `demo` — it prints the source next to the rendered result. A fence does **not** protect shortcode syntax anywhere on a page: Hugo expands shortcodes before Goldmark sees the fence.
 
 ## kbd
 
@@ -262,7 +272,9 @@ Mind map drawn in the browser from a nested Markdown list body.
 
 Parameters: `caption`, `num`, `id`, `height`, `expand`
 
-**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `mindmap` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `mindmap` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build.
+
+To show shortcode syntax as text, use `demo` — it prints the source next to the rendered result. A fence does **not** protect shortcode syntax anywhere on a page: Hugo expands shortcodes before Goldmark sees the fence.
 
 ## param
 
@@ -353,7 +365,9 @@ Tab group.
 
 Parameters: `group`, `default`, `label`
 
-**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `tabs` child's body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `tabs` child's body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build.
+
+To show shortcode syntax as text, use `demo` — it prints the source next to the rendered result. A fence does **not** protect shortcode syntax anywhere on a page: Hugo expands shortcodes before Goldmark sees the fence.
 
 ## tbl
 
@@ -363,7 +377,9 @@ Numbered table. Body is a Markdown table.
 
 Parameters: `num`, `id`, `caption`, `class`
 
-**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `tbl` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `tbl` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build.
+
+To show shortcode syntax as text, use `demo` — it prints the source next to the rendered result. A fence does **not** protect shortcode syntax anywhere on a page: Hugo expands shortcodes before Goldmark sees the fence.
 
 ## xref
 
