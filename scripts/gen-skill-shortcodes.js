@@ -144,6 +144,16 @@ const NOTES = {
     'as in `{{< xref fig="2" >}}see the figure above{{< /xref >}}`. ' +
     "`fig`, `tbl`, `eq`, and `eg` are mutually exclusive — pass exactly one, or use `anchor` " +
     "for an arbitrary fragment. `page` adds a cross-page target.",
+  demo:
+    "**Write the body in Hugo's escaped shortcode form** — `{{<` and `>}}` each wrapped in a " +
+    "C-style comment. That escape being unescaped and then executed is the mechanism, not a " +
+    "hazard: Hugo strips the markers during parsing, so `.InnerDeindent` already holds the " +
+    "literal text. The rendered half runs that text as a real shortcode; the source half " +
+    "highlights the same text through `transform.Highlight`, which no shortcode parser touches. " +
+    "One input, two outputs, so the demo and its source cannot drift apart. " +
+    "Nesting works — an escaped `cards` containing escaped `card` children renders as a real " +
+    "grid above its own source. Plain fences work too, and stay visible in the source half. " +
+    "In Markdown and other plain-text outputs only the source is emitted.",
   include:
     "**`file` resolves in three places, in order:** the page's own resources, then `assets/`, " +
     "then `content/`. A leading `/` means the content root and skips the first two; anything " +
@@ -202,6 +212,9 @@ const NOTES_PROOF = {
   "book-equations": "或 page= 指定的页",
   // 两档解析的判据就是那一行 or：加了 content/ 那一档它就变了。
   "release-assets": "(.Page.Resources.Get $src) (resources.Get $src)",
+  // demo 的说明全靠「源码侧不走 Markdown」这一点。哪天有人把 transform.Highlight
+  // 换成围栏加 RenderString，源码侧就会渲染成真组件，而这一页还在教对照展示。
+  demo: "transform.Highlight $src $lang",
 };
 
 /** NEEDS 的判据，各自一个能在模板里查到的标记。 */
@@ -712,14 +725,25 @@ for (const s of specs) {
     lines.push("");
   }
 
-  if (s.rerenders) {
+  // demo 例外：对它来说「转义被摘掉再执行」正是工作原理，不是陷阱。它自己的
+  // NOTES 条目说明这件事，这里再印一遍通用警告会互相矛盾。
+  if (s.rerenders && s.name !== "demo") {
     const where = s.name in CONTAINERS ? `a \`${s.name}\` child's body` : `a \`${s.name}\` body`;
     lines.push(
       `**This body is rendered in a second pass**, so Hugo's \`{{</* … */>}}\` escape does not ` +
         `survive it. An escaped shortcode inside ${where} is unescaped by the outer render and ` +
         "then executed by the inner one — it runs, warns about its own deliberate mistakes, and " +
-        "under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced " +
-        "code block.",
+        "under `--panicOnWarning` fails the build.",
+    );
+    lines.push("");
+    // 「改用围栏」曾经写在上面那段里，是错的：Hugo 在 Goldmark 之前展开
+    // shortcode，围栏和行内代码都不构成保护，围栏里的 `{{< cards />}}` 会渲染成
+    // 一个真的空栅格。二次渲染的 body 里唯一能得到字面文本的写法是双层转义，
+    // 但它把 `/*` `*/` 留在页面上，并不干净 —— 展示写法请用 `demo`。
+    lines.push(
+      "To show shortcode syntax as text, use `demo` — it prints the source next to the " +
+        "rendered result. A fence does **not** protect shortcode syntax anywhere on a page: " +
+        "Hugo expands shortcodes before Goldmark sees the fence.",
     );
     lines.push("");
   }

@@ -52,9 +52,17 @@
       {{- partial "content/render-block.html" (dict
         "page" .Page "scope" $id "content" $src) -}}
     </div>
-    {{- /* 源码。走 transform.Highlight 而不是围栏 —— 见文件头的说明。 */}}
+    {{- /* 源码。高亮走 transform.Highlight 而不是围栏（见文件头），但外壳与围栏
+           共用 content/code-shell.html —— 复制按钮是这半的重点，读者要的就是
+           把源码拿走。自己写一套外壳等于让示例页的源码块慢慢缺功能。 */}}
     <div class="td-demo-source">
-      {{- transform.Highlight $src $lang -}}
+      {{- /* 标题栏写语言名：data-td-language 只是给运行时的，页面上不显示，
+             读者看不出这块该粘到哪里。默认的 markdown 正好回答了这个主题最要紧
+             的一件事 —— 输入全是 Markdown 文件。 */ -}}
+      {{- partial "content/code-shell.html" (dict
+        "page" .Page "highlighted" (transform.Highlight $src $lang)
+        "code" $src "lang" $lang "id" (printf "%s-src" $id)
+        "filename" $lang "copy" true "wrap" false "collapseLines" 0) -}}
     </div>
   </div>
   {{- end -}}

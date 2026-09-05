@@ -41,12 +41,12 @@
   .td-demo-source {
     border-block-start: 1px solid var(--color-border);
 
-    /* transform.Highlight 直接吐 .highlight > pre，没有代码块 hook 的外壳，
-       所以这里自己给内边距。行内的 pre 自带 margin，收掉。 */
-    & pre {
-      margin: 0;
-      padding: 0.9rem 1rem;
-      overflow-x: auto;
+    /* 里面是完整的 .td-code —— 内边距、复制按钮、折叠都归 code.css。这里只去掉
+       它作为独立块时的外边距和圆角，让它贴合 demo 的外框。 */
+    & .td-code {
+      margin-block: 0;
+      border: 0;
+      border-radius: 0;
     }
   }
 
