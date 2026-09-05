@@ -1,0 +1,31 @@
+{{- /* 同页编号引用的死链检测。正文渲染完才跑 —— 那时目标登记表与 xref 用过的
+     编号都全了，前向引用和后向引用一样能判。
+
+     只有一种情况是死链：作者用 `xref fig="2"`（拼出锚点 `#fig-2`），而编号 2 的
+     那个 fig 写了自定义 `id`，所以页面上没有 `#fig-2`。链接文字是对的（"图 2"），
+     href 指向不存在的片段，页面上看不出来。
+
+     自定义 id 本身不警告 —— 稳定深链是合法需求。上一版把警告放在目标那一侧，
+     结果任何自定义 id 都必然出声，`--panicOnWarning` 下等于禁用了这个参数。
+     判据错在「写了自定义 id」而不是「真的被编号引用了」。
+
+     编号引用了不存在的目标不在这里报：那可能是跨页目标，或者作者写错了编号，
+     两者都要全站信息才能分辨，是检查器的活。这里只报「目标存在，但锚点对不上」。
+
+     入参：页面（传 `.`）。 */ -}}
+{{- $page := . -}}
+{{- $refs := $page.Store.Get "tdBookXrefNums" -}}
+{{- with $refs -}}
+  {{- $nums := $page.Store.Get "tdBookTargetNums" | default dict -}}
+  {{- range $key, $at := . -}}
+    {{- with index $nums $key -}}
+      {{- $kind := index (split $key ":") 0 -}}
+      {{- $num := index (split $key ":") 1 -}}
+      {{- $default := printf "%s-%s" $kind $num -}}
+      {{- if ne .id $default -}}
+        {{- warnf "shortcode %q: %s %q has the custom id %q, so the anchor #%s this reference builds does not exist at %s; write `xref anchor=%q` instead"
+            "xref" $kind $num .id $default $at .id -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}

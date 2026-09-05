@@ -38,21 +38,9 @@
   {{- $id = printf "%s-%s" $kind $num -}}
   {{- if isset $params "id" -}}
     {{- $custom := partial "book/validate-id.html" (dict "name" $sc.Name "value" ($sc.Get "id") "position" $at) -}}
-    {{- /* 自定义 id 换掉了默认的 `<kind>-<num>`，而 `xref` 的编号形式
-           （`{{< xref fig="1" />}}`）拼的正是那个默认值 —— 它拼不出这个 id，
-           也查不到登记表（xref 是行内的，靠后的目标那时还没登记）。结果是一条
-           指向不存在的锚点的链接，链接文字却是对的，所以页面上看不出来。
-
-           所以在作者写下自定义 id 的这一处说清楚：这个目标要用 `anchor=` 引。
-           不改 xref 去查表，那条路对前向引用不成立。id 本身照用 —— 它是合法的
-           需求（稳定的深链地址），只是与编号引用不能混着来。 */ -}}
-    {{- with $custom -}}
-      {{- if ne . $id -}}
-        {{- warnidf (printf "custom-target-id:%s" .)
-            "shortcode %q: id %q replaces the default %q, so `xref %s=%q` will not find it at %s; reference it with `xref anchor=%q`"
-            $sc.Name . $id $kind $num $at . -}}
-      {{- end -}}
-    {{- end -}}
+    {{- /* 自定义 id 换掉默认的 `<kind>-<num>`，这本身是合法需求（稳定的深链
+           地址），不警告。只有当同一页真的用编号形式 `xref` 引它时才是死链，
+           而那个判断在 book/xref-check.html 里做 —— 正文渲染完才有完整信息。 */ -}}
     {{- $id = $custom -}}
   {{- end -}}
 {{- end -}}

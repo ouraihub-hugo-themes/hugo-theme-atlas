@@ -78,6 +78,10 @@
           {{ if $hasSidebar }}data-td-shell-drawer-inert{{ end }}>
       {{ partial "shell/breadcrumb.html" . }}
       {{ block "main" . }}{{ end }}
+      {{- /* 同页编号引用的死链检测。必须在正文渲染之后 —— 目标登记表与 xref
+             用过的编号都是渲染时才写进 Store 的，早于这里跑就只看到一半。
+             不输出任何标记，只在真出死链时 warn。 */ -}}
+      {{- partial "book/xref-check.html" . -}}
       {{- /* 页尾那批在正文之后、翻页之前：它们都是关于「这一篇」的，而翻页
              已经是去下一篇了。各自默认关着，没配的站点这里什么都不输出。 */ -}}
       {{ partial "shell/page-end.html" . }}
@@ -111,6 +115,9 @@
   <main id="td-main" tabindex="-1"{{ $search.attrs }}
         class="{{ if $landing }}td-landing{{ else }}mx-auto max-w-4xl px-4 py-16{{ end }}">
     {{ block "main" . }}{{ end }}
+    {{- /* 这一支也要检 —— 独立单页可以有 xref。landing 没有 shortcode，
+           那时 Store 是空的，这个 partial 什么都不做。 */ -}}
+    {{- partial "book/xref-check.html" . -}}
   </main>
 
   {{ partial "shell/footer.html" . }}

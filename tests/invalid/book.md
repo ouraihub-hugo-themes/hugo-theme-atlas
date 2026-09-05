@@ -14,9 +14,9 @@ expect:
   - 'shortcode "tbl" requires inner table content'
   - 'duplicate id "fig-dup"'
   - 'duplicate fig number "7"'
-  - 'id "fig-dup" replaces the default "fig-7"'
-  - 'will not find it'
-  - 'reference it with `xref anchor="fig-shell"`'
+  - 'has the custom id "fig-shell"'
+  - 'does not exist'
+  - 'write `xref anchor="fig-shell"` instead'
   - 'contains characters that cannot appear in an id or fragment'
   - 'must not start with a digit or a hyphen'
   - 'shortcode "xref" accepts only one of fig, tbl, eq, or eg'
@@ -92,11 +92,14 @@ eg 没有 caption：
 {{< eg num="1" >}}正文{{< /eg >}}
 
 自定义 id 换掉了默认的 `<kind>-<num>`，而编号形式的 xref 拼的是那个默认值 ——
-链接文字是对的，href 指向不存在的锚点，页面上看不出来：
+链接文字是对的，href 指向不存在的锚点，页面上看不出来。
 
-{{< fig num="20" id="fig-shell" caption="自定义 id" >}}正文{{< /fig >}}
+两者同时出现才是死链，所以这个用例必须两条都写。单写自定义 id 不该出声：
+稳定深链是合法需求。前向引用（xref 在目标之前）也要能判，所以先写引用：
 
 {{< xref fig="20" />}}
+
+{{< fig num="20" id="fig-shell" caption="自定义 id" >}}正文{{< /fig >}}
 
 xref 同时给了两种 kind：
 
