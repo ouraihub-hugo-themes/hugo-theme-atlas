@@ -59,7 +59,33 @@ function packageOf(file) {
 
 // 许可文件的常见名字。有些包（khroma）不写 package.json 的 license 字段，
 // 只放一个文件 —— 合规文档里留 "?" 等于没记。
-const LICENSE_FILES = ["LICENSE", "license", "LICENSE.md", "license.md", "LICENSE.txt", "COPYING"];
+//
+// 匹配不区分大小写，因为 store 里这个名字有 13 种写法（LICENSE、license、
+// license.txt、LICENCE…）。逐个 existsSync 探测在 Windows 上会"意外成功"：
+// NTFS 大小写不敏感，`LICENSE.txt` 能命中磁盘上的 `license.txt`，Linux 命中
+// 不了 —— 那时同一次提交在作者机器上绿、在 CI 上红，@iconify/utils 正是这样。
+const LICENSE_FILES = ["LICENSE", "LICENSE.md", "LICENSE.txt", "LICENCE", "COPYING"];
+const NOTICE_FILES = ["NOTICE", "NOTICE.txt", "NOTICE.md"];
+
+/**
+ * 在目录里按名字找文件，不区分大小写。命中返回磁盘上的真实文件名。
+ *
+ * 读一次目录再比，而不是对每种大小写写法各探测一次：后者在两种文件系统上
+ * 结果不同，而这份输出要在两边逐字节相同。
+ */
+function findFile(dir, names) {
+  let entries;
+  try {
+    entries = readdirSync(dir);
+  } catch {
+    return null;
+  }
+  for (const want of names) {
+    const hit = entries.find((e) => e.toLowerCase() === want.toLowerCase());
+    if (hit) return hit;
+  }
+  return null;
+}
 
 /**
  * 从许可文件正文认 SPDX 标识。
@@ -68,17 +94,14 @@ const LICENSE_FILES = ["LICENSE", "license", "LICENSE.md", "license.md", "LICENS
  * SPDX id 比承认认不出更糟：合规文档里一个错的标识会被下游直接采信。
  */
 function licenseFromFile(dir) {
-  for (const name of LICENSE_FILES) {
-    const path = join(dir, name);
-    if (!existsSync(path)) continue;
-    const head = readFileSync(path, "utf8").slice(0, 400);
-    if (/MIT License/i.test(head)) return "MIT";
-    if (/Apache License/i.test(head)) return "Apache-2.0";
-    if (/ISC License/i.test(head)) return "ISC";
-    if (/BSD/i.test(head)) return "BSD";
-    return `see ${name}`;
-  }
-  return "?";
+  const name = findFile(dir, LICENSE_FILES);
+  if (!name) return "?";
+  const head = readFileSync(join(dir, name), "utf8").slice(0, 400);
+  if (/MIT License/i.test(head)) return "MIT";
+  if (/Apache License/i.test(head)) return "Apache-2.0";
+  if (/ISC License/i.test(head)) return "ISC";
+  if (/BSD/i.test(head)) return "BSD";
+  return `see ${name}`;
 }
 
 /** 读包的 version 与 license。 */
@@ -106,18 +129,14 @@ function sha256(path) {
  */
 function texts(dir) {
   const read = (names) => {
-    for (const name of names) {
-      const path = join(dir, name);
-      if (existsSync(path)) {
-        return { name, body: readFileSync(path, "utf8").replaceAll("\r\n", "\n").trimEnd() };
-      }
-    }
-    return null;
+    const name = findFile(dir, names);
+    if (!name) return null;
+    return { name, body: readFileSync(join(dir, name), "utf8").replaceAll("\r\n", "\n").trimEnd() };
   };
   return {
     license: read(LICENSE_FILES),
     // Apache-2.0 §4(d)：上游给了 NOTICE，分发时要带着。
-    notice: read(["NOTICE", "NOTICE.txt", "NOTICE.md"]),
+    notice: read(NOTICE_FILES),
   };
 }
 
