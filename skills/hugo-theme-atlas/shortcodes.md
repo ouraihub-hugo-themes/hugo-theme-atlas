@@ -25,6 +25,7 @@ A third failure is silent: self-closing a container. `{{< cards />}}` builds wit
 - [cast](#cast) — Terminal session recording from an asciicast file.
 - [comment](#comment) — Author note kept in the source and dropped from the output.
 - [contributors](#contributors) — Contributor avatar wall built from a local data file. Makes no network requests.
+- [demo](#demo) — Component example: the rendered result above, its copyable source below.
 - [download](#download) — Download section with per-channel install instructions, built from a data file.
 - [eg](#eg) — Numbered example. Caption on top, body is usually one or more code fences.
 - [eq](#eq) — Numbered equation. Body is LaTeX.
@@ -155,6 +156,16 @@ Parameters: `data`, `class`
 
 **Also requires:** a `data/<key>.yaml` file in the site; the `data` parameter is that filename
 Without it the shortcode renders nothing at all — the build still succeeds.
+
+## demo
+
+Component example: the rendered result above, its copyable source below.
+
+`{{< demo lang="…" title="…" >}}` … `{{< /demo >}}` — the body is required. Syntactically `{{< demo lang="…" title="…" />}}` is legal, but it warns and renders nothing every time. Every call must be closed or self-closed; a bare opening tag is a build error.
+
+Parameters: `lang`, `title`
+
+**This body is rendered in a second pass**, so Hugo's `{{</* … */>}}` escape does not survive it. An escaped shortcode inside a `demo` body is unescaped by the outer render and then executed by the inner one — it runs, warns about its own deliberate mistakes, and under `--panicOnWarning` fails the build. To show shortcode syntax as text, use a fenced code block.
 
 ## download
 
