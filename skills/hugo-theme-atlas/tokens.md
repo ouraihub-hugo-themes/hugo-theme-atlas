@@ -6,7 +6,7 @@ Restyling this theme means setting a custom property, not overriding a class. Th
 
 ## Set `--td-*`, not `--color-*`
 
-`--color-*`, `--font-*`, and `--shadow-*` are **mappings** — 34 of them, declared in `@theme inline` so that Tailwind generates utility classes. Component CSS reads the underlying `--td-*` directly.
+`--color-*`, `--font-*`, and `--shadow-*` are **mappings** — 36 of them, declared in `@theme inline` so that Tailwind generates utility classes. Component CSS reads the underlying `--td-*` directly.
 
 So setting `--color-accent` changes what `bg-accent` paints and leaves every component reading `--td-accent` untouched. The page half-changes and the build stays green. **Set the `--td-*` name.**
 
@@ -60,7 +60,9 @@ Set the left column. The Tailwind column is the alias to use when you are writin
 | `--td-status-danger` | `--color-status-danger` | ✓ |
 | `--td-status-accent` | `--color-status-accent` | ✓ |
 | `--td-status-neutral` | `--color-status-neutral` | ✓ |
+| `--td-shell-scrim` | `--color-shell-scrim` | ✓ |
 | `--td-nav-shadow` | `--shadow-nav` | ✓ |
+| `--td-shell-overlay-shadow` | `--shadow-overlay` | ✓ |
 | `--td-font-ui` | `--font-sans` |  |
 | `--td-font-code` | `--font-mono` |  |
 | `--td-font-display` | `--font-display` |  |
