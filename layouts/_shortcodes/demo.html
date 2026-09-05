@@ -1,0 +1,61 @@
+{{- /* 组件示例：上半渲染效果，下半可复制的源码。
+
+     body 里写 Hugo 的 shortcode 转义形式，也就是在 `{{<` 之后、`>}}` 之前各
+     加一层 C 风格的注释符。这里不写出那个序列：Go 模板注释不嵌套，注释结束符
+     一出现就会把本条说明提前关掉，构建报 "comment ends before closing
+     delimiter"。用法示例见 exampleSite 的 demo 页。
+
+     一份输入出两种结果，靠的是 Hugo 处理 shortcode 的顺序：转义标记在解析阶段
+     就被摘掉，`.InnerDeindent` 拿到的已经是字面文本 `{{< badge … >}}`。之后
+     RenderString 把这段文本当真 shortcode 展开（效果），transform.Highlight
+     直接高亮同一段文本（源码）。
+
+     源码侧不能走 Markdown 围栏 —— Hugo 在 Goldmark 之前展开 shortcode，围栏
+     里的 `{{< badge >}}` 会变成真徽章，代码块里显示的就是渲染后的 HTML。
+     transform.Highlight 收的是数据，shortcode 解析器不介入，所以它是唯一
+     能拿到字面源码的路。同理，把片段放进 assets/ 再 include 两次也不行：
+     resources.Get 绕过了摘转义标记那一步，`/*` 会原样留在页面上。
+
+     参数：lang（源码高亮语言，默认 markdown）、title（示例标题）*/ -}}
+{{- $at := .Position -}}
+{{- partial "validate-shortcode.html" (dict "shortcode" . "at" $at
+  "allowed" (slice "lang" "title")) -}}
+
+{{- $src := strings.TrimSpace (printf "%s" .InnerDeindent) -}}
+{{- if not $src -}}
+  {{- warnf "shortcode %q needs a body at %s; rendering nothing" .Name $at -}}
+{{- else -}}
+  {{- $lang := "markdown" -}}
+  {{- with .Get "lang" -}}
+    {{- $raw := strings.TrimSpace (printf "%v" .) -}}
+    {{- /* 语言名进 transform.Highlight 的 lexer 名，空格与引号会让它猜错。 */ -}}
+    {{- if findRE `^[A-Za-z0-9#+_.-]+$` $raw -}}
+      {{- $lang = $raw -}}
+    {{- else -}}
+      {{- warnf "shortcode %q: lang %q is not a language name at %s; using markdown" $.Name $raw $at -}}
+    {{- end -}}
+  {{- end -}}
+  {{- $title := strings.TrimSpace (printf "%v" (.Get "title" | default "")) -}}
+  {{- $id := printf "demo-%s%d" (.Page.Store.Get "tdBlockScope" | default "") .Ordinal -}}
+
+  {{- if partial "content/plain.html" .Page -}}
+{{- /* 纯文本输出（Markdown / LLMS / RSS）：只给源码，不给渲染结果。
+       两者在这里会重复同一件事，而 HTML 是渲染效果的唯一载体。 */ -}}
+{{ printf "```%s\n%s\n```" $lang $src | safeHTML }}
+  {{- else -}}
+  <div class="td-demo" id="{{ $id }}" data-td-demo>
+    {{- with $title }}
+    <p class="td-demo-title" id="{{ $id }}-title">{{ . }}</p>
+    {{- end }}
+    {{- /* 渲染效果。scope 前缀让示例内部的围栏、标题不与页面上的撞 id。 */}}
+    <div class="td-demo-preview"{{ with $title }} aria-labelledby="{{ $id }}-title"{{ end }}>
+      {{- partial "content/render-block.html" (dict
+        "page" .Page "scope" $id "content" $src) -}}
+    </div>
+    {{- /* 源码。走 transform.Highlight 而不是围栏 —— 见文件头的说明。 */}}
+    <div class="td-demo-source">
+      {{- transform.Highlight $src $lang -}}
+    </div>
+  </div>
+  {{- end -}}
+{{- end -}}

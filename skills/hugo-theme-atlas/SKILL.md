@@ -1,13 +1,13 @@
 ---
 name: hugo-theme-atlas
-description: Authoring and configuring sites built on the Atlas Hugo theme (hugo-theme-atlas) — its 30 shortcodes, 9 fence languages, 22 landing sections, params.ui settings, data files, required site configuration, and commands. Use this skill whenever the project contains themes/hugo-theme-atlas or a td- CSS class, and whenever the task involves writing Hugo content with shortcodes, editing hugo.toml, setting any params.ui option, building a landing page, adding cards/tabs/badges/figures/steps/mermaid diagrams, cross-referencing a numbered figure or table, enabling comments or an OpenAPI viewer, setting up search, or debugging a page that renders wrong — even when the theme is not mentioned by name. Almost every mistake with this theme still builds successfully, so relying on general Hugo knowledge instead of this skill produces pages that look fine and are quietly wrong.
+description: Authoring and configuring sites built on the Atlas Hugo theme (hugo-theme-atlas) — its 31 shortcodes, 9 fence languages, 22 landing sections, params.ui settings, data files, required site configuration, and commands. Use this skill whenever the project contains themes/hugo-theme-atlas or a td- CSS class, and whenever the task involves writing Hugo content with shortcodes, editing hugo.toml, setting any params.ui option, building a landing page, adding cards/tabs/badges/figures/steps/mermaid diagrams, cross-referencing a numbered figure or table, enabling comments or an OpenAPI viewer, setting up search, or debugging a page that renders wrong — even when the theme is not mentioned by name. Almost every mistake with this theme still builds successfully, so relying on general Hugo knowledge instead of this skill produces pages that look fine and are quietly wrong.
 user-invocable: false
 ---
 
 # Atlas Hugo theme
 
 A documentation and landing theme for Hugo, distributed **clone-and-own** (not a Hugo
-Module). Its public authoring surface is 30 shortcodes, 9 fence languages, 22 landing
+Module). Its public authoring surface is 31 shortcodes, 9 fence languages, 22 landing
 sections, and 4 reading shells.
 
 ## Read these before acting

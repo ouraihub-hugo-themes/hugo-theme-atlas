@@ -261,7 +261,7 @@ landing section 漏一个必需字段那一项（有时整节）被跳过。模�
 | 文件 | 内容 | 生成 |
 |---|---|---|
 | `SKILL.md` | 入口，路由到下面几份 | |
-| `shortcodes.md` | 30 个 shortcode 的参数、调用形式与正文二次渲染 | ✓ |
+| `shortcodes.md` | 31 个 shortcode 的参数、调用形式与正文二次渲染 | ✓ |
 | `fences.md` | 9 种代码围栏的属性、约束与 body 格式 | ✓ |
 | `landing.md` | 22 个 landing section 的键、必需字段与枚举 | ✓ |
 | `data.md` | `data/contributors.yaml` 与 `data/download/*.yaml` 的字段 | ✓ |

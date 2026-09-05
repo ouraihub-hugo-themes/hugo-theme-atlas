@@ -1,0 +1,64 @@
+/* 组件示例：渲染效果在上，源码在下，共一个外框。
+   由 layouts/_shortcodes/demo.html 渲染。
+
+   两半必须读作一件东西 —— 一个外框加一条分隔线，而不是两个各自带边框的块。
+   否则「这段源码画出上面那个东西」这层关系要靠读者自己拼。 */
+
+@layer components {
+  .td-demo {
+    margin-block: 1.5rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.5rem;
+
+    /* 圆角要裁到里面的代码块上，否则源码块的直角会从外框的圆角里探出来。 */
+    overflow: hidden;
+  }
+
+  .td-demo-title {
+    margin: 0;
+    padding: 0.55rem 1rem;
+    border-block-end: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-ink-muted);
+    font-size: 0.8125rem;
+  }
+
+  .td-demo-preview {
+    padding: 1.5rem;
+    background: var(--color-canvas);
+
+    /* 示例可能是一行徽章，也可能是一整块卡片网格。首尾外边距收掉，
+       让内边距说话 —— 不然一行徽章会顶在框的上沿。 */
+    & > :first-child {
+      margin-block-start: 0;
+    }
+
+    & > :last-child {
+      margin-block-end: 0;
+    }
+  }
+
+  .td-demo-source {
+    border-block-start: 1px solid var(--color-border);
+
+    /* transform.Highlight 直接吐 .highlight > pre，没有代码块 hook 的外壳，
+       所以这里自己给内边距。行内的 pre 自带 margin，收掉。 */
+    & pre {
+      margin: 0;
+      padding: 0.9rem 1rem;
+      overflow-x: auto;
+    }
+  }
+
+  /* 打印：源码留下，渲染效果也留下 —— 示例的意义就在两者对照。
+     只把分隔线加重，因为打印没有底色差别可依赖。 */
+  @media print {
+    .td-demo {
+      break-inside: avoid;
+    }
+
+    .td-demo-source {
+      border-block-start-width: 2px;
+    }
+  }
+}

@@ -409,6 +409,7 @@ const DESCRIPTIONS = {
   cards: "Grid container for `card`. Takes no parameters of its own.",
   cast: "Terminal session recording from an asciicast file.",
   comment: "Author note kept in the source and dropped from the output.",
+  demo: "Component example: the rendered result above, its copyable source below.",
   contributors: "Contributor avatar wall built from a local data file. Makes no network requests.",
   download: "Download section with per-channel install instructions, built from a data file.",
   eg: "Numbered example. Caption on top, body is usually one or more code fences.",

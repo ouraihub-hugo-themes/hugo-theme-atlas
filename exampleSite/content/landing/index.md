@@ -25,7 +25,7 @@ sections:
     title: 一些数字
     subtitle: 用 `<dl>` 而不是一排 `<div>` —— 值与标签要能被读屏软件关联起来。
     items:
-      - value: "30"
+      - value: "31"
         label: shortcode
       - value: "22"
         label: landing section
@@ -119,7 +119,7 @@ sections:
         price: 免费
         description: 个人项目与试用。
         features:
-          - 全部 30 个 shortcode
+          - 全部 31 个 shortcode
           - 4 种阅读外壳
           - 社区支持
         actions:
@@ -161,7 +161,7 @@ sections:
       - 企业版
     items:
       - feature: shortcode 数量
-        values: ["30", "30", "30"]
+        values: ["31", "31", "31"]
       - feature: 私有仓库
         values: [false, true, true]
       - feature: 响应时间
